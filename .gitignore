@@ -2,9 +2,12 @@
 __pycache__/
 *.pyc
 .env
-venv/
+.venv/
 .env.*
 *.sqlite3
 .idea/
 .DS_Store
 *.log
+*Zone.Identifier
+*.rar
+.vs/
