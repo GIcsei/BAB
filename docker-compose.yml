@@ -1,0 +1,30 @@
+version: "3.9"
+
+services:
+  app:
+    build:
+      context: .
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      SELENIUM_REMOTE_URL: "http://selenium:4444"
+      APP_USER_DATA_DIR: /var/app/user_data
+      APP_JOB_HOUR: "18"
+      APP_JOB_MINUTE: "0"
+    depends_on:
+      - selenium
+    volumes:
+      - user_data:/var/app/user_data
+
+  selenium:
+    image: selenium/standalone-edge:latest
+    restart: unless-stopped
+    shm_size: "2g"
+    ports:
+      - "4444:4444"
+    volumes:
+      - user_data:/var/app/user_data
+      
+volumes:
+  user_data:
