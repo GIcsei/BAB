@@ -6,6 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 import app.main as main_mod
+from app.core.auth import get_current_user_id
 from app.main import app
 
 
@@ -35,20 +36,27 @@ def test_list_endpoint_and_preview_and_series(tmp_path: Path):
     pkl = user / "d.pkl"
     df.to_pickle(pkl)
 
+    # override auth dependency to simulate authenticated user 'alice'
+    app.dependency_overrides[get_current_user_id] = lambda: "alice"
+
     client = TestClient(app)
 
-    # list
-    r = client.get("/data/list", params={"user_id": "alice"})
-    assert r.status_code == 200
-    assert "files" in r.json()
+    try:
+        # list
+        r = client.get("/data/list")
+        assert r.status_code == 200
+        assert "files" in r.json()
 
-    # preview
-    r = client.get("/data/alice/files/d.pkl/preview")
-    assert r.status_code == 200
-    assert "preview" in r.json()
+        # preview
+        r = client.get("/data/files/d.pkl/preview")
+        assert r.status_code == 200
+        assert "preview" in r.json()
 
-    # series (use y=val)
-    r = client.get("/data/alice/files/d.pkl/series", params={"y": "val"})
-    assert r.status_code == 200
-    data = r.json()
-    assert "x" in data and "y" in data
+        # series (use y=val)
+        r = client.get("/data/files/d.pkl/series", params={"y": "val"})
+        assert r.status_code == 200
+        data = r.json()
+        assert "x" in data and "y" in data
+    finally:
+        # cleanup override to avoid leaking into other tests
+        app.dependency_overrides.pop(get_current_user_id, None)

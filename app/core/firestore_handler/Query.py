@@ -1,4 +1,4 @@
-import json
+﻿import json
 import re
 
 from app.core.firestore_handler.Utils import parse_to_firestore

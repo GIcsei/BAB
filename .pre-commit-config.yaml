@@ -3,6 +3,7 @@
     rev: 8.0.0
     hooks:
       - id: isort
+        args: ["--profile=black"]
   
   - repo: https://github.com/psf/black
     rev: 26.1.0
@@ -13,4 +14,4 @@
     rev: 7.3.0
     hooks:
       - id: flake8
-        #args: ["--extend-ignore=E501"]
+        args: ["--extend-ignore=E203,E501"]
