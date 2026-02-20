@@ -1,4 +1,4 @@
-version: "3.9"
+﻿version: "3.9"
 
 services:
   app:
@@ -13,18 +13,36 @@ services:
       APP_JOB_HOUR: "18"
       APP_JOB_MINUTE: "0"
     depends_on:
-      - selenium
+      selenium:
+        condition: service_healthy
     volumes:
       - user_data:/var/app/user_data
+      - downloads:/downloads
+
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
   selenium:
-    image: selenium/standalone-edge:latest
+    image: selenium/standalone-edge:4.15.0-2023-12-01 # pin to a stable release you tested
     restart: unless-stopped
     shm_size: "2g"
     ports:
       - "4444:4444"
     volumes:
-      - user_data:/var/app/user_data
-      
+      - downloads:/home/seluser/Downloads
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:4444/status || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+
 volumes:
   user_data:
+  downloads:

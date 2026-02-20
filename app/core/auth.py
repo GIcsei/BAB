@@ -1,4 +1,4 @@
-import logging
+﻿import logging
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -16,13 +16,18 @@ def get_current_user_id(creds: HTTPAuthorizationCredentials = Depends(security))
     """
     token = creds.credentials if creds else None
     if not token:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing or invalid Authorization header")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing or invalid Authorization header"
+        )
 
     try:
         verified = firebase.verify_id_token(token)
     except Exception:
         logger.exception("Token verification failed")
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired token")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired token"
+        )
 
     if verified and verified.get("user_id"):
         return verified["user_id"]
@@ -32,5 +37,7 @@ def get_current_user_id(creds: HTTPAuthorizationCredentials = Depends(security))
     if user_id:
         return user_id
 
-    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired token")
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired token"
+    )
 
