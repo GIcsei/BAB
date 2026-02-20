@@ -5,18 +5,34 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
 
 jobs:
-  build-and-test:
+  lint-and-checks:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: [3.12, 3.13]
+
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: "3.12"
+          python-version: ${{ matrix.python }}
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ matrix.python }}-${{ hashFiles('**/pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-${{ matrix.python }}-
 
       - name: Install dependencies
         run: |
@@ -26,32 +42,142 @@ jobs:
 
       - name: Run formatters and linters
         run: |
-          black --check app tests || true
-          flake8 app tests --count --show-source --statistics || true
+          black --check app tests
+          flake8 app tests --count --show-source --statistics
 
       - name: Static type checking
         run: |
-          mypy app --ignore-missing-imports --disallow-untyped-defs || true
+          mypy app --ignore-missing-imports --no-strict-optional
 
-      - name: Security audit (bandit)
-        run: |
-          bandit -r app -ll || true
+  tests:
+    runs-on: ubuntu-latest
+    needs: lint-and-checks
 
-      - name: Dependency vulnerability scan
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.12
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-3.12-${{ hashFiles('**/pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-3.12-
+
+      - name: Install deps
         run: |
-          pip-audit || true
+          python -m pip install --upgrade pip
+          pip install -e .
+          pip install pytest pytest-cov
 
       - name: Run tests with coverage
         run: |
-          pytest tests/ -v --cov=app --cov-report=term-missing --cov-fail-under=60
+          mkdir -p reports
+          pytest -v --maxfail=1 \
+            --junitxml=reports/junit.xml \
+            --cov=app --cov-report=xml:coverage.xml --cov-report=term-missing
 
-      - name: Report coverage
+      - name: Generate summary
+        if: always()
         run: |
-          pytest tests/ --cov=app --cov-report=xml
+          python << 'PY'
+          import os
+          import xml.etree.ElementTree as ET
+          from pathlib import Path
 
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+          junit = Path("reports/junit.xml")
+          cov = Path("coverage.xml")
+          summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
+
+          tests = failures = errors = skipped = 0
+          if junit.exists():
+              root = ET.parse(junit).getroot()
+              tests = int(root.attrib.get("tests", 0))
+              failures = int(root.attrib.get("failures", 0))
+              errors = int(root.attrib.get("errors", 0))
+              skipped = int(root.attrib.get("skipped", 0))
+
+          cov_pct = "n/a"
+          if cov.exists():
+              cov_root = ET.parse(cov).getroot()
+              line_rate = cov_root.attrib.get("line-rate")
+              if line_rate:
+                  cov_pct = f"{float(line_rate) * 100:.1f}%"
+
+          summary = f"""
+          ## Test & Coverage Summary
+
+          - Tests run: **{tests}**
+          - Failures: **{failures}**
+          - Errors: **{errors}**
+          - Skipped: **{skipped}**
+
+          ### Coverage
+          - Line coverage: **{cov_pct}**
+          """
+
+          print(summary)
+
+          if summary_path:
+              with open(summary_path, "a", encoding="utf-8") as f:
+                  f.write(summary)
+          PY
+
+      - name: Post summary as PR comment
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/github-script@v6
         with:
-          files: ./coverage.xml
-          flags: unittests
-          name: codecov-umbrella
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const body = fs.readFileSync(process.env.GITHUB_STEP_SUMMARY, 'utf8');
+            const pr = context.payload.pull_request.number;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr,
+              body: body
+            });
+
+  security:
+    runs-on: ubuntu-latest
+    needs: lint-and-checks
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.12
+
+      - name: Install security tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install pip-audit bandit
+
+      - name: Dependency vulnerability scan
+        run: pip-audit
+
+      - name: Static security scan (bandit)
+        run: bandit -r app -ll
+
+      - name: Install Trivy
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget
+          wget https://github.com/aquasecurity/trivy/releases/latest/download/trivy_0.50.2_Linux-64bit.deb
+          sudo dpkg -i trivy_0.50.2_Linux-64bit.deb
+
+      - name: Container image scan
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          docker build -t app:${GITHUB_SHA} .
+          trivy image --severity CRITICAL,HIGH app:${GITHUB_SHA}
