@@ -1,14 +1,14 @@
-from random import uniform
+import json
 import re
+import socket
+import threading
+import time
+from random import uniform
 from typing import Any, Dict
+
 from requests import Session
 from requests.exceptions import HTTPError
-
-import json
-import time
 from sseclient import SSEClient
-import threading
-import socket
 
 
 def parse_to_firestore(value: str) -> Dict[str, Any]:
@@ -20,15 +20,16 @@ def parse_to_firestore(value: str) -> Dict[str, Any]:
         return {"booleanValue": False}
 
     if re.match(r"^-?\d+(\.\d+)?$", value):
-        if '.' in value:
+        if "." in value:
             return {"doubleValue": float(value)}
         else:
             return {"integerValue": value}
 
     if re.match(r"^['\"].*['\"]$", value):
-        return {"stringValue": value.strip('\'"')}
+        return {"stringValue": value.strip("'\"")}
 
     return {"stringValue": value}
+
 
 def raise_detailed_error(request_object):
     try:
@@ -37,6 +38,7 @@ def raise_detailed_error(request_object):
         # raise detailed error message
         # TODO: Check if we get a { "error" : "Permission denied." } and handle automatically
         raise HTTPError(e, request_object.text)
+
 
 class KeepAuthSession(Session):
     """
@@ -64,6 +66,7 @@ class ClosableSSEClient(SSEClient):
         self.resp.raw._fp.fp.raw._sock.shutdown(socket.SHUT_RDWR)
         self.resp.raw._fp.fp.raw._sock.close()
 
+
 class Stream:
     def __init__(self, url, stream_handler, build_headers, stream_id):
         self.build_headers = build_headers
@@ -87,7 +90,9 @@ class Stream:
         return self
 
     def start_stream(self):
-        self.sse = ClosableSSEClient(self.url, session=self.make_session(), build_headers=self.build_headers)
+        self.sse = ClosableSSEClient(
+            self.url, session=self.make_session(), build_headers=self.build_headers
+        )
         for msg in self.sse:
             if msg:
                 msg_data = json.loads(msg.data)
@@ -97,15 +102,16 @@ class Stream:
                 self.stream_handler(msg_data)
 
     def close(self):
-        while not self.sse and not hasattr(self.sse, 'resp'):
+        while not self.sse and not hasattr(self.sse, "resp"):
             time.sleep(0.001)
         self.sse.running = False
         self.sse.close()
         self.thread.join()
         return self
 
+
 class DocumentKeyGenerator:
-    PUSH_CHARS = '-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz'
+    PUSH_CHARS = "-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz"
 
     def __init__(self):
         self.last_push_time = 0
@@ -121,7 +127,7 @@ class DocumentKeyGenerator:
             time_stamp_chars[i] = self.PUSH_CHARS[now % 64]
             now //= 64
 
-        new_id = ''.join(time_stamp_chars)
+        new_id = "".join(time_stamp_chars)
 
         if not duplicate_time:
             self.last_rand_chars = [int(uniform(0, 64)) for _ in range(12)]
@@ -131,5 +137,5 @@ class DocumentKeyGenerator:
                     self.last_rand_chars[i] = 0
                 self.last_rand_chars[i] += 1
 
-        new_id += ''.join(self.PUSH_CHARS[i] for i in self.last_rand_chars)
+        new_id += "".join(self.PUSH_CHARS[i] for i in self.last_rand_chars)
         return new_id

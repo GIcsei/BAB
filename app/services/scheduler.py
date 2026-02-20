@@ -1,12 +1,13 @@
-﻿import threading
+﻿import heapq
+import logging
+import os
+import threading
 import time
-import json
-import heapq
-from datetime import datetime, timedelta, time as dt_time
+from datetime import datetime
+from datetime import time as dt_time
+from datetime import timedelta
 from pathlib import Path
 from typing import Dict, Optional, Tuple
-import os
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -16,19 +17,33 @@ class _Job:
     Lightweight descriptor for a per-user scheduled job.
     The heavy task logic remains in `_perform_task` and is run in worker threads.
     """
-    def __init__(self, user_id: str, user_dir: Path, target_hour: int = 18, target_minute: int = 0):
+
+    def __init__(
+        self,
+        user_id: str,
+        user_dir: Path,
+        target_hour: int = 18,
+        target_minute: int = 0,
+    ):
         self.user_id = user_id
         self.user_dir = Path(user_dir)
         self.target_hour = int(target_hour)
         self.target_minute = int(target_minute)
         self._stopped = False
         self.logger = logging.getLogger(f"{__name__}.job.{user_id}")
-        self.logger.debug("Job.__init__ user_dir=%s target=%02d:%02d", str(user_dir), self.target_hour, self.target_minute)
+        self.logger.debug(
+            "Job.__init__ user_dir=%s target=%02d:%02d",
+            str(user_dir),
+            self.target_hour,
+            self.target_minute,
+        )
 
     def _seconds_until_next_target(self) -> float:
         """Compute seconds until next occurrence of target_hour:target_minute local time."""
         now = datetime.now()
-        today_target = datetime.combine(now.date(), dt_time(hour=self.target_hour, minute=self.target_minute))
+        today_target = datetime.combine(
+            now.date(), dt_time(hour=self.target_hour, minute=self.target_minute)
+        )
         if now >= today_target:
             next_target = today_target + timedelta(days=1)
         else:
@@ -71,11 +86,17 @@ class _Job:
             # import lazily to avoid heavy startup cost and potential missing deps during import
             from app.core.netbank.getReport import ErsteNetBroker
         except Exception:
-            self.logger.exception("Failed to import ErsteNetBroker for user %s", self.user_id)
+            self.logger.exception(
+                "Failed to import ErsteNetBroker for user %s", self.user_id
+            )
             return
 
         try:
-            self.logger.debug("Instantiating ErsteNetBroker for user %s (saveFolder=%s)", self.user_id, str(self.user_dir))
+            self.logger.debug(
+                "Instantiating ErsteNetBroker for user %s (saveFolder=%s)",
+                self.user_id,
+                str(self.user_dir),
+            )
             broker = ErsteNetBroker(user_id=self.user_id, saveFolder=str(self.user_dir))
             self.logger.info("Calling get_report() for user %s", self.user_id)
             result_filename = broker.get_report()
@@ -85,11 +106,17 @@ class _Job:
                     size = fullpath.stat().st_size
                 except Exception:
                     size = None
-                self.logger.info("get_report produced file=%s size=%s", result_filename, size)
+                self.logger.info(
+                    "get_report produced file=%s size=%s", result_filename, size
+                )
             else:
-                self.logger.warning("get_report returned no file for user %s", self.user_id)
+                self.logger.warning(
+                    "get_report returned no file for user %s", self.user_id
+                )
         except Exception:
-            self.logger.exception("Exception while running get_report for user %s", self.user_id)
+            self.logger.exception(
+                "Exception while running get_report for user %s", self.user_id
+            )
 
 
 class Scheduler:
@@ -97,6 +124,7 @@ class Scheduler:
     Single-worker scheduler that keeps CPU usage minimal by sleeping until the next scheduled job.
     Uses a heap for upcoming runs and a Condition to wake the worker only when needed.
     """
+
     def __init__(self):
         self._jobs: Dict[str, _Job] = {}
         # heap of (next_run_epoch_seconds, counter, user_id)
@@ -159,7 +187,10 @@ class Scheduler:
                 job = self._jobs.get(user_id)
 
             if not job:
-                logger.debug("Scheduled job %s not found (may have been removed); skipping", user_id)
+                logger.debug(
+                    "Scheduled job %s not found (may have been removed); skipping",
+                    user_id,
+                )
                 continue
 
             if getattr(job, "_stopped", False):
@@ -177,20 +208,38 @@ class Scheduler:
                     next_dt = job.compute_next_run_dt()
                     with self._cond:
                         self._counter += 1
-                        heapq.heappush(self._heap, (next_dt.timestamp(), self._counter, user_id))
+                        heapq.heappush(
+                            self._heap, (next_dt.timestamp(), self._counter, user_id)
+                        )
                         self._cond.notify()
 
     def _spawn_job_thread(self, job: _Job):
         thread = threading.Thread(target=job._perform_task, daemon=True)
         thread.start()
-        logger.info("Spawned background thread for user %s (thread=%s)", job.user_id, thread.name)
+        logger.info(
+            "Spawned background thread for user %s (thread=%s)",
+            job.user_id,
+            thread.name,
+        )
 
-    def start_job_for_user(self, user_id: str, user_dir: Path, target_hour: int = 18, target_minute: int = 0):
+    def start_job_for_user(
+        self,
+        user_id: str,
+        user_dir: Path,
+        target_hour: int = 18,
+        target_minute: int = 0,
+    ):
         """
         Start or restart a job that runs each day at target_hour:target_minute (local time).
         Returns immediately after scheduling the next run.
         """
-        logger.info("Request to start job for user=%s dir=%s target=%02d:%02d", user_id, str(user_dir), target_hour, target_minute)
+        logger.info(
+            "Request to start job for user=%s dir=%s target=%02d:%02d",
+            user_id,
+            str(user_dir),
+            target_hour,
+            target_minute,
+        )
         try:
             user_dir.mkdir(parents=True, exist_ok=True)
             try:
@@ -208,14 +257,18 @@ class Scheduler:
                 try:
                     self._jobs[user_id]._stopped = True
                 except Exception:
-                    logger.debug("Error marking previous job stopped for user=%s", user_id)
+                    logger.debug(
+                        "Error marking previous job stopped for user=%s", user_id
+                    )
             job = _Job(user_id, user_dir, target_hour, target_minute)
             self._jobs[user_id] = job
             # compute next run and push to heap
             next_dt = job.compute_next_run_dt()
             with self._cond:
                 self._counter += 1
-                heapq.heappush(self._heap, (next_dt.timestamp(), self._counter, user_id))
+                heapq.heappush(
+                    self._heap, (next_dt.timestamp(), self._counter, user_id)
+                )
                 self._start_worker_if_needed()
         logger.info("Job scheduled for user=%s", user_id)
         return job
@@ -264,7 +317,9 @@ class Scheduler:
             self._worker.join(timeout=2.0)
         logger.debug("All jobs stopped and worker joined")
 
-    def restore_jobs_from_dir(self, base_dir: Path, target_hour: int = 18, target_minute: int = 0):
+    def restore_jobs_from_dir(
+        self, base_dir: Path, target_hour: int = 18, target_minute: int = 0
+    ):
         """
         Scan `base_dir` for per-user folders containing `credentials.json` and start jobs.
         """
@@ -300,7 +355,10 @@ class Scheduler:
         if job:
             try:
                 self._spawn_job_thread(job)
-                logger.info("Triggered immediate run for user %s using existing scheduled job", user_id)
+                logger.info(
+                    "Triggered immediate run for user %s using existing scheduled job",
+                    user_id,
+                )
                 return True
             except Exception:
                 logger.exception("Failed to trigger existing job for user %s", user_id)
@@ -312,7 +370,10 @@ class Scheduler:
             user_dir = base_data_dir / user_id
             temp_job = _Job(user_id=user_id, user_dir=user_dir)
             self._spawn_job_thread(temp_job)
-            logger.info("Triggered one-off immediate run for user %s (no existing schedule)", user_id)
+            logger.info(
+                "Triggered one-off immediate run for user %s (no existing schedule)",
+                user_id,
+            )
             return True
         except Exception:
             logger.exception("Failed to trigger one-off job for user %s", user_id)

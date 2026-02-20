@@ -1,10 +1,8 @@
-﻿from pathlib import Path
-import os
-import pickle
+﻿import pickle
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import pytest
 
 from app.services import data_service
 
@@ -38,7 +36,11 @@ def test_preview_pickle_file_dataframe(tmp_path: Path):
 
     preview = data_service.preview_pickle_file(base, "user2", "df.pkl", max_rows=2)
     assert isinstance(preview, dict)
-    assert preview.get("type") == "dataframe" or preview.get("type") is None and "rows" in preview
+    assert (
+        preview.get("type") == "dataframe"
+        or preview.get("type") is None
+        and "rows" in preview
+    )
 
 
 def test_extract_series_dataframe_datetime_index(tmp_path: Path):
@@ -50,7 +52,9 @@ def test_extract_series_dataframe_datetime_index(tmp_path: Path):
     pkl = user / "series.pkl"
     df.to_pickle(pkl)
 
-    res = data_service.extract_series(base, "user3", "series.pkl", x_column=None, y_column="value", max_points=10)
+    res = data_service.extract_series(
+        base, "user3", "series.pkl", x_column=None, y_column="value", max_points=10
+    )
     assert "x" in res and "y" in res
     assert len(res["x"]) == len(res["y"]) == 5
 
@@ -61,5 +65,7 @@ def test_extract_series_list_and_ndarray(tmp_path: Path):
     user.mkdir(parents=True)
     arr = np.array([0.1, 0.2, 0.3])
     (user / "arr.pkl").write_bytes(pickle.dumps(arr))
-    res = data_service.extract_series(base, "user4", "arr.pkl", x_column=None, y_column="unused", max_points=10)
+    res = data_service.extract_series(
+        base, "user4", "arr.pkl", x_column=None, y_column="unused", max_points=10
+    )
     assert res["meta"]["shape"] == arr.shape or isinstance(res["y"], list)

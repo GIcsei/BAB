@@ -1,7 +1,8 @@
-import re
 import json
+import re
 
 from app.core.firestore_handler.Utils import parse_to_firestore
+
 
 class FirestoreQueryBuilder:
     OPERATOR_MAP = {
@@ -10,7 +11,7 @@ class FirestoreQueryBuilder:
         ">": "GREATER_THAN",
         ">=": "GREATER_THAN_OR_EQUAL",
         "<": "LESS_THAN",
-        "<=": "LESS_THAN_OR_EQUAL"
+        "<=": "LESS_THAN_OR_EQUAL",
     }
 
     def __init__(self, collection):
@@ -25,16 +26,16 @@ class FirestoreQueryBuilder:
             "fieldFilter": {
                 "field": {"fieldPath": field},
                 "op": self.OPERATOR_MAP[op],
-                "value": parse_to_firestore(value)
+                "value": parse_to_firestore(value),
             }
         }
 
     def _tokenize(self, filter_string: str):
         # Tokenizer to preserve parentheses and split by logical operators
         # Match everything: conditions, AND, OR, and parentheses
-        token_pattern = r'(\s+AND\s+|\s+OR\s+|\(|\))'
+        token_pattern = r"(\s+AND\s+|\s+OR\s+|\(|\))"
         tokens = re.split(token_pattern, filter_string)
-        
+
         # Clean up any leading/trailing spaces from tokens and remove empty tokens
         tokens = [token.strip() for token in tokens if token.strip()]
         return tokens
@@ -44,28 +45,25 @@ class FirestoreQueryBuilder:
             stack = []
             while tokens:
                 token = tokens.pop(0)
-                if token == '(':
+                if token == "(":
                     stack.append(parse(tokens))
-                elif token == ')':
+                elif token == ")":
                     break
-                elif token in ('AND', 'OR'):
+                elif token in ("AND", "OR"):
                     stack.append(token)
                 else:
                     stack.append(self._parse_condition(token))
 
             # Convert flat expression into nested structure
-            while 'OR' in stack or 'AND' in stack:
+            while "OR" in stack or "AND" in stack:
                 for i, token in enumerate(stack):
-                    if token in ('AND', 'OR'):
+                    if token in ("AND", "OR"):
                         left = stack[i - 1]
                         right = stack[i + 1]
                         combined = {
-                            "compositeFilter": {
-                                "op": token,
-                                "filters": [left, right]
-                            }
+                            "compositeFilter": {"op": token, "filters": [left, right]}
                         }
-                        stack[i - 1:i + 2] = [combined]
+                        stack[i - 1 : i + 2] = [combined]
                         break
             return stack[0]
 
@@ -85,6 +83,7 @@ class FirestoreQueryBuilder:
             }
         }
 
+
 # Example usage:
 if __name__ == "__main__":
     builder = FirestoreQueryBuilder("messages")
@@ -94,4 +93,3 @@ if __name__ == "__main__":
     )
 
     print(json.dumps(query, indent=2))
-

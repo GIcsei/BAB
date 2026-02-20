@@ -1,5 +1,5 @@
-﻿from typing import List, Optional, Dict, Any
-from dataclasses import dataclass
+﻿from dataclasses import dataclass
+from typing import Any, Dict, List, Optional
 
 
 @dataclass
@@ -10,7 +10,9 @@ class Document:
     data_fields: Optional[Dict[str, Any]] = None
 
     def __str__(self) -> str:
-        field_preview = "\n\t\t".join(f"{k}={repr(v)}" for k, v in (self.data_fields or {}).items())
+        field_preview = "\n\t\t".join(
+            f"{k}={repr(v)}" for k, v in (self.data_fields or {}).items()
+        )
         if len(field_preview) > 300:
             field_preview = field_preview[:297] + "..."
 
@@ -23,7 +25,9 @@ class Document:
 
     def __repr__(self) -> str:
         # shorter, single-line representation for debugging
-        field_preview = ", ".join(f"{k}={repr(v)}" for k, v in (self.data_fields or {}).items())
+        field_preview = ", ".join(
+            f"{k}={repr(v)}" for k, v in (self.data_fields or {}).items()
+        )
         if len(field_preview) > 60:
             field_preview = field_preview[:57] + "..."
         return f"Document(name='{self.name}', created='{self.created}', updated='{self.updated}', fields={{ {field_preview} }})"
@@ -38,7 +42,9 @@ class Document:
 
         required_keys = {"name", "createTime", "updateTime"}
         if not required_keys.issubset(set(dictionary.keys())):
-            raise ValueError("Given dictionary cannot be used as a document entry: missing required keys")
+            raise ValueError(
+                "Given dictionary cannot be used as a document entry: missing required keys"
+            )
 
         name = dictionary["name"].split("/")[-1]
         created = dictionary["createTime"]
@@ -46,7 +52,10 @@ class Document:
 
         datafields = None
         if dictionary.get("fields"):
-            datafields = {key: Document.convert_firefield(value) for key, value in dictionary["fields"].items()}
+            datafields = {
+                key: Document.convert_firefield(value)
+                for key, value in dictionary["fields"].items()
+            }
 
         return Document(name, created, updated, datafields)
 
@@ -60,7 +69,9 @@ class Document:
             "stringValue": str,
             "integerValue": int,
             "doubleValue": float,
-            "booleanValue": lambda v: v.lower() == "true" if isinstance(v, str) else bool(v),
+            "booleanValue": lambda v: (
+                v.lower() == "true" if isinstance(v, str) else bool(v)
+            ),
             "nullValue": lambda v: None,
         }
 
@@ -85,7 +96,11 @@ class Collection:
 
     def sort_by(self, field: str, reverse: bool = True):
         def sort_key(doc: Document):
-            return doc.data_fields.get(field) if (doc.data_fields and (field in doc.data_fields)) else None
+            return (
+                doc.data_fields.get(field)
+                if (doc.data_fields and (field in doc.data_fields))
+                else None
+            )
 
         self.documents = sorted(self.documents, key=sort_key, reverse=reverse)
         return self

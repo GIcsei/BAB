@@ -1,11 +1,11 @@
-from app.core.firestore_handler.QueryHandler import initialize_app
-from app.schemas.login import LoginRequest, LoginResponse
-from pathlib import Path
 import json
-import os
 import logging
+import os
+from pathlib import Path
 from typing import Optional
 
+from app.core.firestore_handler.QueryHandler import initialize_app
+from app.schemas.login import LoginRequest, LoginResponse
 from app.services.scheduler import scheduler
 
 logger = logging.getLogger(__name__)
@@ -15,7 +15,7 @@ config = {
     "authDomain": "ersterepgen.firebaseapp.com",
     "databaseURL": "https://ersterepgen.firebaseio.com/",
     "storageBucket": "ersterepgen.firebasestorage.app",
-    "projectId" : "ersterepgen",
+    "projectId": "ersterepgen",
 }
 
 firebase = initialize_app(config)
@@ -27,7 +27,12 @@ def _extract_user_id(user_obj: dict) -> Optional[str]:
     The Identity Toolkit returns 'localId' for sign-in responses; refresh responses
     may use different keys. Check common variants.
     """
-    return user_obj.get("userId") or user_obj.get("localId") or user_obj.get("user_id") or user_obj.get("uid")
+    return (
+        user_obj.get("userId")
+        or user_obj.get("localId")
+        or user_obj.get("user_id")
+        or user_obj.get("uid")
+    )
 
 
 def login_user(data: LoginRequest) -> LoginResponse:
@@ -52,7 +57,9 @@ def login_user(data: LoginRequest) -> LoginResponse:
 
         id_token = user.get("idToken")
         if not id_token:
-            logger.error("Authentication did not return idToken for email=%s", data.email)
+            logger.error(
+                "Authentication did not return idToken for email=%s", data.email
+            )
             raise ValueError("No idToken returned from authentication provider.")
 
         user_id = _extract_user_id(user)
@@ -82,7 +89,9 @@ def login_user(data: LoginRequest) -> LoginResponse:
         try:
             os.chmod(str(cred_path), 0o600)
         except Exception:
-            logger.debug("chmod on credentials file may not be supported in this environment")
+            logger.debug(
+                "chmod on credentials file may not be supported in this environment"
+            )
 
         # Register token in Firebase singleton in-memory mapping and set token as active for this session
         firebase.user_tokens[user_id] = token_copy
@@ -93,7 +102,12 @@ def login_user(data: LoginRequest) -> LoginResponse:
         target_hour = int(os.getenv("APP_JOB_HOUR", "18"))
         target_minute = int(os.getenv("APP_JOB_MINUTE", "0"))
         scheduler.start_job_for_user(user_id, user_dir, target_hour, target_minute)
-        logger.info("Scheduled daily job for user %s at %02d:%02d", user_id, target_hour, target_minute)
+        logger.info(
+            "Scheduled daily job for user %s at %02d:%02d",
+            user_id,
+            target_hour,
+            target_minute,
+        )
 
         return LoginResponse(access_token=id_token, message="Login successful")
     except Exception as e:

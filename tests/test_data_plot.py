@@ -13,9 +13,13 @@ from app.main import app
 def disable_startup(monkeypatch):
     # prevent startup code from attempting real scheduler/firebase work during tests
     if hasattr(main_mod, "scheduler"):
-        monkeypatch.setattr(main_mod.scheduler, "restore_jobs_from_dir", lambda *a, **k: None)
+        monkeypatch.setattr(
+            main_mod.scheduler, "restore_jobs_from_dir", lambda *a, **k: None
+        )
     if hasattr(main_mod, "firebase"):
-        monkeypatch.setattr(main_mod.firebase, "load_tokens_from_dir", lambda *a, **k: None)
+        monkeypatch.setattr(
+            main_mod.firebase, "load_tokens_from_dir", lambda *a, **k: None
+        )
     yield
 
 
@@ -25,7 +29,9 @@ def test_list_endpoint_and_preview_and_series(tmp_path: Path):
     os.environ["APP_USER_DATA_DIR"] = str(base)
     user = base / "alice"
     user.mkdir(parents=True)
-    df = pd.DataFrame({"date": pd.date_range("2020-01-01", periods=3), "val": [10, 20, 30]})
+    df = pd.DataFrame(
+        {"date": pd.date_range("2020-01-01", periods=3), "val": [10, 20, 30]}
+    )
     pkl = user / "d.pkl"
     df.to_pickle(pkl)
 
