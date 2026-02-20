@@ -1,18 +1,33 @@
-from pathlib import Path
+﻿from pathlib import Path
 import pickle
 import logging
-import json
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
+from functools import lru_cache
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
 import pandas as pd
 
 logger = logging.getLogger(__name__)
 
+# Thread pool for blocking I/O operations
+_executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="data_service")
+
 
 def _safe_basename(filename: str) -> str:
     # prevent path traversal - only allow simple filenames
     return Path(filename).name
+
+
+def _validate_file_size(path: Path, max_size_mb: int = 500) -> None:
+    """Prevent loading extremely large files that could exhaust memory."""
+    try:
+        size_bytes = path.stat().st_size
+        if size_bytes > max_size_mb * 1024 * 1024:
+            raise ValueError(f"File exceeds maximum allowed size of {max_size_mb}MB")
+    except FileNotFoundError:
+        raise FileNotFoundError(str(path))
 
 
 def list_pickles_for_user(base_data_dir: Path, user_id: str) -> List[Dict[str, Any]]:
@@ -35,13 +50,40 @@ def list_pickles_for_user(base_data_dir: Path, user_id: str) -> List[Dict[str, A
 
 def _try_load(path: Path) -> Any:
     """
-    Try joblib.load then pickle.load. May raise exception on corrupt/untrusted data.
-    Callers should catch and log.
+    Try to load common serialized formats in a safe fallback order:
+    - joblib.load (if joblib available)
+    - pandas.read_pickle
+    - pickle.load (fallback)
+    May raise exception on corrupt/untrusted data. Callers should catch and log.
     """
+    # Try joblib if installed (useful for sklearn objects / numpy-heavy dumps)
+    try:
+        import joblib  # type: ignore
+    except Exception:
+        joblib = None
+
+    last_exc = None
+    if joblib is not None:
+        try:
+            return joblib.load(path)
+        except Exception as exc:
+            last_exc = exc
+            logger.debug("joblib.load failed for %s: %s", path, exc)
+
     try:
         return pd.read_pickle(path)
-    except Exception:
-        raise
+    except Exception as exc:
+        last_exc = exc
+        logger.debug("pandas.read_pickle failed for %s: %s", path, exc)
+
+    # final fallback to built-in pickle
+    try:
+        with open(path, "rb") as f:
+            return pickle.load(f)
+    except Exception as exc:
+        logger.exception("All deserialization attempts failed for %s", path)
+        # re-raise the last caught exception to preserve context
+        raise last_exc or exc
 
 
 def _to_json_serializable(obj: Any, max_rows: int = 200) -> Any:
@@ -98,10 +140,24 @@ def _to_json_serializable(obj: Any, max_rows: int = 200) -> Any:
 def preview_pickle_file(base_data_dir: Path, user_id: str, filename: str, max_rows: int = 200) -> Dict[str, Any]:
     safe_name = _safe_basename(filename)
     path = base_data_dir / user_id / safe_name
+    _validate_file_size(path)
     if not path.exists() or not path.is_file():
         raise FileNotFoundError(str(path))
     obj = _try_load(path)
     return _to_json_serializable(obj, max_rows=max_rows)
+
+
+async def preview_pickle_file_async(base_data_dir: Path, user_id: str, filename: str, max_rows: int = 200) -> Dict[str, Any]:
+    """Async wrapper to prevent blocking the event loop."""
+    loop = asyncio.get_running_loop()
+    return await loop.run_in_executor(
+        _executor,
+        preview_pickle_file,
+        base_data_dir,
+        user_id,
+        filename,
+        max_rows,
+    )
 
 
 def extract_series(base_data_dir: Path, user_id: str, filename: str, x_column: Optional[str], y_column: str,
@@ -113,6 +169,7 @@ def extract_series(base_data_dir: Path, user_id: str, filename: str, x_column: O
     """
     safe_name = _safe_basename(filename)
     path = base_data_dir / user_id / safe_name
+    _validate_file_size(path)
     if not path.exists() or not path.is_file():
         raise FileNotFoundError(str(path))
 
@@ -180,3 +237,19 @@ def extract_series(base_data_dir: Path, user_id: str, filename: str, x_column: O
 
     # fallback: try to stringify and fail
     raise ValueError("Unsupported pickle object for series extraction")
+
+
+async def extract_series_async(base_data_dir: Path, user_id: str, filename: str, x_column: Optional[str], y_column: str,
+                               max_points: int = 10000) -> Dict[str, Any]:
+    """Async wrapper to prevent blocking the event loop."""
+    loop = asyncio.get_running_loop()
+    return await loop.run_in_executor(
+        _executor,
+        extract_series,
+        base_data_dir,
+        user_id,
+        filename,
+        x_column,
+        y_column,
+        max_points,
+    )
