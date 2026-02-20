@@ -1,10 +1,9 @@
-﻿from pathlib import Path
-import pickle
+﻿import asyncio
 import logging
-from typing import Any, Dict, List, Optional
-from functools import lru_cache
-import asyncio
+import pickle
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 import pandas as pd
@@ -38,11 +37,13 @@ def list_pickles_for_user(base_data_dir: Path, user_id: str) -> List[Dict[str, A
     for p in sorted(user_dir.iterdir(), key=lambda x: x.name):
         if p.is_file() and p.suffix.lower() in {".pkl", ".pickle"}:
             try:
-                out.append({
-                    "filename": p.name,
-                    "size_bytes": p.stat().st_size,
-                    "modified_ms": int(p.stat().st_mtime * 1000),
-                })
+                out.append(
+                    {
+                        "filename": p.name,
+                        "size_bytes": p.stat().st_size,
+                        "modified_ms": int(p.stat().st_mtime * 1000),
+                    }
+                )
             except Exception:
                 logger.exception("Error reading file metadata: %s", p)
     return out
@@ -100,15 +101,30 @@ def _to_json_serializable(obj: Any, max_rows: int = 200) -> Any:
             # provide schema + sample rows
             rows = obj.head(max_rows).to_dict(orient="records")
             columns = [{"name": c, "dtype": str(obj[c].dtype)} for c in obj.columns]
-            return {"type": "dataframe", "columns": columns, "rows": rows, "n_rows": int(obj.shape[0])}
+            return {
+                "type": "dataframe",
+                "columns": columns,
+                "rows": rows,
+                "n_rows": int(obj.shape[0]),
+            }
         if isinstance(obj, pd.Series):
             values = obj.head(max_rows).tolist()
             index = obj.head(max_rows).index.tolist()
-            return {"type": "series", "index": index, "values": values, "n_rows": int(obj.shape[0])}
+            return {
+                "type": "series",
+                "index": index,
+                "values": values,
+                "n_rows": int(obj.shape[0]),
+            }
         if isinstance(obj, np.ndarray):
             flat = obj.ravel()
             lst = flat[:max_rows].tolist()
-            return {"type": "ndarray", "shape": obj.shape, "values": lst, "n_items": int(flat.size)}
+            return {
+                "type": "ndarray",
+                "shape": obj.shape,
+                "values": lst,
+                "n_items": int(flat.size),
+            }
         if isinstance(obj, (list, tuple)):
             # attempt to convert elements
             def conv_item(i):
@@ -120,7 +136,12 @@ def _to_json_serializable(obj: Any, max_rows: int = 200) -> Any:
                     return str(i)
                 except Exception:
                     return None
-            return {"type": "list", "sample": [conv_item(x) for x in list(obj)[:max_rows]], "length": len(obj)}
+
+            return {
+                "type": "list",
+                "sample": [conv_item(x) for x in list(obj)[:max_rows]],
+                "length": len(obj),
+            }
         if isinstance(obj, dict):
             # shallow convert
             sample = {}
@@ -129,7 +150,11 @@ def _to_json_serializable(obj: Any, max_rows: int = 200) -> Any:
                     sample[k] = v
                 else:
                     sample[k] = str(type(v))
-            return {"type": "dict", "sample_keys": list(sample.keys()), "sample": sample}
+            return {
+                "type": "dict",
+                "sample_keys": list(sample.keys()),
+                "sample": sample,
+            }
         # fallback
         return {"type": "unknown", "repr": str(obj)}
     except Exception:
@@ -137,7 +162,9 @@ def _to_json_serializable(obj: Any, max_rows: int = 200) -> Any:
         return {"type": "error", "repr": str(obj)}
 
 
-def preview_pickle_file(base_data_dir: Path, user_id: str, filename: str, max_rows: int = 200) -> Dict[str, Any]:
+def preview_pickle_file(
+    base_data_dir: Path, user_id: str, filename: str, max_rows: int = 200
+) -> Dict[str, Any]:
     safe_name = _safe_basename(filename)
     path = base_data_dir / user_id / safe_name
     _validate_file_size(path)
@@ -147,7 +174,9 @@ def preview_pickle_file(base_data_dir: Path, user_id: str, filename: str, max_ro
     return _to_json_serializable(obj, max_rows=max_rows)
 
 
-async def preview_pickle_file_async(base_data_dir: Path, user_id: str, filename: str, max_rows: int = 200) -> Dict[str, Any]:
+async def preview_pickle_file_async(
+    base_data_dir: Path, user_id: str, filename: str, max_rows: int = 200
+) -> Dict[str, Any]:
     """Async wrapper to prevent blocking the event loop."""
     loop = asyncio.get_running_loop()
     return await loop.run_in_executor(
@@ -160,8 +189,14 @@ async def preview_pickle_file_async(base_data_dir: Path, user_id: str, filename:
     )
 
 
-def extract_series(base_data_dir: Path, user_id: str, filename: str, x_column: Optional[str], y_column: str,
-                   max_points: int = 10000) -> Dict[str, Any]:
+def extract_series(
+    base_data_dir: Path,
+    user_id: str,
+    filename: str,
+    x_column: Optional[str],
+    y_column: str,
+    max_points: int = 10000,
+) -> Dict[str, Any]:
     """
     Return {x: [...], y: [...], meta: {...}} suitable for plotting.
     If x_column is None and input is Series or DataFrame with datetime index, index -> x is used.
@@ -205,24 +240,40 @@ def extract_series(base_data_dir: Path, user_id: str, filename: str, x_column: O
         length = min(len(y), max_points)
         x_vals = pd.Series(x).head(length).astype(str).tolist()
         y_vals = y.head(length).tolist()
-        return {"x": x_vals, "y": y_vals, "meta": {"y_column": y_column, "n_points": length}}
+        return {
+            "x": x_vals,
+            "y": y_vals,
+            "meta": {"y_column": y_column, "n_points": length},
+        }
 
     if isinstance(obj, pd.Series):
         s = obj.dropna().astype(float)
         x_vals = s.head(max_points).index.astype(str).tolist()
         y_vals = s.head(max_points).tolist()
-        return {"x": x_vals, "y": y_vals, "meta": {"series_name": getattr(s, "name", None), "n_points": len(y_vals)}}
+        return {
+            "x": x_vals,
+            "y": y_vals,
+            "meta": {"series_name": getattr(s, "name", None), "n_points": len(y_vals)},
+        }
 
     if isinstance(obj, np.ndarray):
         arr = obj.flatten()
         length = min(arr.size, max_points)
-        return {"x": list(range(length)), "y": arr[:length].astype(float).tolist(), "meta": {"shape": obj.shape}}
+        return {
+            "x": list(range(length)),
+            "y": arr[:length].astype(float).tolist(),
+            "meta": {"shape": obj.shape},
+        }
 
     if isinstance(obj, (list, tuple)):
         # try numeric list
         arr = np.array(obj, dtype=float)
         length = min(arr.size, max_points)
-        return {"x": list(range(length)), "y": arr[:length].tolist(), "meta": {"kind": "list"}}
+        return {
+            "x": list(range(length)),
+            "y": arr[:length].tolist(),
+            "meta": {"kind": "list"},
+        }
 
     if isinstance(obj, dict):
         # try to find a single numeric array inside
@@ -230,7 +281,11 @@ def extract_series(base_data_dir: Path, user_id: str, filename: str, x_column: O
             try:
                 arr = np.array(v, dtype=float)
                 length = min(arr.size, max_points)
-                return {"x": list(range(length)), "y": arr[:length].tolist(), "meta": {"key_used": k}}
+                return {
+                    "x": list(range(length)),
+                    "y": arr[:length].tolist(),
+                    "meta": {"key_used": k},
+                }
             except Exception:
                 continue
         raise ValueError("Could not extract numeric series from dict")
@@ -239,8 +294,14 @@ def extract_series(base_data_dir: Path, user_id: str, filename: str, x_column: O
     raise ValueError("Unsupported pickle object for series extraction")
 
 
-async def extract_series_async(base_data_dir: Path, user_id: str, filename: str, x_column: Optional[str], y_column: str,
-                               max_points: int = 10000) -> Dict[str, Any]:
+async def extract_series_async(
+    base_data_dir: Path,
+    user_id: str,
+    filename: str,
+    x_column: Optional[str],
+    y_column: str,
+    max_points: int = 10000,
+) -> Dict[str, Any]:
     """Async wrapper to prevent blocking the event loop."""
     loop = asyncio.get_running_loop()
     return await loop.run_in_executor(

@@ -1,10 +1,11 @@
-﻿from datetime import datetime, date
-import glob
-from os import path
-import re
-import os
-import pandas as pd
+﻿import glob
 import logging
+import os
+import re
+from datetime import date, datetime
+from os import path
+
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 
@@ -45,13 +46,25 @@ def get_all_files_from_folder(folder, extension):
     return files
 
 
-class reportFormatter():
+class reportFormatter:
     FOLDER = r"D:\Erste"
     fileName = r"Riport.xlsx"
     COLUMNS = [
-        "Instrumentum", "V/E", "Készletnap", "Darabszám", "Beker. ár",
-        "Bek. árfolyamérték", "Bek. költség", "Piaci ár", "P&L/db HUF",
-        "Bruttó P&L HUF", "Nettó P&L HUF", "Hozam %", "Készletcsoport", "Készlet ÜK", "Árfolyam"
+        "Instrumentum",
+        "V/E",
+        "Készletnap",
+        "Darabszám",
+        "Beker. ár",
+        "Bek. árfolyamérték",
+        "Bek. költség",
+        "Piaci ár",
+        "P&L/db HUF",
+        "Bruttó P&L HUF",
+        "Nettó P&L HUF",
+        "Hozam %",
+        "Készletcsoport",
+        "Készlet ÜK",
+        "Árfolyam",
     ]
     TIME_STAMP = date.today()
 
@@ -80,9 +93,13 @@ class reportFormatter():
             strTime = self.TIME_STAMP.strftime("%Y%m%d_%H%M")
         try:
             if zipped:
-                self.data.to_pickle(os.path.join(self.FOLDER, f'innerValue_{strTime}.pkl'))
+                self.data.to_pickle(
+                    os.path.join(self.FOLDER, f"innerValue_{strTime}.pkl")
+                )
             else:
-                self.data.to_excel(os.path.join(self.FOLDER, f'innerValue_{strTime}.xlsx'), index=False)
+                self.data.to_excel(
+                    os.path.join(self.FOLDER, f"innerValue_{strTime}.xlsx"), index=False
+                )
         except Exception:
             logger.exception("Failed to save formatted data to %s", self.FOLDER)
             raise
@@ -94,9 +111,11 @@ class reportFormatter():
         try:
             df.columns = self.COLUMNS
         except Exception:
-            logger.warning("Column count mismatch while assigning COLUMNS; keeping original columns")
+            logger.warning(
+                "Column count mismatch while assigning COLUMNS; keeping original columns"
+            )
         df.reset_index(inplace=True, drop=True)
-        df['Date_of_import'] = self.TIME_STAMP
+        df["Date_of_import"] = self.TIME_STAMP
         # show a small preview in logs instead of calling undefined print()
         try:
             logger.debug("Formatted data preview:\n%s", df.head().to_string())
@@ -115,7 +134,7 @@ class reportFormatter():
             df.drop(df.head(6).index, inplace=True)
         except Exception:
             logger.debug("Failed to drop head rows - possibly smaller dataframe")
-        df.dropna(axis=1, how='all', inplace=True)
+        df.dropna(axis=1, how="all", inplace=True)
         if df.shape[1] > 0:
             df.dropna(subset=[df.columns[0]], inplace=True)
         if df.shape[1] > 1:
@@ -125,14 +144,18 @@ class reportFormatter():
         currency_values = {"HUF", "USD", "EUR"}
         df = self.data
         try:
-            cols_to_drop = [col for col in df.columns if df[col].dropna().isin(currency_values).all()]
+            cols_to_drop = [
+                col
+                for col in df.columns
+                if df[col].dropna().isin(currency_values).all()
+            ]
         except Exception:
             cols_to_drop = []
         if len(cols_to_drop) == 0:
             return
         # move first matching currency column into NewCurrency and then drop the originals
         try:
-            df['NewCurrency'] = df[cols_to_drop[0]]
+            df["NewCurrency"] = df[cols_to_drop[0]]
             df.drop(columns=cols_to_drop, inplace=True)
         except Exception:
             logger.exception("Failed while extracting currency columns")

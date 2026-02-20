@@ -1,9 +1,9 @@
-﻿import os
-import json
-import base64
+﻿import base64
 import hashlib
+import json
 import logging
-from typing import Optional, Dict
+import os
+from typing import Dict, Optional
 
 try:
     from cryptography.fernet import Fernet, InvalidToken
@@ -58,7 +58,9 @@ def _ensure_key(config_dir: str) -> bytes:
             return key_bytes
         except Exception:
             # try decode as plaintext -> generate stable key from it
-            key = base64.urlsafe_b64encode(hashlib.sha256(env_key.encode("utf-8")).digest())
+            key = base64.urlsafe_b64encode(
+                hashlib.sha256(env_key.encode("utf-8")).digest()
+            )
             return key
 
     key_path = _key_path_for_dir(config_dir)
@@ -83,8 +85,13 @@ def _ensure_key(config_dir: str) -> bytes:
     return key
 
 
-def save_user_credentials(user_id: str, username: str, account_number: str, password: str,
-                          config_dir: Optional[str] = None) -> None:
+def save_user_credentials(
+    user_id: str,
+    username: str,
+    account_number: str,
+    password: str,
+    config_dir: Optional[str] = None,
+) -> None:
     """
     Save credentials for a given user_id encrypted and tagged for ErsteNetBroker.
     Creates per-user credential file with restrictive permissions.
@@ -99,22 +106,20 @@ def save_user_credentials(user_id: str, username: str, account_number: str, pass
     key = _ensure_key(config_dir)
     f = Fernet(key)
 
-    payload = json.dumps({
-        "class": _CLASS_TAG,
-        "user_id": user_id,
-        "username": username,
-        "account_number": account_number,
-        "password": password
-    }).encode("utf-8")
+    payload = json.dumps(
+        {
+            "class": _CLASS_TAG,
+            "user_id": user_id,
+            "username": username,
+            "account_number": account_number,
+            "password": password,
+        }
+    ).encode("utf-8")
 
     token = f.encrypt(payload)
     token_b64 = base64.urlsafe_b64encode(token).decode("utf-8")
 
-    cred_blob = {
-        "class": _CLASS_TAG,
-        "user_id": user_id,
-        "token": token_b64
-    }
+    cred_blob = {"class": _CLASS_TAG, "user_id": user_id, "token": token_b64}
 
     cred_path = _cred_path_for_dir(config_dir, user_id)
     # write with restrictive permissions
@@ -133,7 +138,9 @@ def save_user_credentials(user_id: str, username: str, account_number: str, pass
             raise
 
 
-def load_user_credentials(user_id: str, config_dir: Optional[str] = None) -> Optional[Dict[str, str]]:
+def load_user_credentials(
+    user_id: str, config_dir: Optional[str] = None
+) -> Optional[Dict[str, str]]:
     """
     Load and decrypt credentials stored for the given user_id.
     Returns dict with keys: username, account_number, password or None if not available or invalid.
@@ -145,7 +152,9 @@ def load_user_credentials(user_id: str, config_dir: Optional[str] = None) -> Opt
 
     cred_path = _cred_path_for_dir(config_dir, user_id)
     if not os.path.exists(cred_path):
-        logger.debug("Credential file not present for user %s in %s", user_id, config_dir)
+        logger.debug(
+            "Credential file not present for user %s in %s", user_id, config_dir
+        )
         return None
 
     try:
@@ -156,7 +165,9 @@ def load_user_credentials(user_id: str, config_dir: Optional[str] = None) -> Opt
         return None
 
     if cred_blob.get("class") != _CLASS_TAG or cred_blob.get("user_id") != user_id:
-        logger.warning("Credential file tags do not match expected values for user %s", user_id)
+        logger.warning(
+            "Credential file tags do not match expected values for user %s", user_id
+        )
         return None
 
     token_b64 = cred_blob.get("token")
@@ -167,7 +178,9 @@ def load_user_credentials(user_id: str, config_dir: Optional[str] = None) -> Opt
     try:
         token = base64.urlsafe_b64decode(token_b64.encode("utf-8"))
     except Exception:
-        logger.exception("Failed to decode token from credential file for user %s", user_id)
+        logger.exception(
+            "Failed to decode token from credential file for user %s", user_id
+        )
         return None
 
     try:
@@ -180,7 +193,10 @@ def load_user_credentials(user_id: str, config_dir: Optional[str] = None) -> Opt
         f = Fernet(key)
         payload = f.decrypt(token)
     except InvalidToken:
-        logger.warning("Invalid token or wrong key while decrypting credentials for user %s", user_id)
+        logger.warning(
+            "Invalid token or wrong key while decrypting credentials for user %s",
+            user_id,
+        )
         return None
     except Exception:
         logger.exception("Error while decrypting credentials for user %s", user_id)
@@ -194,10 +210,12 @@ def load_user_credentials(user_id: str, config_dir: Optional[str] = None) -> Opt
         return {
             "username": data.get("username"),
             "account_number": data.get("account_number"),
-            "password": data.get("password")
+            "password": data.get("password"),
         }
     except Exception:
-        logger.exception("Failed to parse decrypted credential payload for user %s", user_id)
+        logger.exception(
+            "Failed to parse decrypted credential payload for user %s", user_id
+        )
         return None
 
 

@@ -18,7 +18,7 @@ def get_current_user_id(creds: HTTPAuthorizationCredentials = Depends(security))
     if not token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Missing or invalid Authorization header"
+            detail="Missing or invalid Authorization header",
         )
 
     try:
@@ -40,4 +40,3 @@ def get_current_user_id(creds: HTTPAuthorizationCredentials = Depends(security))
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired token"
     )
-

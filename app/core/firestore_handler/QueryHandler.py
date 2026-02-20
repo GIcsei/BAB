@@ -1,13 +1,11 @@
-﻿from datetime import date
-import datetime
-from pathlib import Path
-import requests
+﻿import json
 import logging
+from pathlib import Path
+
+import requests
 
 from app.core.firestore_handler.FirestoreService import FirestoreService
 from app.core.firestore_handler.User import Auth
-
-import json
 
 logger = logging.getLogger(__name__)
 
@@ -15,11 +13,14 @@ logger = logging.getLogger(__name__)
 def initialize_app(config):
     return Firebase(config)
 
+
 class Firebase:
-    """ Firebase Interface """
+    """Firebase Interface"""
+
     _instance = None
     _database = None
     _auth_instance = None
+
     def __new__(cls, config=None):
         if cls._instance is not None:
             return cls._instance
@@ -35,11 +36,10 @@ class Firebase:
         self.requests = requests.Session()
         self.token = None
         self.user_tokens = {}  # in-memory mapping: user_id -> token dict
-        for scheme in ('http://', 'https://'):
+        for scheme in ("http://", "https://"):
             self.requests.mount(scheme, requests.adapters.HTTPAdapter(max_retries=3))
 
-
-    def auth(self, token_json : Path):
+    def auth(self, token_json: Path):
         if self._auth_instance is None:
             self._auth_instance = Auth(self.api_key, self.requests)
         token = None
@@ -47,7 +47,7 @@ class Firebase:
         old_token = self.load_login_token()
         if old_token:
             try:
-                token = self._auth_instance.refresh(old_token['refreshToken'])
+                token = self._auth_instance.refresh(old_token["refreshToken"])
             except Exception:
                 token = old_token
         self.token = token
@@ -70,11 +70,13 @@ class Firebase:
         if self.TOKEN_FILE.exists():
             with open(self.TOKEN_FILE, "r") as f:
                 return json.load(f)
-        return None 
+        return None
 
     def database(self):
         if self._auth_instance is None:
-            raise ValueError("No instance of AUTH had been made yet! Cannot join to database...")
+            raise ValueError(
+                "No instance of AUTH had been made yet! Cannot join to database..."
+            )
         if self._database is None:
             self._database = FirestoreService(self)
         return self._database
@@ -113,10 +115,14 @@ class Firebase:
                     refreshed = self._auth_instance.refresh(stored["refreshToken"])
                     # normalize refreshed dict
                     normalized = {
-                        "userId": refreshed.get("userId") or refreshed.get("user_id") or stored.get("userId"),
-                        "idToken": refreshed.get("idToken") or refreshed.get("id_token"),
-                        "refreshToken": refreshed.get("refreshToken") or refreshed.get("refresh_token"),
-                        "email": stored.get("email")
+                        "userId": refreshed.get("userId")
+                        or refreshed.get("user_id")
+                        or stored.get("userId"),
+                        "idToken": refreshed.get("idToken")
+                        or refreshed.get("id_token"),
+                        "refreshToken": refreshed.get("refreshToken")
+                        or refreshed.get("refresh_token"),
+                        "email": stored.get("email"),
                     }
                     stored = normalized
                     # write back refreshed token to credentials.json
@@ -146,9 +152,12 @@ class Firebase:
         """
         self.user_tokens.pop(user_id, None)
         # If the active token pointed to this user, unset it
-        if self.token and (self.token.get("userId") == user_id or self.token.get("idToken") == self.user_tokens.get(user_id, {}).get("idToken")):
+        if self.token and (
+            self.token.get("userId") == user_id
+            or self.token.get("idToken")
+            == self.user_tokens.get(user_id, {}).get("idToken")
+        ):
             self.token = None
-
 
     def verify_id_token(self, id_token: str):
         """
@@ -179,26 +188,23 @@ class Firebase:
                 return uid
         return None
 
+
 # Example usage
 if __name__ == "__main__":
     # User credentials
     email = "REDACTED_EMAIL"  # Replace with a test email
-    password = "REDACTED_PASSWORD"   # Replace with a strong password
+    password = "REDACTED_PASSWORD"  # Replace with a strong password
     # Replace these with your actual Firebase project settings
     config = {
         "apiKey": "REDACTED_FIREBASE_API_KEY",
         "authDomain": "REDACTED_PROJECT.firebaseapp.com",
         "databaseURL": "https://REDACTED_PROJECT.firebaseio.com/",
         "storageBucket": "REDACTED_PROJECT.firebasestorage.app",
-        "projectId" : "REDACTED_PROJECT",
+        "projectId": "REDACTED_PROJECT",
     }
     token = None
     # Data for the POST request to Firebase Authentication REST API
-    data = {
-        'email': email,
-        'password': password,
-        'returnSecureToken': True
-    }
+    data = {"email": email, "password": password, "returnSecureToken": True}
 
     # 🔹 Initialize Firebase Authentication (Pyrebase)
     firebase = initialize_app(config)
@@ -209,13 +215,15 @@ if __name__ == "__main__":
         logger.info("Signing in again...")
         result = auth_client.sign_in_with_email_and_password(email, password)
     logger.info(db.get_document("users"))
-    
-    #db.child("messages").push(data={},token = result["idToken"])
-    changed_doc = db.run_query('messages',f'uid == {result["userId"]}')
+
+    # db.child("messages").push(data={},token = result["idToken"])
+    changed_doc = db.run_query("messages", f'uid == {result["userId"]}')
     logger.info(changed_doc)
     timeStamp = 1745015393000
-    changed_doc = db.run_query('messages',f'uid == {result["userId"]} AND timestamp >= {timeStamp}')
-   
+    changed_doc = db.run_query(
+        "messages", f'uid == {result["userId"]} AND timestamp >= {timeStamp}'
+    )
+
     logger.info("\n\n\n")
     data = db.get_document("messages")
-    logger.info(data.sort_by('timestamp'))
+    logger.info(data.sort_by("timestamp"))

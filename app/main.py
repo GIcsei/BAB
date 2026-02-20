@@ -3,16 +3,18 @@
 # To run the code in dev mode:
 # source .venv/bin/activate
 # fastapi dev login.py
-from fastapi import FastAPI
-from pathlib import Path
+import logging
 import os
 import sys
-import logging
 from logging.handlers import RotatingFileHandler
+from pathlib import Path
 
-from app.routers import login, data_plot, netbank_credentials
+from fastapi import FastAPI
+
+from app.routers import data_plot, login, netbank_credentials
+from app.services.login_service import \
+    firebase  # reuse the already-initialized firebase singleton
 from app.services.scheduler import scheduler
-from app.services.login_service import firebase  # reuse the already-initialized firebase singleton
 
 app = FastAPI(title="Bank analysis backend")
 
@@ -49,7 +51,11 @@ def configure_logging():
     sh = logging.StreamHandler(sys.stdout)
     sh.setFormatter(formatter)
     root_logger.addHandler(sh)
-    root_logger.debug("Logging configured with level %s, output to %s", log_level, log_file or "stdout")
+    root_logger.debug(
+        "Logging configured with level %s, output to %s",
+        log_level,
+        log_file or "stdout",
+    )
 
 
 @app.on_event("startup")
@@ -69,8 +75,12 @@ async def startup_event():
     target_minute = int(os.getenv("APP_JOB_MINUTE", "0"))
 
     logger.debug("Using base data directory: %s", base_data_dir)
-    logger.debug("Scheduling jobs daily at %02d:%02d (local container time)", target_hour, target_minute)
-    
+    logger.debug(
+        "Scheduling jobs daily at %02d:%02d (local container time)",
+        target_hour,
+        target_minute,
+    )
+
     # restore jobs (creates per-user folders if needed) using daily schedule
     scheduler.restore_jobs_from_dir(base_data_dir, target_hour, target_minute)
     logger.info("Restored scheduled jobs from %s", base_data_dir)

@@ -1,23 +1,25 @@
-﻿from datetime import datetime
-import glob
+﻿import glob
+import logging
 import os
 import os.path
 import time
-import logging
+from datetime import datetime
 from typing import Optional
 
 from selenium import webdriver
-from selenium.webdriver.edge.options import Options
-from selenium.webdriver.common.by import By
-from selenium.webdriver.remote.webelement import WebElement
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, WebDriverException
 from selenium.webdriver import ActionChains
+from selenium.webdriver.common.by import By
+from selenium.webdriver.edge.options import Options
+from selenium.webdriver.remote.webelement import WebElement
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
 
 from app.core.firestore_handler.QueryHandler import Firebase
-from app.core.netbank.utils import get_all_files_from_folder, extract_date_from_filename, is_today_in, reportFormatter
 from app.core.netbank.credentials import load_user_credentials
+from app.core.netbank.utils import (extract_date_from_filename,
+                                    get_all_files_from_folder, is_today_in,
+                                    reportFormatter)
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +31,12 @@ class ErsteNetBroker:
     save them via the secured FastAPI endpoint implemented in app.routers.netbank_credentials.
     """
 
-    def __init__(self, user_id: str, saveFolder: str = "/tmp/Erste", config_dir: Optional[str] = None):
+    def __init__(
+        self,
+        user_id: str,
+        saveFolder: str = "/tmp/Erste",
+        config_dir: Optional[str] = None,
+    ):
         if not user_id:
             raise ValueError("user_id is required to load per-user credentials")
         self.get_report_url = "https://netbroker.erstebroker.hu/netbroker/Logon.aspx"
@@ -50,29 +57,39 @@ class ErsteNetBroker:
         self.__PASSWORD = creds.get("password")
 
         if not (self.__USERNAME and self.__ACCOUNT_NUM and self.__PASSWORD):
-            raise RuntimeError("Incomplete credentials loaded for ErsteNetBroker for this user")
+            raise RuntimeError(
+                "Incomplete credentials loaded for ErsteNetBroker for this user"
+            )
 
         self._config_edge()
 
-    def __find_and_click(self, by: str = By.NAME, name: str = "", to_click: bool = True) -> WebElement:
+    def __find_and_click(
+        self, by: str = By.NAME, name: str = "", to_click: bool = True
+    ) -> WebElement:
         """Find element, optionally wait until clickable and click it."""
         if not name:
             raise ValueError("Element name must not be empty")
         delay = 20  # seconds
         try:
-            my_elem = WebDriverWait(self.driver, delay).until(EC.presence_of_element_located((by, name)))
+            my_elem = WebDriverWait(self.driver, delay).until(
+                EC.presence_of_element_located((by, name))
+            )
         except TimeoutException:
             raise AttributeError(f"Element not found: {name}")
         if to_click:
-            ActionChains(self.driver).scroll_to_element(my_elem).move_to_element(my_elem).perform()
-            my_elem = WebDriverWait(self.driver, delay).until(EC.element_to_be_clickable((by, name)))
+            ActionChains(self.driver).scroll_to_element(my_elem).move_to_element(
+                my_elem
+            ).perform()
+            my_elem = WebDriverWait(self.driver, delay).until(
+                EC.element_to_be_clickable((by, name))
+            )
             my_elem.click()
         return my_elem
 
     def __wait_for_page(self, timeout=20):
         """
         Waits until 'default.aspx' is in the current URL.
-    
+
         Args:
             driver: Selenium WebDriver instance
             timeout: maximum wait time in seconds
@@ -111,14 +128,17 @@ class ErsteNetBroker:
         edge_options.add_experimental_option("excludeSwitches", ["enable-automation"])
         edge_options.add_experimental_option("useAutomationExtension", False)
         edge_options.add_argument("--disable-dev-shm-usage")
-        edge_options.add_experimental_option("prefs", {
-            'download.default_directory': self.__SAVE_TO,
-            'download.prompt_for_download': False,
-            'download.directory_upgrade': True,
-            'safebrowsing.enabled': False,
-            'profile.default_content_settings.popups': 0,
-            'profile.default_content_setting_values.automatic_downloads': 1,
-        })
+        edge_options.add_experimental_option(
+            "prefs",
+            {
+                "download.default_directory": self.__SAVE_TO,
+                "download.prompt_for_download": False,
+                "download.directory_upgrade": True,
+                "safebrowsing.enabled": False,
+                "profile.default_content_settings.popups": 0,
+                "profile.default_content_setting_values.automatic_downloads": 1,
+            },
+        )
 
         # Ensure save folder exists
         try:
@@ -132,14 +152,18 @@ class ErsteNetBroker:
             raise
 
         try:
-            self.driver = webdriver.Remote(options=edge_options, command_executor="http://selenium:4444")
+            self.driver = webdriver.Remote(
+                options=edge_options, command_executor="http://selenium:4444"
+            )
             logger.debug("Edge WebDriver started")
         except WebDriverException:
             # Surface a useful error to logs for container environments
-            logger.exception("Failed to start Edge WebDriver. Ensure browser and driver are installed and available in the container")
+            logger.exception(
+                "Failed to start Edge WebDriver. Ensure browser and driver are installed and available in the container"
+            )
             raise
 
-    def _renameDownloadedFile(self, timeout = 180) -> str:
+    def _renameDownloadedFile(self, timeout=180) -> str:
         """Wait for the default download name and rename it with timestamp."""
         download_folder = self.__SAVE_TO
         end_time = time.time() + timeout
@@ -163,7 +187,9 @@ class ErsteNetBroker:
             time.sleep(1)
 
         if has_timeout:
-            raise TimeoutError(f"No downloaded file appeared in {download_folder} within {timeout} seconds")
+            raise TimeoutError(
+                f"No downloaded file appeared in {download_folder} within {timeout} seconds"
+            )
 
         newFileName = f'Riport_{datetime.now().strftime("%Y%m%d_%H%M")}.xls'
         new_path = os.path.join(self.__SAVE_TO, newFileName)
@@ -175,13 +201,15 @@ class ErsteNetBroker:
         """Handle 'already logged in' page by clicking the 'Tovább' button."""
         logger.info("Already logged in on another session. Attempting to resolve...")
         try:
-            self.__find_and_click(By.NAME, 'ctl18$Button1')
+            self.__find_and_click(By.NAME, "ctl18$Button1")
             time.sleep(2)
             if "alreadyloggedin" in self.driver.current_url.lower():
                 logger.info("Transaction code page reached; user must supply code")
                 return True
             else:
-                logger.error("Did not reach transaction code page after resolving 'already logged in'")
+                logger.error(
+                    "Did not reach transaction code page after resolving 'already logged in'"
+                )
                 return False
         except Exception:
             logger.exception("Error while handling already-logged-in page")
@@ -189,7 +217,10 @@ class ErsteNetBroker:
 
     def _handle_otp_Selenium(self, timestamp: int) -> bool:
         """Handle 2FA by obtaining a code from Firestore and submitting it."""
-        logger.info("Two-factor authentication required; checking for OTP messages since ts=%s", timestamp)
+        logger.info(
+            "Two-factor authentication required; checking for OTP messages since ts=%s",
+            timestamp,
+        )
         otp_code = self._checkForCode(timestamp)
         logger.debug("OTP code retrieved: %s", "REDACTED" if otp_code else "None")
         if otp_code is None:
@@ -197,16 +228,20 @@ class ErsteNetBroker:
             return False
 
         try:
-            otp_input = self.__find_and_click(By.NAME, 'ctl17$txtSMS', False)
+            otp_input = self.__find_and_click(By.NAME, "ctl17$txtSMS", False)
             otp_input.send_keys(otp_code)
-            self.__find_and_click(By.NAME, 'ctl17$btnGo')
+            self.__find_and_click(By.NAME, "ctl17$btnGo")
             logger.debug("Submitted OTP code, waiting for landing page")
-            logger.debug("Current URL after submitting OTP: %s", self.driver.current_url)
+            logger.debug(
+                "Current URL after submitting OTP: %s", self.driver.current_url
+            )
             if self.__wait_for_page(timeout=30):
                 logger.info("get_report flow: OTP accepted and landing page reached")
                 return True
             else:
-                logger.warning("get_report flow: OTP may be incorrect or session expired")
+                logger.warning(
+                    "get_report flow: OTP may be incorrect or session expired"
+                )
                 return False
         except Exception:
             logger.exception("Exception while submitting OTP")
@@ -221,18 +256,24 @@ class ErsteNetBroker:
             self.driver.get(self.get_report_url)
 
             # Fill credentials
-            self.__find_and_click(By.NAME, "ctl04$un", to_click=False).send_keys(self.__USERNAME)
-            self.__find_and_click(By.NAME, "ctl04$uk", to_click=False).send_keys(self.__ACCOUNT_NUM)
-            self.__find_and_click(By.NAME, "ctl04$pw", to_click=False).send_keys(self.__PASSWORD)
+            self.__find_and_click(By.NAME, "ctl04$un", to_click=False).send_keys(
+                self.__USERNAME
+            )
+            self.__find_and_click(By.NAME, "ctl04$uk", to_click=False).send_keys(
+                self.__ACCOUNT_NUM
+            )
+            self.__find_and_click(By.NAME, "ctl04$pw", to_click=False).send_keys(
+                self.__PASSWORD
+            )
 
             # Click login
             self.__find_and_click(By.NAME, "ctl04$btnLogon")
             no_error = True
 
             if "checksession" in self.driver.current_url.lower():
-            #     no_error = self._handle_already_logged_in_Selenium()
+                #     no_error = self._handle_already_logged_in_Selenium()
 
-            # if no_error:
+                # if no_error:
                 no_error = self._handle_otp_Selenium(timestamp)
 
             if not no_error:
@@ -244,7 +285,9 @@ class ErsteNetBroker:
             result_name = self._renameDownloadedFile()
             logger.info("Report downloaded and renamed to %s", result_name)
             try:
-                formatter = reportFormatter(fileName=result_name, fileLoc=self.__SAVE_TO)
+                formatter = reportFormatter(
+                    fileName=result_name, fileLoc=self.__SAVE_TO
+                )
                 formatter.save(True)
             except Exception:
                 logger.exception("Failed to format/save report for %s", result_name)
@@ -263,10 +306,17 @@ class ErsteNetBroker:
 
     def download_report(self):
         """Navigate the UI to export the report to Excel."""
-        self.__find_and_click(By.XPATH, "//td[@class='menuitem']/a/div[@class='menuitemtext' and text()='Riportok']")
-        self.__find_and_click(By.XPATH, "//a[@class='ReportTreeNode' and text()='Riportok']")
+        self.__find_and_click(
+            By.XPATH,
+            "//td[@class='menuitem']/a/div[@class='menuitemtext' and text()='Riportok']",
+        )
+        self.__find_and_click(
+            By.XPATH, "//a[@class='ReportTreeNode' and text()='Riportok']"
+        )
         self.__find_and_click(By.XPATH, "//a[text()='Készletinformációk']")
-        self.__find_and_click(By.NAME, 'ctl_Default$ContentCtl$ModuleCtl$btnExportExcel')
+        self.__find_and_click(
+            By.NAME, "ctl_Default$ContentCtl$ModuleCtl$btnExportExcel"
+        )
 
     def _checkForCode(self, timeStamp: int) -> Optional[str]:
         """
@@ -288,8 +338,10 @@ class ErsteNetBroker:
         retry_times = 30
         while retry_times > 0:
             try:
-                changed_doc = db.run_query('messages', f'uid == {token["userId"]} AND timestamp >= {timeStamp}')
-                if (hasattr(changed_doc, "documents") and changed_doc.documents):
+                changed_doc = db.run_query(
+                    "messages", f'uid == {token["userId"]} AND timestamp >= {timeStamp}'
+                )
+                if hasattr(changed_doc, "documents") and changed_doc.documents:
                     doc = changed_doc.documents[0]
                     ts_field = doc.data_fields.get("timestamp")
                     if ts_field and ts_field > timeStamp:
@@ -309,4 +361,3 @@ class ErsteNetBroker:
 
         logger.debug("Timed out waiting for OTP code (timestamp=%s)", timeStamp)
         return None
-

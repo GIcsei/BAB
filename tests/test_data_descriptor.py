@@ -1,6 +1,6 @@
 ﻿import pytest
 
-from app.core.firestore_handler.DataDescriptor import Document, Collection
+from app.core.firestore_handler.DataDescriptor import Document
 
 
 def test_convert_firefield_string():
