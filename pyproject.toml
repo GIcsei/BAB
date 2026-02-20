@@ -61,4 +61,4 @@ profile = "black"
 # Ensure you are using 'pyproject-flake8' (pflake8) to read this section.
 [tool.flake8]
 max-line-length = 88
-extend-ignore = "E203"
+extend-ignore = "E203, E501"

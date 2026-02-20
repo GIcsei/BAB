@@ -12,9 +12,9 @@ from pathlib import Path
 from fastapi import FastAPI
 
 from app.routers import data_plot, login, netbank_credentials
-from app.services.login_service import (
+from app.services.login_service import (  # reuse the already-initialized firebase singleton
     firebase,
-)  # reuse the already-initialized firebase singleton
+)
 from app.services.scheduler import scheduler
 
 app = FastAPI(title="Bank analysis backend")
