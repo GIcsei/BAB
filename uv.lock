@@ -81,6 +81,7 @@ dev = [
     { name = "flake8" },
     { name = "isort" },
     { name = "pre-commit" },
+    { name = "pyproject-flake8" },
 ]
 
 [package.metadata]
@@ -107,6 +108,7 @@ dev = [
     { name = "flake8", specifier = ">=7.3.0" },
     { name = "isort", specifier = ">=8.0.0" },
     { name = "pre-commit", specifier = ">=4.5.1" },
+    { name = "pyproject-flake8", specifier = ">=0.0.1a3" },
 ]
 
 [[package]]
@@ -1257,6 +1259,18 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/bb/22/f1129e69d94ffff626bdb5c835506b3a5b4f3d070f17ea295e12c2c6f60f/pyparsing-3.2.3.tar.gz", hash = "sha256:b9c13f1ab8b3b542f72e28f634bad4de758ab3ce4546e4301970ad6fa77c38be", size = 1088608, upload-time = "2025-03-25T05:01:28.114Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/05/e7/df2285f3d08fee213f2d041540fa4fc9ca6c2d44cf36d3a035bf2a8d2bcc/pyparsing-3.2.3-py3-none-any.whl", hash = "sha256:a749938e02d6fd0b59b356ca504a24982314bb090c383e3cf201c95ef7e2bfcf", size = 111120, upload-time = "2025-03-25T05:01:24.908Z" },
+]
+
+[[package]]
+name = "pyproject-flake8"
+version = "7.0.0a1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "flake8" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/42/a0/80fc074315cf4644989048301bac73b0639de5b4c0cf7888836fbba020c0/pyproject_flake8-7.0.0a1.tar.gz", hash = "sha256:6762b141cc7114149f5d59cb6c516e61899e1bda962ffa2e17b104b279509a02", size = 4617, upload-time = "2024-04-09T22:06:01.714Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/fd/95/da912a948b7a7d0a306098935102415030dd8b7f446de69978d49bd4f7b3/pyproject_flake8-7.0.0a1-py3-none-any.whl", hash = "sha256:d87c448660a90ef6a6b27b4bc53915f44733db1e5fd55cc05a235d9938878877", size = 5506, upload-time = "2024-04-09T22:05:59.67Z" },
 ]
 
 [[package]]
