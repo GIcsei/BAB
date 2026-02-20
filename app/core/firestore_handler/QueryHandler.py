@@ -149,6 +149,30 @@ class Firebase:
         if self.token and (self.token.get("userId") == user_id or self.token.get("idToken") == self.user_tokens.get(user_id, {}).get("idToken")):
             self.token = None
 
+
+    def verify_id_token(self, id_token: str):
+        """
+        Verify an ID token through Identity Toolkit and return normalized identity payload.
+        Returns {"user_id": "...", "email": "..."} or None if invalid.
+        """
+        if not id_token:
+            return None
+        if self._auth_instance is None:
+            self._auth_instance = Auth(self.api_key, self.requests)
+        try:
+            info = self._auth_instance.get_account_info(id_token)
+            users = info.get("users") if isinstance(info, dict) else None
+            if not users:
+                return None
+            user = users[0] or {}
+            return {
+                "user_id": user.get("localId") or user.get("userId") or user.get("uid"),
+                "email": user.get("email"),
+            }
+        except Exception:
+            logger.exception("Failed to verify id token")
+            return None
+
     def get_user_id_by_token(self, access_token: str):
         for uid, tok in self.user_tokens.items():
             if tok.get("idToken") == access_token:

@@ -1,5 +1,5 @@
 from app.core.firestore_handler.QueryHandler import initialize_app
-from app.schemas.login import LoginRequest, LoginResponse, UserInfo
+from app.schemas.login import LoginRequest, LoginResponse
 from pathlib import Path
 import json
 import os
@@ -101,26 +101,15 @@ def login_user(data: LoginRequest) -> LoginResponse:
         raise ValueError(f"Login failed: {e}")
 
 
-def logout_user(data: UserInfo) -> bool:
+def logout_user(user_id: str) -> bool:
     """
-    Logout user identified by `data.access_token` (preferred) or by stored user_name/email.
+    Logout user identified by verified user_id.
     Stops user job, removes credentials file, and clears in-memory token.
     """
     base_data_dir = Path(os.getenv("APP_USER_DATA_DIR", "/var/app/user_data"))
 
-    user_id = None
-    if data.access_token:
-        user_id = firebase.get_user_id_by_token(data.access_token)
-
-    if not user_id and data.user_name:
-        # try match by email stored in token
-        for uid, tok in firebase.user_tokens.items():
-            if tok.get("email") == data.user_name:
-                user_id = uid
-                break
-
     if not user_id:
-        logger.warning("Logout attempt for unknown user: access_token=%s user_name=%s", data.access_token, data.user_name)
+        logger.warning("Logout attempt for unknown user")
         raise ValueError("User not found")
 
     # stop scheduled job
