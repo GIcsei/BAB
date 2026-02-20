@@ -17,9 +17,12 @@ from selenium.webdriver.support.ui import WebDriverWait
 
 from app.core.firestore_handler.QueryHandler import Firebase
 from app.core.netbank.credentials import load_user_credentials
-from app.core.netbank.utils import (extract_date_from_filename,
-                                    get_all_files_from_folder, is_today_in,
-                                    reportFormatter)
+from app.core.netbank.utils import (
+    extract_date_from_filename,
+    get_all_files_from_folder,
+    is_today_in,
+    reportFormatter,
+)
 
 logger = logging.getLogger(__name__)
 
