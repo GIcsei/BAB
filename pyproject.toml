@@ -1,4 +1,4 @@
-﻿[project]
+[project]
 name = "backend"
 version = "0.5.0"
 description = "Add your description here"
@@ -7,18 +7,18 @@ requires-python = ">=3.12"
 dependencies = [
     "cryptography>=44.0.2",
     "fastapi[standard]>=0.115.12",
-	"fastapi-cli[standard]>=0.0.7",
+    "fastapi-cli[standard]>=0.0.7",
     "firestore>=0.0.8",
     "jwcrypto>=1.5.6",
     "pycryptodome>=3.22.0",
     "python-jwt>=4.1.0",
     "sseclient>=0.0.27",
     "uvicorn[standard]>=0.34.2",
-	"requests>=2.31.0",
-	"selenium>=4.9.0",
-	"pandas>=2.2.0",
-	"openpyxl>=3.1.0",
-	"xlrd>=2.0.1",
+    "requests>=2.31.0",
+    "selenium>=4.9.0",
+    "pandas>=2.2.0",
+    "openpyxl>=3.1.0",
+    "xlrd>=2.0.1",
 ]
 
 [dependency-groups]
@@ -27,4 +27,35 @@ dev = [
     "flake8>=7.3.0",
     "isort>=8.0.0",
     "pre-commit>=4.5.1",
+    "pyproject-flake8>=0.0.1a3",
 ]
+
+[tool.black]
+line-length = 88
+include = '\.(py|ipynb|md|rst)$'
+# Use single quotes for regex and exclude common directories properly
+extend-exclude = '''
+^/(
+  \.eggs
+
+  | \.git
+  | \.hg
+  | \.mypy_cache
+
+  | \.tox
+  | \.venv
+  | _build
+
+  | buck-out
+  | build
+  | dist
+)/
+'''
+
+[tool.isort]
+profile = "black"
+
+# Note: Flake8 does not natively support pyproject.toml without extra plugins.
+# Ensure you are using 'pyproject-flake8' (pflake8) to read this section.
+[tool.flake8]
+max-line-length = 88
