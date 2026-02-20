@@ -32,7 +32,7 @@ dev = [
 
 [tool.black]
 line-length = 88
-include = '\.(py|ipynb|md|rst)$'
+include = '\.py$'
 # Use single quotes for regex and exclude common directories properly
 extend-exclude = '''
 ^/(
@@ -49,6 +49,8 @@ extend-exclude = '''
   | buck-out
   | build
   | dist
+  | \.__pycache__
+  | \.md
 )/
 '''
 
@@ -59,3 +61,4 @@ profile = "black"
 # Ensure you are using 'pyproject-flake8' (pflake8) to read this section.
 [tool.flake8]
 max-line-length = 88
+extend-ignore = "E203"
