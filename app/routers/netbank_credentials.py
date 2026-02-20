@@ -5,8 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from app.core.auth import get_current_user_id
-from app.core.netbank.credentials import (delete_user_credentials,
-                                          save_user_credentials)
+from app.core.netbank.credentials import delete_user_credentials, save_user_credentials
 
 router = APIRouter(prefix="/netbank", tags=["netbank"])
 logger = logging.getLogger(__name__)
