@@ -1,14 +1,15 @@
-from typing import List
+﻿from typing import List, Optional, Dict, Any
 from dataclasses import dataclass
 
+
 @dataclass
-class Document: 
+class Document:
     name: str
     created: str
     updated: str
-    data_fields: dict = None
+    data_fields: Optional[Dict[str, Any]] = None
 
-    def __str__(self):
+    def __str__(self) -> str:
         field_preview = "\n\t\t".join(f"{k}={repr(v)}" for k, v in (self.data_fields or {}).items())
         if len(field_preview) > 300:
             field_preview = field_preview[:297] + "..."
@@ -21,32 +22,39 @@ class Document:
         )
 
     def __repr__(self) -> str:
-        return self.__str__()
+        # shorter, single-line representation for debugging
         field_preview = ", ".join(f"{k}={repr(v)}" for k, v in (self.data_fields or {}).items())
         if len(field_preview) > 60:
             field_preview = field_preview[:57] + "..."
-
-        return f"Document(id='{self.name}', created='{self.created}', updated='{self.updated}', fields={{ {field_preview} }})"
+        return f"Document(name='{self.name}', created='{self.created}', updated='{self.updated}', fields={{ {field_preview} }})"
 
     @staticmethod
     def from_dict(input_dict: dict):
-        dictionary = input_dict
-        if input_dict.get("document"):
-            dictionary = input_dict["document"]
-        if len(dictionary) not in [3,4]:
-            raise ValueError("Given dictionary cannot be used as a document entry!")
-        name = dictionary["name"].split('/')[-1]
+        if not isinstance(input_dict, dict):
+            raise ValueError("Input must be a dictionary")
+
+        # Support wrapped format {"document": {...}} or bare document dict
+        dictionary = input_dict.get("document", input_dict)
+
+        required_keys = {"name", "createTime", "updateTime"}
+        if not required_keys.issubset(set(dictionary.keys())):
+            raise ValueError("Given dictionary cannot be used as a document entry: missing required keys")
+
+        name = dictionary["name"].split("/")[-1]
         created = dictionary["createTime"]
         updated = dictionary["updateTime"]
+
         datafields = None
         if dictionary.get("fields"):
-            datafields = {key: Document.convert_firefield(value) for key,value in dictionary['fields'].items()}
+            datafields = {key: Document.convert_firefield(value) for key, value in dictionary["fields"].items()}
+
         return Document(name, created, updated, datafields)
 
     @staticmethod
-    def convert_firefield(fire_field:dict):
-        if len(fire_field) != 1:
+    def convert_firefield(fire_field: dict):
+        if not isinstance(fire_field, dict) or len(fire_field) != 1:
             raise ValueError("Given value is not a field!")
+
         key, value = next(iter(fire_field.items()))
         type_casts = {
             "stringValue": str,
@@ -60,19 +68,19 @@ class Document:
         if caster is None:
             raise ValueError(f"Unsupported value type: {key}")
 
-        return caster(value)    
+        return caster(value)
+
 
 class Collection:
-    def __init__(self, name, docs = None):
+    def __init__(self, name: str, docs: Optional[List[Document]] = None):
         if name is None:
             raise ValueError("Name cannot be None!")
-        self.documents : List[Document] = []
+        self.documents: List[Document] = []
         self.name = name
-        if not docs:
-            return
-        self.documents = docs
+        if docs:
+            self.documents = docs
 
-    def add_doc(self, doc : Document):
+    def add_doc(self, doc: Document):
         self.documents.append(doc)
 
     def sort_by(self, field: str, reverse: bool = True):
@@ -80,21 +88,47 @@ class Collection:
             return doc.data_fields.get(field) if (doc.data_fields and (field in doc.data_fields)) else None
 
         self.documents = sorted(self.documents, key=sort_key, reverse=reverse)
-
         return self
 
     def update_elems(self, elemnum=None):
-        if elemnum is not None:
+        """
+        Narrow or pick elements from the collection.
+        - If elemnum is int: keep only the element at that index (wrapped in list).
+        - If elemnum is slice: apply slice to documents.
+        - If elemnum is list/tuple of ints: select those indices.
+        - If elemnum is None: no-op.
+        """
+        if elemnum is None:
+            return self
+
+        if isinstance(elemnum, int):
+            # keep single element as a list (preserve documents type)
+            try:
+                self.documents = [self.documents[elemnum]]
+            except IndexError:
+                self.documents = []
+            return self
+
+        if isinstance(elemnum, slice):
             self.documents = self.documents[elemnum]
-        return self
+            return self
+
+        if isinstance(elemnum, (list, tuple)):
+            selected = []
+            for i in elemnum:
+                if not isinstance(i, int):
+                    raise TypeError("Indices must be integers")
+                if 0 <= i < len(self.documents):
+                    selected.append(self.documents[i])
+            self.documents = selected
+            return self
+
+        raise TypeError("Unsupported elemnum type for update_elems")
 
     @staticmethod
-    def from_list(name, list_of_docs):
-        new_docs = []
-        for elem in list_of_docs:
-            new_docs.append(Document.from_dict(elem))
-
-        return Collection(name,new_docs)
+    def from_list(name: str, list_of_docs):
+        new_docs = [Document.from_dict(elem) for elem in list_of_docs]
+        return Collection(name, new_docs)
 
     def __repr__(self):
         doc_ids = [doc.name.split("/")[-1] for doc in self.documents]
