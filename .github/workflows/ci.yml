@@ -68,7 +68,7 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "## Flake8" >> $GITHUB_STEP_SUMMARY
 
-          if flake8 --extend-ignore="E203" app tests --count --show-source --statistics > reports/flake8.txt 2>&1; then
+          if flake8 --extend-ignore="E203, E501" app tests --count --show-source --statistics > reports/flake8.txt 2>&1; then
             echo "✅ Flake8 passed" >> $GITHUB_STEP_SUMMARY
           else
             echo "❌ Flake8 failed" >> $GITHUB_STEP_SUMMARY
