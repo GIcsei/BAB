@@ -81,7 +81,7 @@ fi
 # Stop stack cleanly
 # -------------------------
 echo -e "${YELLOW}Stopping stack...${NC}"
-docker compose $COMPOSE_FILES down
+docker compose $COMPOSE_FILES down -v
 
 # -------------------------
 # Build
