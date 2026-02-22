@@ -192,7 +192,7 @@ class ErsteNetBroker:
 
     def _renameDownloadedFile(self, timeout=180) -> str:
         """Wait for the default download name and rename it with timestamp."""
-        download_folder = self.__SAVE_TO
+        download_folder = (self.__LOCAL_DIR / self.__SAVE_TO).name
         end_time = time.time() + timeout
         has_timeout = True
         while time.time() < end_time:
@@ -207,7 +207,7 @@ class ErsteNetBroker:
             files = glob.glob(os.path.join(download_folder, "*.xls*"))
             if files:
                 # Pick the newest one
-                latest_file = max(files, key=os.path.getctime)
+                latest_file = Path(max(files, key=os.path.getctime))
                 logger.info("Download finished: %s", latest_file)
                 has_timeout = False
                 break
@@ -219,7 +219,7 @@ class ErsteNetBroker:
             )
 
         newFileName = f'Riport_{datetime.now().strftime("%Y%m%d_%H%M")}.xls'
-        new_path = os.path.join(self.__SAVE_TO, newFileName)
+        new_path = self.__SAVE_TO / newFileName
         os.rename(latest_file, new_path)
         self.RESULT = newFileName
         return newFileName
@@ -281,20 +281,6 @@ class ErsteNetBroker:
 
         return no_error
 
-    def move_report(self):
-        """Move the downloaded report from the remote download folder to the final save location."""
-        try:
-            remote_file = self.__LOCAL_DIR / self.RESULT
-            if not remote_file.exists():
-                logger.error("Expected downloaded file does not exist: %s", remote_file)
-                raise FileNotFoundError(f"Downloaded file not found: {remote_file}")
-            final_path = self.__SAVE_TO / self.RESULT
-            Path.rename(remote_file, final_path)
-            logger.debug("Moved downloaded file from %s to %s", remote_file, final_path)
-        except Exception:
-            logger.exception("Failed to move downloaded report to final location")
-            raise
-
     def get_report(self) -> Optional[str]:
         """Main entry: logs in and downloads the report; returns the filename or None."""
         self.RESULT = None
@@ -325,7 +311,6 @@ class ErsteNetBroker:
 
             # proceed to download and rename
             self.download_report()
-            self.move_report()
             result_name = self._renameDownloadedFile()
             logger.info("Report downloaded and renamed to %s", result_name)
             try:
