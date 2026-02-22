@@ -1,4 +1,4 @@
-﻿import json
+import json
 import logging
 from pathlib import Path
 
@@ -90,9 +90,11 @@ class Firebase:
         """
         base_dir = Path(base_dir)
         if not base_dir.exists():
+            logger.info("Base directory for user tokens does not exist: %s", base_dir)
             return
 
         if self._auth_instance is None:
+            logger.info("Creating Auth instance for token refresh during load")
             self._auth_instance = Auth(self.api_key, self.requests)
 
         for child in base_dir.iterdir():
@@ -100,11 +102,13 @@ class Firebase:
                 continue
             cred_path = child / "credentials.json"
             if not cred_path.exists():
+                logger.warning("No credentials.json found for user directory: %s", child)
                 continue
             try:
                 with open(cred_path, "r", encoding="utf-8") as f:
                     token_data = json.load(f)
             except Exception:
+                logger.exception("Failed to load token data from %s", cred_path)
                 continue
 
             user_id = child.name
@@ -125,6 +129,7 @@ class Firebase:
                         "email": stored.get("email"),
                     }
                     stored = normalized
+                    logger.info("Successfully refreshed token for user %s", user_id)
                     # write back refreshed token to credentials.json
                     try:
                         with open(cred_path, "w", encoding="utf-8") as f:
