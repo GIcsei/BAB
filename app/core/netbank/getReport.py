@@ -44,9 +44,9 @@ class ErsteNetBroker:
         if not user_id:
             raise ValueError("user_id is required to load per-user credentials")
         self.get_report_url = "https://netbroker.erstebroker.hu/netbroker/Logon.aspx"
-        self.__REMOTE_DIR = Path(os.getenv("SELENIUM_DOWNLOADS_DIR"))
-        self.__LOCAL_DIR = Path(os.getenv("LOCAL_DOWNLOADS_DIR"))
         self.__SAVE_TO = Path(saveFolder)
+        self.__REMOTE_DIR = Path(os.getenv("SELENIUM_DOWNLOADS_DIR")) / self.__SAVE_TO
+        self.__LOCAL_DIR = Path(os.getenv("LOCAL_DOWNLOADS_DIR")) / self.__SAVE_TO
         logger.debug(
             "Initializing ErsteNetBroker for user_id=%s with save folder %s",
             user_id,
@@ -58,7 +58,6 @@ class ErsteNetBroker:
             self.__LOCAL_DIR,
         )
         logger.debug("Config dir for credentials: %s", config_dir)
-        logger.debug("Local save path will be: %s", self.__LOCAL_DIR / self.__SAVE_TO)
         self.driver = None
         self.RESULT: Optional[str] = None
 
@@ -180,15 +179,19 @@ class ErsteNetBroker:
         )
 
         # Ensure save folder exists
-        try:
-            os.makedirs(self.__REMOTE_DIR / self.__SAVE_TO, exist_ok=True)
+        def ensure_directory(path: Path):
             try:
-                os.chmod(self.__SAVE_TO, 0o777)
+                os.makedirs(path, exist_ok=True)
+                try:
+                    os.chmod(path, 0o777)
+                except Exception:
+                    logger.warning("chmod not supported for %s", path)
             except Exception:
-                logger.warning("chmod not supported for %s", self.__SAVE_TO)
-        except Exception:
-            logger.exception("Failed to create save folder %s", self.__SAVE_TO)
-            raise
+                logger.exception("Failed to create save folder %s", path)
+                raise
+
+        ensure_directory(self.__SAVE_TO)
+        ensure_directory(self.__LOCAL_DIR)
 
         try:
             self.driver = webdriver.Remote(
