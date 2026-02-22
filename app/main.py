@@ -101,6 +101,11 @@ async def root():
     return {"message": "Hello World"}
 
 
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
+
+
 app.include_router(login.router)
 app.include_router(netbank_credentials.router)
 app.include_router(data_plot.router)
