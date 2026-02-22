@@ -238,9 +238,10 @@ class ErsteNetBroker:
                 f"No downloaded file appeared in {download_folder} within {timeout} seconds"
             )
 
+        import shutil
         newFileName = f'Riport_{datetime.now().strftime("%Y%m%d_%H%M")}.xls'
         new_path = self.__SAVE_TO / newFileName
-        os.rename(latest_file, new_path)
+        shutil.move(latest_file, new_path)
         self.RESULT = newFileName
         return newFileName
 
