@@ -149,9 +149,10 @@ class ErsteNetBroker:
         for file in files:
             date = extract_date_from_filename(file)
             if date and is_today_in(date):
-                logger.info("Found existing report file for today: %s", file)
+                logger.debug("Found existing report file for today: %s", file)
+                self.RESULT = file.name
                 return True
-        logger.info("No existing report file found for today in %s", self.__SAVE_TO)
+        logger.debug("No existing report file found for today in %s", self.__SAVE_TO)
         return False
 
     def _config_edge(self):
@@ -305,6 +306,10 @@ class ErsteNetBroker:
     def get_report(self) -> Optional[str]:
         """Main entry: logs in and downloads the report; returns the filename or None."""
         self.RESULT = None
+        if self._file_exist_today():
+            logger.info("Report for today already exists: %s", self.RESULT)
+            return self.RESULT
+
         timestamp = int((datetime.now().timestamp() - 60) * 1e3)  # milliseconds
 
         try:

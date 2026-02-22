@@ -31,6 +31,12 @@ dev = [
     "pyproject-flake8>=0.0.1a3",
 ]
 
+[tool.setuptools.packages.find]
+# This tells setuptools to only look for packages in 'app'
+include = ["app*"] 
+# This ensures it ignores any other top-level folders like 'docker'
+exclude = ["docker*", "tests*"]
+
 [tool.black]
 line-length = 88
 include = '\.py$'
