@@ -2,8 +2,8 @@
 set -euo pipefail
 
 APP_USER="appuser"
-PUID="${PUID:-1200}"
-PGID="${PGID:-1201}"
+PUID="${PUID:-568}"
+PGID="${PGID:-568}"
 
 if ! [[ "${PUID}" =~ ^[0-9]+$ && "${PGID}" =~ ^[0-9]+$ ]]; then
   echo "PUID and PGID must be numeric values" >&2

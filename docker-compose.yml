@@ -5,26 +5,24 @@ services:
       context: .
     restart: unless-stopped
     ports:
-      - "${APP_PORT}:8000"
+      - "${APP_PORT:-8000}:8000"
     environment:
+      APP_USER_DATA_DIR: ${APP_USER_DATA_DIR:-/var/app/user_data}
+      LOCAL_DOWNLOADS_DIR: ${LOCAL_DOWNLOADS_DIR:-/var/app/downloads}
+      SELENIUM_DOWNLOADS_DIR: ${SELENIUM_DOWNLOADS_DIR:-/downloads}
+      APP_JOB_HOUR: "${APP_JOB_HOUR:-18}"
+      APP_JOB_MINUTE: "${APP_JOB_MINUTE:-0}"
+      LOG_LEVEL: "${LOG_LEVEL:-INFO}"
+      PUID: "${PUID:-568}"
+      PGID: "${PGID:-568}"
+      NETBANK_MASTER_KEY: "${NETBANK_MASTER_KEY}"
       SELENIUM_REMOTE_URL: "http://selenium:4444"
-      APP_USER_DATA_DIR: ${APP_USER_DATA_DIR}
-      LOCAL_DOWNLOADS_DIR: ${LOCAL_DOWNLOADS_DIR}
-      SELENIUM_DOWNLOADS_DIR: ${SELENIUM_DOWNLOADS_DIR}
-      APP_JOB_HOUR: "18"
-      APP_JOB_MINUTE: "0"
     depends_on:
       selenium:
         condition: service_healthy
     volumes:
-      - user_data:${APP_USER_DATA_DIR}
-      - downloads:${LOCAL_DOWNLOADS_DIR}
-
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8000/ || exit 1"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
+      - ${APP_USER_DATA_HOST_PATH}:${APP_USER_DATA_DIR}
+      - ${APP_DOWNLOADS_HOST_PATH}:${LOCAL_DOWNLOADS_DIR}
 
   selenium:
     image: selenium/standalone-edge:144.0-20260202 # pin to a stable release you tested
@@ -33,19 +31,9 @@ services:
     ports:
       - "4444:4444"
     volumes:
-      - downloads:${SELENIUM_DOWNLOADS_DIR}
+      - ${APP_DOWNLOADS_HOST_PATH}:${SELENIUM_DOWNLOADS_DIR}
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:4444/status || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 5
-    environment:
-        LOG_LEVEL: "INFO"
-    deploy:
-      resources:
-        limits:
-          memory: 2g
-
-volumes:
-  user_data:
-  downloads:

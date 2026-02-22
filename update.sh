@@ -88,7 +88,7 @@ docker compose $COMPOSE_FILES down -v
 # -------------------------
 echo -e "${YELLOW}Building image...${NC}"
 docker build \
-  -t ${PROJECT_NAME}:${IMAGE_TAG} \
+  -t ${PROJECT_NAME}:${IMAGE_TAG}_${ENV} \
   -t ${PROJECT_NAME}:latest \
   .
 

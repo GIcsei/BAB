@@ -5,7 +5,11 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
 # Install uv
-RUN apt-get update && apt-get install -y --no-install-recommends gosu && rm -rf /var/lib/apt/lists/*
+# Install runtime OS dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    gosu \
+    && rm -rf /var/lib/apt/lists/*
 RUN pip install --no-cache-dir uv
 
 # Create app user (production safety)
@@ -22,11 +26,13 @@ COPY pyproject.toml uv.lock ./
 ENV PATH="/proj/.venv/bin:$PATH"
 
 # Install dependencies
+RUN uv lock
 RUN uv sync --frozen --no-dev
 
 # Copy source into the image so production/TrueNAS runs do not depend on bind mounts
 COPY app ./app
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod 0755 /usr/local/bin/entrypoint.sh
 
 # Change ownership
 RUN chown -R appuser:appuser /app
