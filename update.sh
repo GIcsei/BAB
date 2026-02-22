@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env bash
+#!/usr/bin/env bash
 set -euo pipefail
 
 # -------------------------
@@ -90,7 +90,9 @@ docker build \
   .
 
 echo -e "${GREEN}Build completed.${NC}"
-
+echo -e "${BLUE}Exporting tag to ENV variable...${NC}"
+export IMAGE_TAG=$IMAGE_TAG
+echo -e "${GREEN}IMAGE_TAG set to ${IMAGE_TAG}${NC}"
 # -------------------------
 # Start stack
 # -------------------------
