@@ -11,7 +11,7 @@ RUN pip install --no-cache-dir uv
 RUN useradd -m appuser
 
 # Create workdir
-WORKDIR /proj
+WORKDIR /app
 
 # Copy dependency files
 COPY pyproject.toml uv.lock ./
@@ -26,7 +26,7 @@ RUN uv sync --frozen --no-dev
 COPY app ./app
 
 # Change ownership
-RUN chown -R appuser:appuser /proj
+RUN chown -R appuser:appuser /app
 USER appuser
 
 EXPOSE 8000
