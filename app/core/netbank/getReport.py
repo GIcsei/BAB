@@ -47,8 +47,16 @@ class ErsteNetBroker:
         self.__REMOTE_DIR = Path(os.getenv("SELENIUM_DOWNLOADS_DIR"))
         self.__LOCAL_DIR = Path(os.getenv("LOCAL_DOWNLOADS_DIR"))
         self.__SAVE_TO = Path(saveFolder)
-        logger.debug("Initializing ErsteNetBroker for user_id=%s with save folder %s", user_id, self.__SAVE_TO)
-        logger.debug("Remote download dir: %s, Local download dir: %s", self.__REMOTE_DIR, self.__LOCAL_DIR)
+        logger.debug(
+            "Initializing ErsteNetBroker for user_id=%s with save folder %s",
+            user_id,
+            self.__SAVE_TO,
+        )
+        logger.debug(
+            "Remote download dir: %s, Local download dir: %s",
+            self.__REMOTE_DIR,
+            self.__LOCAL_DIR,
+        )
         logger.debug("Config dir for credentials: %s", config_dir)
         logger.debug("Local save path will be: %s", self.__LOCAL_DIR / self.__SAVE_TO)
         self.driver = None
