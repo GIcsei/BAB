@@ -30,6 +30,8 @@ RUN chown -R appuser:appuser /app
 RUN mkdir -p /var/app/user_data && \
     mkdir -p /var/app/downloads && \
     chown -R appuser:appuser /var/app
+
+VOLUME ["/var/app/user_data", "/var/app/downloads"]
 USER appuser
 
 EXPOSE 8000

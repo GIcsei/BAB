@@ -17,7 +17,7 @@ services:
       selenium:
         condition: service_healthy
     volumes:
-      - user_data:${APP_USER_DATA_DIR}}
+      - user_data:${APP_USER_DATA_DIR}
       - downloads:${LOCAL_DOWNLOADS_DIR}
 
     healthcheck:
