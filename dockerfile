@@ -1,4 +1,4 @@
-﻿FROM python:3.12-slim AS base
+FROM python:3.12-slim AS base
 
 # Prevent Python from writing .pyc files
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -27,6 +27,8 @@ COPY app ./app
 
 # Change ownership
 RUN chown -R appuser:appuser /app
+RUN mkdir -p /var/app/user_data && \
+    chown -R appuser:appuser /var/app
 USER appuser
 
 EXPOSE 8000
