@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-
-set -e
+set -euo pipefail
 
 # -------------------------
 # Configuration
@@ -9,6 +8,7 @@ PROJECT_NAME="bank_analysis_backend"
 BASE_COMPOSE="docker-compose.yml"
 DEV_COMPOSE="docker-compose.dev.yml"
 PROD_COMPOSE="docker-compose.prod.yml"
+
 LOG_DIR="./logs"
 TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
 LOG_FILE="$LOG_DIR/run_$TIMESTAMP.log"
@@ -21,7 +21,7 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
 BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
 # -------------------------
 # Prepare logging
@@ -34,17 +34,17 @@ echo -e "${BLUE}Log file:${NC} $LOG_FILE"
 echo ""
 
 # -------------------------
-# Get version from pyproject.toml
+# Extract version safely
 # -------------------------
 if [[ ! -f pyproject.toml ]]; then
   echo -e "${RED}pyproject.toml not found!${NC}"
   exit 1
 fi
 
-VERSION=$(grep '^version' pyproject.toml | head -n1 | cut -d '"' -f2)
+VERSION=$(python -c "import tomllib;print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
 
 if [[ -z "$VERSION" ]]; then
-  echo -e "${RED}Could not extract version from pyproject.toml${NC}"
+  echo -e "${RED}Could not extract version${NC}"
   exit 1
 fi
 
@@ -55,23 +55,33 @@ echo -e "${GREEN}Image tag:${NC} $IMAGE_TAG"
 echo ""
 
 # -------------------------
-# User input
+# Environment selection
 # -------------------------
-read -p "Enter environment (dev/prod): " ENV
+read -p "Enter environment (dev/prod) [dev]: " ENV
+ENV=${ENV:-dev}
 
 if [[ "$ENV" != "dev" && "$ENV" != "prod" ]]; then
-  echo -e "${RED}Invalid environment. Use 'dev' or 'prod'.${NC}"
+  echo -e "${RED}Invalid environment.${NC}"
   exit 1
 fi
 
 # -------------------------
-# Stop previous containers
+# Compose stack selection
 # -------------------------
-echo -e "${YELLOW}Stopping existing containers...${NC}"
-docker compose -f "$BASE_COMPOSE" down || true
+if [[ "$ENV" == "dev" ]]; then
+  COMPOSE_FILES="-f $BASE_COMPOSE -f $DEV_COMPOSE"
+else
+  COMPOSE_FILES="-f $BASE_COMPOSE -f $PROD_COMPOSE"
+fi
 
 # -------------------------
-# Build image with tag
+# Stop stack cleanly
+# -------------------------
+echo -e "${YELLOW}Stopping stack...${NC}"
+docker compose $COMPOSE_FILES down
+
+# -------------------------
+# Build
 # -------------------------
 echo -e "${YELLOW}Building image...${NC}"
 docker build \
@@ -80,24 +90,17 @@ docker build \
   .
 
 echo -e "${GREEN}Build completed.${NC}"
-echo ""
 
 # -------------------------
-# Run environment
+# Start stack
 # -------------------------
 if [[ "$ENV" == "dev" ]]; then
   echo -e "${BLUE}Starting DEVELOPMENT environment...${NC}"
-  docker compose \
-    -f "$BASE_COMPOSE" \
-    -f "$DEV_COMPOSE" \
-    up
-
 else
   echo -e "${BLUE}Starting PRODUCTION environment...${NC}"
-  docker compose \
-    -f "$BASE_COMPOSE" \
-    -f "$PROD_COMPOSE" \
-    up -d
 fi
 
+docker compose $COMPOSE_FILES up -d
+echo -e "${GREEN}Containers running in background.${NC}"
+echo -e "${BLUE}Use 'docker compose logs -f' to stream logs.${NC}"
 echo -e "${GREEN}Done.${NC}"
