@@ -107,14 +107,19 @@ class _Job:
                     firebase.load_tokens_from_dir(base_dir, refresh=True)
                     firebase.set_active_user(self.user_id)
                     self.logger.debug(
-                        "Loaded tokens from %s and set active user to %s", base_dir, self.user_id
+                        "Loaded tokens from %s and set active user to %s",
+                        base_dir,
+                        self.user_id,
                     )
                 except Exception:
                     self.logger.exception(
-                        "Failed to set Firebase active user for %s; OTP checks may fail", self.user_id
+                        "Failed to set Firebase active user for %s; OTP checks may fail",
+                        self.user_id,
                     )
         except Exception:
-            self.logger.exception("Failed to prepare Firebase token for user %s", self.user_id)
+            self.logger.exception(
+                "Failed to prepare Firebase token for user %s", self.user_id
+            )
 
         try:
             self.logger.debug(
