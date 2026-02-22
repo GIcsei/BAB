@@ -172,9 +172,9 @@ class ErsteNetBroker:
         edge_options.add_experimental_option(
             "prefs",
             {
-                "download.default_directory": str(self.__REMOTE_DIR
-                .resolve()
-                .absolute()),
+                "download.default_directory": str(
+                    self.__REMOTE_DIR.resolve().absolute()
+                ),
                 "download.prompt_for_download": False,
                 "download.directory_upgrade": True,
                 "safebrowsing.enabled": False,
