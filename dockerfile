@@ -28,6 +28,7 @@ COPY app ./app
 # Change ownership
 RUN chown -R appuser:appuser /app
 RUN mkdir -p /var/app/user_data && \
+    mkdir -p /var/app/downloads && \
     chown -R appuser:appuser /var/app
 USER appuser
 
