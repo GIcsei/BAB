@@ -240,6 +240,7 @@ class ErsteNetBroker:
             )
 
         import shutil
+
         newFileName = f'Riport_{datetime.now().strftime("%Y%m%d_%H%M")}.xls'
         new_path = self.__SAVE_TO / newFileName
         shutil.move(latest_file, new_path)
