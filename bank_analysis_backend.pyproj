@@ -79,7 +79,7 @@
     <Content Include="app\services\__pycache__\login_service.cpython-312.pyc" />
     <Content Include="app\__pycache__\login.cpython-312.pyc" />
     <Content Include="app\__pycache__\main.cpython-312.pyc" />
-    <Content Include="editorconfig .editorconfig" />
+    <Content Include=".editorconfig" />
     <Content Include="README.md" />
   </ItemGroup>
   <ItemGroup>
