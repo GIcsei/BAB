@@ -1,4 +1,4 @@
-﻿import glob
+import glob
 import logging
 import os
 import os.path
@@ -70,16 +70,26 @@ class ErsteNetBroker:
         self, by: str = By.NAME, name: str = "", to_click: bool = True
     ) -> WebElement:
         """Find element, optionally wait until clickable and click it."""
+        logger.debug("Finding element by %s with name '%s'", by, name)
         if not name:
+            logger.error("Element name is empty for find_and_click with by=%s", by)
             raise ValueError("Element name must not be empty")
         delay = 20  # seconds
         try:
+            logger.debug(
+                "Waiting for presence of element by %s with name '%s'", by, name
+            )
             my_elem = WebDriverWait(self.driver, delay).until(
                 EC.presence_of_element_located((by, name))
             )
         except TimeoutException:
+            logger.error("Timeout waiting for element by %s with name '%s'", by, name)
             raise AttributeError(f"Element not found: {name}")
+        logger.debug("Element found: %s", my_elem)
         if to_click:
+            logger.debug(
+                "Waiting for element to be clickable by %s with name '%s'", by, name
+            )
             ActionChains(self.driver).scroll_to_element(my_elem).move_to_element(
                 my_elem
             ).perform()
@@ -87,6 +97,7 @@ class ErsteNetBroker:
                 EC.element_to_be_clickable((by, name))
             )
             my_elem.click()
+        logger.debug("Element actions performed: %s", my_elem)
         return my_elem
 
     def __wait_for_page(self, timeout=20):
@@ -100,12 +111,18 @@ class ErsteNetBroker:
         Returns:
             True if 'default.aspx' is in URL within timeout, False otherwise
         """
+        logger.debug("Waiting for page to load with 'default.aspx' in URL")
         try:
             WebDriverWait(self.driver, timeout).until(
                 lambda d: "default.aspx" in d.current_url
             )
+            logger.debug("'default.aspx' found in URL: %s", self.driver.current_url)
             return True
         except TimeoutException:
+            logger.warning(
+                "Timeout waiting for 'default.aspx' in URL. Current URL: %s",
+                self.driver.current_url,
+            )
             return False
 
     def _file_exist_today(self) -> bool:
@@ -113,7 +130,9 @@ class ErsteNetBroker:
         for file in files:
             date = extract_date_from_filename(file)
             if date and is_today_in(date):
+                logger.info("Found existing report file for today: %s", file)
                 return True
+        logger.info("No existing report file found for today in %s", self.__SAVE_TO)
         return False
 
     def _config_edge(self):
@@ -184,7 +203,7 @@ class ErsteNetBroker:
             if files:
                 # Pick the newest one
                 latest_file = max(files, key=os.path.getctime)
-                logger.debug("Download finished: %s", latest_file)
+                logger.info("Download finished: %s", latest_file)
                 has_timeout = False
                 break
             time.sleep(1)
