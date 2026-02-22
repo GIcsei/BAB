@@ -5,6 +5,7 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
 # Install uv
+RUN apt-get update && apt-get install -y --no-install-recommends gosu && rm -rf /var/lib/apt/lists/*
 RUN pip install --no-cache-dir uv
 
 # Create app user (production safety)
@@ -23,8 +24,9 @@ ENV PATH="/proj/.venv/bin:$PATH"
 # Install dependencies
 RUN uv sync --frozen --no-dev
 
-# Copy source
+# Copy source into the image so production/TrueNAS runs do not depend on bind mounts
 COPY app ./app
+COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 
 # Change ownership
 RUN chown -R appuser:appuser /app
@@ -33,8 +35,7 @@ RUN mkdir -p /var/app/user_data && \
     chown -R appuser:appuser /var/app
 
 VOLUME ["/var/app/user_data", "/var/app/downloads"]
-USER appuser
-
 EXPOSE 8000
 
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]

@@ -1,12 +1,17 @@
-# .dockerignore
+.git
+.gitignore
+.venv
 __pycache__
 *.pyc
 *.pyo
 *.pyd
-*.db
-*.sqlite3
+.pytest_cache
+.mypy_cache
+.vscode
+.idea
+logs
 *.log
-.env
-venv/
-.git
-.dockerignore
+.env*
+app/*.json
+*.sqlite3
+tests
