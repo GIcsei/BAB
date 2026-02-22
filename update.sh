@@ -52,6 +52,9 @@ IMAGE_TAG="${VERSION}-${DATE_TAG}"
 
 echo -e "${GREEN}Detected version:${NC} $VERSION"
 echo -e "${GREEN}Image tag:${NC} $IMAGE_TAG"
+echo -e "${BLUE}Exporting tag to ENV variable...${NC}"
+export IMAGE_TAG=$IMAGE_TAG
+echo -e "${GREEN}IMAGE_TAG set to ${IMAGE_TAG}${NC}"
 echo ""
 
 # -------------------------
@@ -90,9 +93,6 @@ docker build \
   .
 
 echo -e "${GREEN}Build completed.${NC}"
-echo -e "${BLUE}Exporting tag to ENV variable...${NC}"
-export IMAGE_TAG=$IMAGE_TAG
-echo -e "${GREEN}IMAGE_TAG set to ${IMAGE_TAG}${NC}"
 # -------------------------
 # Start stack
 # -------------------------
