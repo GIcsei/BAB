@@ -45,8 +45,13 @@ class ErsteNetBroker:
             raise ValueError("user_id is required to load per-user credentials")
         self.get_report_url = "https://netbroker.erstebroker.hu/netbroker/Logon.aspx"
         self.__SAVE_TO = Path(saveFolder)
-        self.__REMOTE_DIR = Path(os.getenv("SELENIUM_DOWNLOADS_DIR")).resolve() / self.__SAVE_TO.parts[-1]
-        self.__LOCAL_DIR = Path(os.getenv("LOCAL_DOWNLOADS_DIR")).resolve() / self.__SAVE_TO.parts[-1]
+        self.__REMOTE_DIR = (
+            Path(os.getenv("SELENIUM_DOWNLOADS_DIR")).resolve()
+            / self.__SAVE_TO.parts[-1]
+        )
+        self.__LOCAL_DIR = (
+            Path(os.getenv("LOCAL_DOWNLOADS_DIR")).resolve() / self.__SAVE_TO.parts[-1]
+        )
         logger.debug(
             "Initializing ErsteNetBroker for user_id=%s with save folder %s",
             user_id,
