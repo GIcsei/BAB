@@ -102,7 +102,9 @@ class Firebase:
                 continue
             cred_path = child / "credentials.json"
             if not cred_path.exists():
-                logger.warning("No credentials.json found for user directory: %s", child)
+                logger.warning(
+                    "No credentials.json found for user directory: %s", child
+                )
                 continue
             try:
                 with open(cred_path, "r", encoding="utf-8") as f:
