@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+﻿#!/usr/bin/env bash
 set -euo pipefail
 
 # -------------------------
@@ -41,7 +41,7 @@ if [[ ! -f pyproject.toml ]]; then
   exit 1
 fi
 
-VERSION=$(python -c "import tomllib;print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
+VERSION=$(python3 -c "import tomllib;print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
 
 if [[ -z "$VERSION" ]]; then
   echo -e "${RED}Could not extract version${NC}"
