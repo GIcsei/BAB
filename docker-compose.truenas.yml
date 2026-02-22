@@ -5,9 +5,9 @@ services:
     ports:
       - "${APP_PORT:-8000}:8000"
     environment:
-      APP_USER_DATA_DIR: /var/app/user_data
-      LOCAL_DOWNLOADS_DIR: /var/app/downloads
-      SELENIUM_DOWNLOADS_DIR: /downloads
+      APP_USER_DATA_DIR: ${APP_USER_DATA_DIR:-/var/app/user_data}
+      LOCAL_DOWNLOADS_DIR: ${LOCAL_DOWNLOADS_DIR:-/var/app/downloads}
+      SELENIUM_DOWNLOADS_DIR: ${SELENIUM_DOWNLOADS_DIR:-/downloads}
       APP_JOB_HOUR: "${APP_JOB_HOUR:-18}"
       APP_JOB_MINUTE: "${APP_JOB_MINUTE:-0}"
       LOG_LEVEL: "${LOG_LEVEL:-INFO}"
@@ -16,18 +16,18 @@ services:
       NETBANK_MASTER_KEY: "${NETBANK_MASTER_KEY}"
       SELENIUM_REMOTE_URL: "http://selenium:4444"
     volumes:
-      - ${APP_USER_DATA_HOST_PATH}:/var/app/user_data
-      - ${APP_DOWNLOADS_HOST_PATH}:/var/app/downloads
+      - ${APP_USER_DATA_HOST_PATH}:${APP_USER_DATA_DIR}
+      - ${APP_DOWNLOADS_HOST_PATH}:${LOCAL_DOWNLOADS_DIR}
     depends_on:
       selenium:
         condition: service_healthy
 
   selenium:
-    image: selenium/standalone-chromium:latest
+    image: selenium/standalone-chromium:144.0-20260202
     restart: unless-stopped
     shm_size: "2g"
     volumes:
-      - ${APP_DOWNLOADS_HOST_PATH}:/downloads
+      - ${APP_DOWNLOADS_HOST_PATH}:${SELENIUM_DOWNLOADS_DIR}
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:4444/status || exit 1"]
       interval: 15s

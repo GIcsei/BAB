@@ -74,7 +74,6 @@
     <Content Include=".env" />
     <Content Include=".github\workflows\ci.yml" />
     <Content Include="app\.python-version" />
-    <Content Include="app\ersterepgen-ebd117266a99.json" />
     <Content Include="app\routers\__pycache__\login.cpython-312.pyc" />
     <Content Include="app\schemas\__pycache__\login.cpython-312.pyc" />
     <Content Include="app\services\__pycache__\login_service.cpython-312.pyc" />
