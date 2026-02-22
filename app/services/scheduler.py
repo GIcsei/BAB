@@ -1,4 +1,4 @@
-﻿import heapq
+import heapq
 import logging
 import os
 import threading
@@ -90,6 +90,31 @@ class _Job:
                 "Failed to import ErsteNetBroker for user %s", self.user_id
             )
             return
+
+        # Ensure Firebase singleton has the correct active token for this user so
+        # OTP polling and DB queries work when the job runs automatically.
+        try:
+            # lazy import to avoid circular import at module import time
+            from app.services.login_service import firebase
+
+            try:
+                firebase.set_active_user(self.user_id)
+                self.logger.debug("Set Firebase active user to %s", self.user_id)
+            except Exception:
+                # If token not present in memory, attempt to load tokens from disk (parent dir)
+                try:
+                    base_dir = self.user_dir.parent
+                    firebase.load_tokens_from_dir(base_dir, refresh=True)
+                    firebase.set_active_user(self.user_id)
+                    self.logger.debug(
+                        "Loaded tokens from %s and set active user to %s", base_dir, self.user_id
+                    )
+                except Exception:
+                    self.logger.exception(
+                        "Failed to set Firebase active user for %s; OTP checks may fail", self.user_id
+                    )
+        except Exception:
+            self.logger.exception("Failed to prepare Firebase token for user %s", self.user_id)
 
         try:
             self.logger.debug(
