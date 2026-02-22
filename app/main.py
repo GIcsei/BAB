@@ -22,7 +22,7 @@ app = FastAPI(title="Bank analysis backend")
 
 def configure_logging():
     """
-    Configure application logging.
+    Configure application logging for the project package only.
     - LOG_LEVEL: default DEBUG
     - LOG_FILE: optional path to file (will use RotatingFileHandler)
     - If LOG_FILE is not set logs are streamed to stdout (recommended for Docker)
@@ -30,30 +30,39 @@ def configure_logging():
     log_level = os.getenv("LOG_LEVEL", "DEBUG").upper()
     log_file = os.getenv("LOG_FILE", "")
 
-    root_logger = logging.getLogger("bab")
-    # Avoid duplicate handlers when this function is called multiple times
-    if root_logger.handlers:
-        for h in list(root_logger.handlers):
-            root_logger.removeHandler(h)
+    # Use a package-level logger so the setting applies across `app.*` modules only
+    project_logger = logging.getLogger("app")
 
-    root_logger.setLevel(getattr(logging, log_level, logging.DEBUG))
+    # Avoid duplicate handlers when this function is called multiple times
+    if project_logger.handlers:
+        for h in list(project_logger.handlers):
+            project_logger.removeHandler(h)
+
+    level = getattr(logging, log_level, logging.DEBUG)
+    project_logger.setLevel(level)
 
     formatter = logging.Formatter("%(asctime)s %(levelname)s [%(name)s] %(message)s")
 
     if log_file:
-        # Ensure directory exists
         try:
             Path(log_file).parent.mkdir(parents=True, exist_ok=True)
         except Exception:
             pass
         fh = RotatingFileHandler(log_file, maxBytes=10 * 1024 * 1024, backupCount=5)
+        fh.setLevel(level)
         fh.setFormatter(formatter)
-        root_logger.addHandler(fh)
+        project_logger.addHandler(fh)
+
     sh = logging.StreamHandler(sys.stdout)
+    sh.setLevel(level)
     sh.setFormatter(formatter)
-    root_logger.addHandler(sh)
-    root_logger.debug(
-        "Logging configured with level %s, output to %s",
+    project_logger.addHandler(sh)
+
+    # Prevent messages from being propagated to the root logger (and other handlers)
+    project_logger.propagate = False
+
+    project_logger.debug(
+        "Logging configured for package 'app' with level %s, output to %s",
         log_level,
         log_file or "stdout",
     )
