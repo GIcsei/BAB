@@ -4,8 +4,8 @@ import os
 import os.path
 import time
 from datetime import datetime
-from typing import Optional
 from pathlib import Path
+from typing import Optional
 
 from selenium import webdriver
 from selenium.common.exceptions import TimeoutException, WebDriverException
@@ -167,7 +167,7 @@ class ErsteNetBroker:
 
         # Ensure save folder exists
         try:
-            os.makedirs(self.__REMOTE_DIR/self.__SAVE_TO, exist_ok=True)
+            os.makedirs(self.__REMOTE_DIR / self.__SAVE_TO, exist_ok=True)
             try:
                 os.chmod(self.__SAVE_TO, 0o777)
             except Exception:
@@ -285,8 +285,6 @@ class ErsteNetBroker:
         except Exception:
             logger.exception("Failed to move downloaded report to final location")
             raise
-
-
 
     def get_report(self) -> Optional[str]:
         """Main entry: logs in and downloads the report; returns the filename or None."""
