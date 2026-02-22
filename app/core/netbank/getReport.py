@@ -212,7 +212,7 @@ class ErsteNetBroker:
 
     def _renameDownloadedFile(self, timeout=180) -> str:
         """Wait for the default download name and rename it with timestamp."""
-        download_folder = (self.__LOCAL_DIR / self.__SAVE_TO).name
+        download_folder = str(self.__LOCAL_DIR)
         end_time = time.time() + timeout
         has_timeout = True
         while time.time() < end_time:
