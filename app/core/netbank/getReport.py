@@ -188,7 +188,7 @@ class ErsteNetBroker:
             try:
                 os.makedirs(path, exist_ok=True)
                 try:
-                    os.chmod(path, 0o775)
+                    os.chmod(path, 0o777)
                 except Exception:
                     logger.warning("chmod not supported for %s", path)
             except Exception:
