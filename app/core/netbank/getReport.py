@@ -229,7 +229,6 @@ class ErsteNetBroker:
         logger.info("Already logged in on another session. Attempting to resolve...")
         try:
             self.__find_and_click(By.NAME, "ctl18$Button1")
-            time.sleep(2)
             if "alreadyloggedin" in self.driver.current_url.lower():
                 logger.info("Transaction code page reached; user must supply code")
                 return True
@@ -240,7 +239,7 @@ class ErsteNetBroker:
                 return False
         except Exception:
             logger.exception("Error while handling already-logged-in page")
-            return False
+            return (False or "checksession" in self.driver.current_url.lower())
 
     def _handle_otp_Selenium(self, timestamp: int) -> bool:
         """Handle 2FA by obtaining a code from Firestore and submitting it."""
@@ -273,6 +272,14 @@ class ErsteNetBroker:
         except Exception:
             logger.exception("Exception while submitting OTP")
             return False
+
+    def _handle_prev_session(self, timestamp: int) -> bool:
+        no_error = self._handle_already_logged_in_Selenium()
+
+        if no_error:
+            no_error = self._handle_otp_Selenium(timestamp)
+
+        return no_error
 
     def move_report(self):
         """Move the downloaded report from the remote download folder to the final save location."""
@@ -309,13 +316,8 @@ class ErsteNetBroker:
 
             # Click login
             self.__find_and_click(By.NAME, "ctl04$btnLogon")
-            no_error = True
 
-            if "checksession" in self.driver.current_url.lower():
-                #     no_error = self._handle_already_logged_in_Selenium()
-
-                # if no_error:
-                no_error = self._handle_otp_Selenium(timestamp)
+            no_error = self._handle_prev_session(timestamp=timestamp)
 
             if not no_error:
                 logger.warning("Login/get_report aborted for user (no_error==False)")
