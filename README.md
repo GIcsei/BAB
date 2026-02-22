@@ -14,6 +14,7 @@ This README provides an overview, developer quickstart, API usage examples, and 
 - [Quickstart (development)](#quickstart-development)
 - [Configuration](#configuration)
 - [Running locally (docker)](#running-locally-docker)
+- [Running on TrueNAS SCALE](#running-on-truenas-scale)
 - [API Endpoints](#api-endpoints)
 - [Developer notes and code structure](#developer-notes-and-code-structure)
 - [Testing and CI](#testing-and-ci)
@@ -84,6 +85,20 @@ Development (interactive):
 
 
 Production mode uses `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d` and expects environment variables to be supplied via your deployment pipeline.
+
+
+## Running on TrueNAS SCALE
+
+To run this project reliably on TrueNAS SCALE, use the dedicated compose file and env template added for NAS deployment:
+
+1. Copy `truenas.env.example` to `truenas.env` and set dataset paths (`APP_USER_DATA_HOST_PATH`, `APP_DOWNLOADS_HOST_PATH`) and `NETBANK_MASTER_KEY`.
+2. Use `docker-compose.truenas.yml` in TrueNAS Custom App / Docker Compose stack configuration.
+3. Keep container UID/GID aligned with TrueNAS apps user (`PUID=568`, `PGID=568` by default).
+4. Store secrets outside the repository and mount them read-only (for example under `/mnt/<pool>/apps/bab/secrets`).
+
+The container now supports runtime UID/GID remapping through `PUID`/`PGID` so mounted datasets remain writable without running your app process as root.
+
+The published runtime image already contains application code. The `dockerfile` keeps `COPY app ./app` so self-built images remain runnable without host source mounts; only `docker-compose.dev.yml` uses bind mounts for live development reload.
 
 ## API Endpoints (updated)
 
@@ -161,6 +176,8 @@ Recommendation: run `pytest --cov=app --cov-report=term-missing` locally and ens
 
 ## Security considerations (important)
 
+- Never commit service-account credentials or private keys into the repository. Keep them in TrueNAS datasets/secrets and mount them read-only at runtime.
+- Rotate and revoke any previously committed credentials immediately.
 - Pickle and joblib can execute arbitrary code during deserialization. The codebase attempts to be defensive, but you must treat untrusted pickles as dangerous.
   - Prefer safe upload formats (Parquet, CSV, JSON) when possible.
   - If you must support pickle, restrict uploads to trusted users and run deserialization in an isolated environment (sandbox, separate process, or container) with resource limits.
