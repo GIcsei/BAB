@@ -1,0 +1,35 @@
+services:
+  app:
+    image: ghcr.io/gicsei/bank_analysis_backend:latest
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8000}:8000"
+    environment:
+      APP_USER_DATA_DIR: /var/app/user_data
+      LOCAL_DOWNLOADS_DIR: /var/app/downloads
+      SELENIUM_DOWNLOADS_DIR: /downloads
+      APP_JOB_HOUR: "${APP_JOB_HOUR:-18}"
+      APP_JOB_MINUTE: "${APP_JOB_MINUTE:-0}"
+      LOG_LEVEL: "${LOG_LEVEL:-INFO}"
+      PUID: "${PUID:-568}"
+      PGID: "${PGID:-568}"
+      NETBANK_MASTER_KEY: "${NETBANK_MASTER_KEY}"
+      SELENIUM_REMOTE_URL: "http://selenium:4444"
+    volumes:
+      - ${APP_USER_DATA_HOST_PATH}:/var/app/user_data
+      - ${APP_DOWNLOADS_HOST_PATH}:/var/app/downloads
+    depends_on:
+      selenium:
+        condition: service_healthy
+
+  selenium:
+    image: selenium/standalone-chromium:latest
+    restart: unless-stopped
+    shm_size: "2g"
+    volumes:
+      - ${APP_DOWNLOADS_HOST_PATH}:/downloads
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:4444/status || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
