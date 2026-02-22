@@ -26,7 +26,7 @@ services:
       retries: 3
 
   selenium:
-    image: selenium/standalone-edge:4.15.0-2023-12-01 # pin to a stable release you tested
+    image: selenium/standalone-edge:144.0-20260202 # pin to a stable release you tested
     restart: unless-stopped
     shm_size: "2g"
     ports:
