@@ -8,7 +8,8 @@ ENV PYTHONUNBUFFERED=1
 RUN pip install --no-cache-dir uv
 
 # Create app user (production safety)
-RUN useradd -m appuser
+RUN groupadd -g 1201 appuser && \
+    useradd -u 1200 -g 1201 -m appuser
 
 # Create workdir
 WORKDIR /app
