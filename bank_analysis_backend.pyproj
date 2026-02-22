@@ -71,6 +71,7 @@
     <Folder Include="tests\" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include=".env" />
     <Content Include=".github\workflows\ci.yml" />
     <Content Include="app\.python-version" />
     <Content Include="app\REDACTED_CREDENTIAL_FILE.json" />

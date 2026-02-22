@@ -5,6 +5,7 @@ import os.path
 import time
 from datetime import datetime
 from typing import Optional
+from pathlib import Path
 
 from selenium import webdriver
 from selenium.common.exceptions import TimeoutException, WebDriverException
@@ -43,7 +44,9 @@ class ErsteNetBroker:
         if not user_id:
             raise ValueError("user_id is required to load per-user credentials")
         self.get_report_url = "https://netbroker.erstebroker.hu/netbroker/Logon.aspx"
-        self.__SAVE_TO = os.path.abspath(saveFolder)
+        self.__REMOTE_DIR = Path(os.getenv("SELENIUM_DOWNLOADS_DIR"))
+        self.__LOCAL_DIR = Path(os.getenv("LOCAL_DOWNLOADS_DIR"))
+        self.__SAVE_TO = Path(saveFolder)
         self.driver = None
         self.RESULT: Optional[str] = None
 
@@ -153,7 +156,7 @@ class ErsteNetBroker:
         edge_options.add_experimental_option(
             "prefs",
             {
-                "download.default_directory": self.__SAVE_TO,
+                "download.default_directory": self.__REMOTE_DIR.resolve().absolute(),
                 "download.prompt_for_download": False,
                 "download.directory_upgrade": True,
                 "safebrowsing.enabled": False,
@@ -164,7 +167,7 @@ class ErsteNetBroker:
 
         # Ensure save folder exists
         try:
-            os.makedirs(self.__SAVE_TO, exist_ok=True)
+            os.makedirs(self.__REMOTE_DIR/self.__SAVE_TO, exist_ok=True)
             try:
                 os.chmod(self.__SAVE_TO, 0o777)
             except Exception:
@@ -269,6 +272,22 @@ class ErsteNetBroker:
             logger.exception("Exception while submitting OTP")
             return False
 
+    def move_report(self):
+        """Move the downloaded report from the remote download folder to the final save location."""
+        try:
+            remote_file = self.__LOCAL_DIR / self.RESULT
+            if not remote_file.exists():
+                logger.error("Expected downloaded file does not exist: %s", remote_file)
+                raise FileNotFoundError(f"Downloaded file not found: {remote_file}")
+            final_path = self.__SAVE_TO / self.RESULT
+            Path.rename(remote_file, final_path)
+            logger.debug("Moved downloaded file from %s to %s", remote_file, final_path)
+        except Exception:
+            logger.exception("Failed to move downloaded report to final location")
+            raise
+
+
+
     def get_report(self) -> Optional[str]:
         """Main entry: logs in and downloads the report; returns the filename or None."""
         self.RESULT = None
@@ -304,6 +323,7 @@ class ErsteNetBroker:
 
             # proceed to download and rename
             self.download_report()
+            self.move_report()
             result_name = self._renameDownloadedFile()
             logger.info("Report downloaded and renamed to %s", result_name)
             try:
