@@ -1,5 +1,6 @@
 services:
   app:
+    image: bank_analysis_backend:${IMAGE_TAG}
     build:
       context: .
     restart: unless-stopped
