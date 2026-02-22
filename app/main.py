@@ -1,4 +1,4 @@
-﻿# FastAPI (backend)
+# FastAPI (backend)
 
 # To run the code in dev mode:
 # source .venv/bin/activate
@@ -30,7 +30,7 @@ def configure_logging():
     log_level = os.getenv("LOG_LEVEL", "DEBUG").upper()
     log_file = os.getenv("LOG_FILE", "")
 
-    root_logger = logging.getLogger()
+    root_logger = logging.getLogger("bab")
     # Avoid duplicate handlers when this function is called multiple times
     if root_logger.handlers:
         for h in list(root_logger.handlers):
