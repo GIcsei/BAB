@@ -151,8 +151,8 @@ class ErsteNetBroker:
         for file in files:
             date = extract_date_from_filename(file)
             if date and is_today_in(date):
-                logger.debug("Found existing report file for today: %s", file)
-                self.RESULT = file.name
+                logger.info("Found existing report file for today: %s", file)
+                self.RESULT = file
                 return True
         logger.debug("No existing report file found for today in %s", self.__SAVE_TO)
         return False
