@@ -43,6 +43,8 @@ class ErsteNetBroker:
     ):
         if not user_id:
             raise ValueError("user_id is required to load per-user credentials")
+        # persist user_id on the instance for later use
+        self.user_id = user_id
         self.get_report_url = "https://netbroker.erstebroker.hu/netbroker/Logon.aspx"
         self.__SAVE_TO = Path(saveFolder)
         self.__REMOTE_DIR = (
@@ -382,6 +384,7 @@ class ErsteNetBroker:
         try:
             fb = Firebase()  # singleton instance (must have been initialized elsewhere)
             db = fb.database()
+            # set active user for Firestore calls; this populates fb.token
             fb.set_active_user(self.user_id)
             token = fb.token
         except Exception:

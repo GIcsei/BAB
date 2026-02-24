@@ -1,14 +1,15 @@
-import asyncio
 import json
 import logging
-import os
 import threading
+import asyncio
+import os
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Optional, Dict, Any
 
 import requests
 
 from app.core.firestore_handler.User import Auth
+from app.core.firestore_handler.FirestoreService import FirestoreService
 
 logger = logging.getLogger(__name__)
 
@@ -176,6 +177,9 @@ class Firebase:
         self._registry = TokenRegistry()
         self._lock = threading.RLock()  # protects auth client creation
         self.TOKEN_FILE: Optional[Path] = None  # kept for backward compatibility
+        # Initialize a token attribute so FirestoreService can safely read it
+        self.token: Optional[Dict[str, Any]] = None
+        self._database: Optional[FirestoreService] = None
 
         # resilient requests session
         for scheme in ("http://", "https://"):
@@ -356,11 +360,26 @@ class Firebase:
         Make a user's token the active session token for downstream Firestore calls.
         Deterministic: only succeeds if user is registered.
         """
+        # set active in registry and keep a copy on the Firebase object for legacy consumers
+        token = self._registry.get(user_id)
+        if not token:
+            raise ValueError(f"No token registered for user {user_id}")
         self._registry.set_active(user_id)
+        # keep token attribute in sync for FirestoreService and legacy code
+        self.token = token
 
     def clear_user(self, user_id: str) -> None:
-        """Remove user from in-memory registry (no disk deletion)."""
+        """Remove user from in-memory registry. Does not delete files on disk."""
+        # if the current active token belongs to this user, unset it
+        try:
+            current = self.token
+        except Exception:
+            current = None
+
         self._registry.remove(user_id)
+
+        if current and current.get("userId") == user_id:
+            self.token = None
 
     def verify_id_token(self, id_token: str) -> Optional[Dict[str, Any]]:
         """
@@ -414,6 +433,15 @@ class Firebase:
         Kept for backward compatibility but not used for primary request auth.
         """
         return self._registry.find_user_by_id_token(access_token)
+
+    def database(self):
+        """
+        Provide FirestoreService instance. Restores compatibility with callers
+        that call Firebase().database() (kept minimal and deterministic).
+        """
+        if self._database is None:
+            self._database = FirestoreService(self)
+        return self._database
 
 
 def initialize_app(config: dict) -> Firebase:
