@@ -35,7 +35,9 @@ def get_current_user_id(creds: HTTPAuthorizationCredentials = Depends(security))
     # legacy fallback: keep compatibility while clients migrate (deprecated)
     user_id = firebase.get_user_id_by_token(token)
     if user_id:
-        logger.warning("Using legacy in-memory token fallback; consider migrating to stateless idTokens")
+        logger.warning(
+            "Using legacy in-memory token fallback; consider migrating to stateless idTokens"
+        )
         return user_id
 
     raise HTTPException(

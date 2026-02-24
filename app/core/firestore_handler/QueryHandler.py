@@ -1,10 +1,10 @@
+import asyncio
 import json
 import logging
-import threading
-import asyncio
 import os
+import threading
 from pathlib import Path
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
 
 import requests
 
@@ -127,13 +127,19 @@ def _init_firebase_admin_once(config: Dict[str, Any]) -> None:
         if cred_path and Path(cred_path).exists():
             cred = _cred.Certificate(cred_path)
             firebase_admin.initialize_app(cred, {"projectId": config.get("projectId")})
-            logger.info("Initialized firebase-admin with service account from %s", cred_path)
+            logger.info(
+                "Initialized firebase-admin with service account from %s", cred_path
+            )
         else:
             # Initialize without explicit credentials; token verification still works (uses public keys).
-            firebase_admin.initialize_app(options={"projectId": config.get("projectId")})
+            firebase_admin.initialize_app(
+                options={"projectId": config.get("projectId")}
+            )
             logger.info("Initialized firebase-admin without explicit service account")
     except Exception:
-        logger.exception("Failed to initialize firebase-admin; falling back to Identity Toolkit")
+        logger.exception(
+            "Failed to initialize firebase-admin; falling back to Identity Toolkit"
+        )
 
 
 class Firebase:
@@ -238,7 +244,10 @@ class Firebase:
 
     # ----- Per-user registry operations (deterministic lifecycle) -----
     def register_user_tokens(
-        self, user_id: str, token: Dict[str, Any], credentials_path: Optional[Path] = None
+        self,
+        user_id: str,
+        token: Dict[str, Any],
+        credentials_path: Optional[Path] = None,
     ) -> None:
         """
         Register token in-memory and optionally persist to credentials_path.
@@ -270,7 +279,9 @@ class Firebase:
             cred_path = child / "credentials.json"
             token_data = self._persistence.read_json(cred_path)
             if not token_data:
-                logger.warning("No credentials.json found for user directory: %s", child)
+                logger.warning(
+                    "No credentials.json found for user directory: %s", child
+                )
                 continue
 
             user_id = child.name
@@ -283,7 +294,8 @@ class Firebase:
                         "userId": refreshed.get("userId")
                         or refreshed.get("user_id")
                         or stored.get("userId"),
-                        "idToken": refreshed.get("idToken") or refreshed.get("id_token"),
+                        "idToken": refreshed.get("idToken")
+                        or refreshed.get("id_token"),
                         "refreshToken": refreshed.get("refreshToken")
                         or refreshed.get("refresh_token"),
                         "email": stored.get("email"),
@@ -372,9 +384,14 @@ class Firebase:
                 # verify_id_token raises on invalid/expired tokens
                 decoded = _fauth.verify_id_token(id_token)
                 # uid is the canonical user id (localId)
-                return {"user_id": decoded.get("uid") or decoded.get("user_id"), "email": decoded.get("email")}
+                return {
+                    "user_id": decoded.get("uid") or decoded.get("user_id"),
+                    "email": decoded.get("email"),
+                }
             except Exception:
-                logger.exception("firebase-admin failed to verify id token; will fallback")
+                logger.exception(
+                    "firebase-admin failed to verify id token; will fallback"
+                )
 
         # Fallback: use Identity Toolkit via Auth client (network call)
         try:
