@@ -23,7 +23,7 @@ WORKDIR /app
 COPY pyproject.toml uv.lock ./
 
 # Activate uv virtualenv path
-ENV PATH="/proj/.venv/bin:$PATH"
+ENV PATH="/app/.venv/bin:$PATH"
 
 # Install dependencies
 RUN uv lock
