@@ -40,7 +40,6 @@ RUN mkdir -p /var/app/user_data && \
     mkdir -p /var/app/downloads && \
     chown -R appuser:appuser /var/app
 
-VOLUME ["/var/app/user_data", "/var/app/downloads"]
 EXPOSE 8000
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

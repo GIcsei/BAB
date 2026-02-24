@@ -26,7 +26,8 @@ if [[ "$(id -u)" -eq 0 ]]; then
   fi
 
   mkdir -p /var/app/user_data /var/app/downloads
-  chown -R "${PUID}:${PGID}" /var/app
+  chown -R "${PUID}:${PGID}" /var/app/user_data
+  chown -R "${PUID}:${PGID}" /var/app/downloads
 
   exec gosu "${PUID}:${PGID}" "$@"
 fi
