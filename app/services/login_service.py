@@ -93,8 +93,9 @@ def login_user(data: LoginRequest) -> LoginResponse:
                 "chmod on credentials file may not be supported in this environment"
             )
 
-        # Register token in Firebase singleton in-memory mapping and set token as active for this session
-        firebase.user_tokens[user_id] = token_copy
+        # Register token in Firebase singleton via API and set token as active for this session
+        # (use the new register_user_tokens API instead of direct user_tokens mutation)
+        firebase.register_user_tokens(user_id, token_copy, cred_path)
         firebase.set_active_user(user_id)
         logger.info("User %s logged in and token registered", user_id)
 
@@ -139,7 +140,7 @@ def logout_user(user_id: str) -> bool:
     except Exception:
         logger.exception("Failed to remove credentials file for user %s", user_id)
 
-    # remove from in-memory registry
+    # remove from in-memory registry (legacy)
     firebase.clear_user(user_id)
     logger.info("Cleared in-memory token registry for user %s", user_id)
 

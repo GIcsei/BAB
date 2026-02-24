@@ -382,6 +382,7 @@ class ErsteNetBroker:
         try:
             fb = Firebase()  # singleton instance (must have been initialized elsewhere)
             db = fb.database()
+            fb.set_active_user(self.user_id)
             token = fb.token
         except Exception:
             logger.exception("Failed to obtain Firebase singleton or database")
