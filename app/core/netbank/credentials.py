@@ -1,8 +1,9 @@
-﻿import base64
+import base64
 import hashlib
 import json
 import logging
 import os
+import threading
 from typing import Dict, Optional
 
 try:
@@ -17,8 +18,14 @@ logger = logging.getLogger(__name__)
 # Tag ties the credential blob to the ErsteNetBroker class.
 _CLASS_TAG = "app.core.netbank.getReport.ErsteNetBroker"
 
-# Default storage location under the service account user's config directory
-_DEFAULT_CONFIG_DIR = os.path.join(os.path.expanduser("~"), ".config", "bank_analysis")
+# Default storage location: prefer APP_USER_DATA_DIR (mounted host volume) to survive restarts.
+_DEFAULT_CONFIG_DIR = os.path.join(
+    os.getenv("APP_USER_DATA_DIR", os.path.expanduser("~")), "netbank"
+)
+
+# In-memory cache for decrypted credentials for the running process.
+_CREDENTIAL_CACHE: Dict[str, Dict[str, str]] = {}
+_CACHE_LOCK = threading.RLock()
 
 
 def _ensure_config_dir(config_dir: str) -> None:
@@ -67,6 +74,8 @@ def _ensure_key(config_dir: str) -> bytes:
     if os.path.exists(key_path):
         with open(key_path, "rb") as fh:
             return fh.read()
+    # ensure directory
+    _ensure_config_dir(config_dir)
     key = Fernet.generate_key()
     # Write with restrictive permissions
     flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
@@ -94,7 +103,7 @@ def save_user_credentials(
 ) -> None:
     """
     Save credentials for a given user_id encrypted and tagged for ErsteNetBroker.
-    Creates per-user credential file with restrictive permissions.
+    Creates per-user credential file with restrictive permissions and updates in-memory cache.
     """
     if not user_id:
         raise ValueError("user_id is required")
@@ -137,6 +146,14 @@ def save_user_credentials(
             logger.exception("Failed to write credential file %s", cred_path)
             raise
 
+    # populate in-memory cache with decrypted values (safe in process memory)
+    with _CACHE_LOCK:
+        _CREDENTIAL_CACHE[user_id] = {
+            "username": username,
+            "account_number": account_number,
+            "password": password,
+        }
+
 
 def load_user_credentials(
     user_id: str, config_dir: Optional[str] = None
@@ -144,9 +161,18 @@ def load_user_credentials(
     """
     Load and decrypt credentials stored for the given user_id.
     Returns dict with keys: username, account_number, password or None if not available or invalid.
+    Uses in-memory cache first to avoid disk I/O.
     """
     if not user_id:
         return None
+
+    # check in-memory cache first
+    with _CACHE_LOCK:
+        cached = _CREDENTIAL_CACHE.get(user_id)
+        if cached:
+            # return a shallow copy to avoid external mutation
+            return dict(cached)
+
     if config_dir is None:
         config_dir = _DEFAULT_CONFIG_DIR
 
@@ -207,11 +233,18 @@ def load_user_credentials(
         if data.get("class") != _CLASS_TAG or data.get("user_id") != user_id:
             logger.warning("Decrypted payload tag mismatch for user %s", user_id)
             return None
-        return {
+
+        result = {
             "username": data.get("username"),
             "account_number": data.get("account_number"),
             "password": data.get("password"),
         }
+
+        # cache decrypted credentials in memory
+        with _CACHE_LOCK:
+            _CREDENTIAL_CACHE[user_id] = dict(result)
+
+        return result
     except Exception:
         logger.exception(
             "Failed to parse decrypted credential payload for user %s", user_id
@@ -222,6 +255,7 @@ def load_user_credentials(
 def delete_user_credentials(user_id: str, config_dir: Optional[str] = None) -> bool:
     """
     Remove stored credentials for a user. Returns True if file removed.
+    Also clears in-memory cache.
     """
     if not user_id:
         return False
@@ -231,6 +265,8 @@ def delete_user_credentials(user_id: str, config_dir: Optional[str] = None) -> b
     try:
         if os.path.exists(cred_path):
             os.remove(cred_path)
+            with _CACHE_LOCK:
+                _CREDENTIAL_CACHE.pop(user_id, None)
             return True
     except Exception:
         logger.exception("Failed to delete credential file %s", cred_path)
