@@ -1,6 +1,6 @@
 services:
   app:
-    image: bank_analysis_backend:${IMAGE_TAG}
+    image: bank_analysis_backend:latest
     build:
       context: .
     restart: unless-stopped
@@ -23,7 +23,7 @@ services:
     volumes:
       - ${APP_USER_DATA_HOST_PATH}:${APP_USER_DATA_DIR:-/var/app/user_data}
       - ${APP_DOWNLOADS_HOST_PATH}:${LOCAL_DOWNLOADS_DIR:-/var/app/downloads}
-      - ${FIRESTORE_MASTER_KEY}:${APP_GOOGLE_APPLICATION_CREDENTIALS:-/var/app/credentials.json}:ro
+      - ${FIRESTORE_MASTER_KEY}:${APP_GOOGLE_APPLICATION_CREDENTIALS:-/var/app/credentials.json}
 
   selenium:
     image: selenium/standalone-edge:144.0-20260202 # pin to a stable release you tested

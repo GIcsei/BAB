@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+echo "I'm alive and using this plane to say logs"
 APP_USER="appuser"
 PUID="${PUID:-568}"
 PGID="${PGID:-568}"
