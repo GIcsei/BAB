@@ -1,4 +1,4 @@
-﻿import logging
+import logging
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -11,8 +11,8 @@ security = HTTPBearer()
 
 def get_current_user_id(creds: HTTPAuthorizationCredentials = Depends(security)) -> str:
     """
-    Resolve current user from Bearer token by verifying token against Firebase.
-    Falls back to in-memory mapping only for backward compatibility.
+    Resolve current user from Bearer token by verifying token via firebase-admin (stateless).
+    Legacy in-memory fallback is retained but deprecated.
     """
     token = creds.credentials if creds else None
     if not token:
@@ -32,9 +32,10 @@ def get_current_user_id(creds: HTTPAuthorizationCredentials = Depends(security))
     if verified and verified.get("user_id"):
         return verified["user_id"]
 
-    # legacy fallback: keep compatibility while clients migrate
+    # legacy fallback: keep compatibility while clients migrate (deprecated)
     user_id = firebase.get_user_id_by_token(token)
     if user_id:
+        logger.warning("Using legacy in-memory token fallback; consider migrating to stateless idTokens")
         return user_id
 
     raise HTTPException(

@@ -1,4 +1,4 @@
-﻿# Bank Analysis Backend
+# Bank Analysis Backend
 
 This README provides an overview, developer quickstart, API usage examples, and security/performance notes for the `bank_analysis_backend` FastAPI project. It documents updated runtime, configuration, and CI expectations introduced in recent changes:
 
@@ -16,6 +16,7 @@ This README provides an overview, developer quickstart, API usage examples, and 
 - [Running locally (docker)](#running-locally-docker)
 - [Running on TrueNAS SCALE](#running-on-truenas-scale)
 - [API Endpoints](#api-endpoints)
+- [AI Model Overview](#ai-model-overview)
 - [Developer notes and code structure](#developer-notes-and-code-structure)
 - [Testing and CI](#testing-and-ci)
 - [Security considerations](#security-considerations)
@@ -75,7 +76,7 @@ These variables are read by `app/main.py` during startup. Job restore and token 
 
 ## Running locally (docker)
 
-The repo contains `update.sh` to build images and launch development/productioncompose stacks. It uses the `pyproject.toml` version to tag images.
+The repo contains `update.sh` to build images and launch development/production compose stacks. It uses the `pyproject.toml` version to tag images.
 
 Development (interactive):
 
@@ -108,9 +109,9 @@ Base prefix: `/data`
 
 1. List authenticated user's pickles
 
-- GET `/data/list`
-- Description: Lists `.pkl`/`.pickle` files in the current user's data folder.
-- Example:
+   - GET `/data/list`
+   - Description: Lists `.pkl`/`.pickle` files in the current user's data folder.
+   - Example:
 
 
   curl -H "Authorization: Bearer $TOKEN" "http://localhost:8000/data/list"
@@ -140,6 +141,34 @@ Notes on authentication and authorization:
 
 - The project uses `app/core/auth.py`, which relies on the Firebase singleton in `app/core/firestore_handler/QueryHandler.py`.
 - Routes now use `Depends(get_current_user_id)` to enforce that the caller is authenticated and to scope file access to the authenticated user's folder.
+
+## AI Model Overview
+
+This project contains the code and services required to host an AI-assisted data analysis model that authenticates users, loads per-user pickled datasets, extracts numeric series for plotting, and exposes those capabilities via authenticated HTTP endpoints.
+
+### Model components
+
+- **API / Router**: `app/routers/data_plot.py` — Exposes model functionality (file listing, preview, series extraction) via authenticated endpoints. Endpoints accept `Authorization: Bearer <idToken>` and validate input to prevent path traversal.
+
+- **Application Entrypoint**: `app/main.py` — Configures logging, environment, startup tasks (job restore, token loading), and mounts the FastAPI app including middleware and dependency wiring for authentication.
+
+- **Authentication**: `app/core/auth.py` and `app/core/firestore_handler/QueryHandler.py` — Handle Firebase `idToken` verification, login token persistence, per-user token registry, and token refresh workflows used to secure model access.
+
+- **Firestore / Persistence Layer**: `app/core/firestore_handler/FirestoreService.py`, `DatabaseHandler.py`, and `DataDescriptor.py` — Abstract document/collection access and provide a lightweight interface to persist model metadata and user pointers to stored data.
+
+- **Data Service (Model I/O)**: `app/services/data_service.py` — Safely loads serialized objects (joblib, pandas, pickle), performs controlled preview and numeric series extraction, and exposes async wrappers to avoid blocking the event loop.
+
+- **Scheduler / Background Jobs**: `app/services/scheduler.py` — Single-process scheduler that runs periodic maintenance and spawns background workers for heavy tasks, protecting the main request loop.
+
+- **Login / Token helpers**: `app/services/login_service.py` — High-level helpers for sign-in flows and token lifecycle management used by frontends and internal services.
+
+- **Utilities**: `app/core/firestore_handler/Utils.py` and other helpers — Provide small, reusable functions for validation, path handling, and defensive checks used across the model.
+
+- **Tests**: `tests/` (e.g. `test_data_plot.py`, `test_data_service.py`, `test_data_descriptor.py`) — Unit and integration tests that verify deserialization, API behavior, token handling, and core data transformations expected of the model.
+
+- **CI / Deployment**: `.github/workflows/ci.yml`, `docker-compose.yml`, and `update.sh` — CI validates linting, typing, security scans and tests; Docker files and compose orchestrate local/dev/production deployments for the model.
+
+- **Security & Standards**: `README.md` Security section, `.editorconfig`, and `CONTRIBUTING.md` — Document risky operations (pickle deserialization), safe practices, formatting rules, and contribution/testing expectations for maintaining the model securely.
 
 ## Developer notes and code structure
 
