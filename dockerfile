@@ -38,7 +38,8 @@ RUN chmod 0755 /usr/local/bin/entrypoint.sh
 RUN chown -R appuser:appuser /app
 RUN mkdir -p /var/app/user_data && \
     mkdir -p /var/app/downloads && \
-    chown -R appuser:appuser /var/app
+    chown -R appuser:appuser /var/app/user_data && \
+    chown -R appuser:appuser /var/app/downloads
 
 EXPOSE 8000
 
