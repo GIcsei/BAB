@@ -15,7 +15,7 @@ services:
       LOG_LEVEL: "${LOG_LEVEL:-INFO}"
       PUID: "${PUID:-568}"
       PGID: "${PGID:-568}"
-      NETBANK_MASTER_KEY: "${NETBANK_MASTER_KEY}"
+      GOOGLE_APPLICATION_CREDENTIALS: "${GOOGLE_APPLICATION_CREDENTIALS}"
       SELENIUM_REMOTE_URL: "http://selenium:4444"
     depends_on:
       selenium:
