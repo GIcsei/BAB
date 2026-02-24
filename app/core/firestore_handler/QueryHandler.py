@@ -1,15 +1,15 @@
+import asyncio
 import json
 import logging
-import threading
-import asyncio
 import os
+import threading
 from pathlib import Path
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
 
 import requests
 
-from app.core.firestore_handler.User import Auth
 from app.core.firestore_handler.FirestoreService import FirestoreService
+from app.core.firestore_handler.User import Auth
 
 logger = logging.getLogger(__name__)
 
