@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <title>Coverage for app/core/auth.py: 33%</title>
+    <title>Coverage for app/core/auth.py: 32%</title>
     <link rel="icon" sizes="32x32" href="favicon_32_cb_c827f16f.png">
     <link rel="stylesheet" href="style_cb_9ff733b0.css" type="text/css">
     <script src="coverage_html_cb_dd2e7eb5.js" defer></script>
@@ -12,7 +12,7 @@
     <div class="content">
         <h1>
             <span class="text">Coverage for </span><b>app&#8201;/&#8201;core&#8201;/&#8201;auth.py</b>:
-            <span class="pc_cov">33%</span>
+            <span class="pc_cov">32%</span>
         </h1>
         <aside id="help_panel_wrapper">
             <input id="help_panel_state" type="checkbox">
@@ -54,9 +54,9 @@
             </div>
         </aside>
         <h2>
-            <span class="text">21 statements &nbsp;</span>
+            <span class="text">22 statements &nbsp;</span>
             <button type="button" class="run button_toggle_run" value="run" data-shortcut="r" title="Toggle lines run">7<span class="text"> run</span></button>
-            <button type="button" class="mis show_mis button_toggle_mis" value="mis" data-shortcut="m" title="Toggle lines missing">14<span class="text"> missing</span></button>
+            <button type="button" class="mis show_mis button_toggle_mis" value="mis" data-shortcut="m" title="Toggle lines missing">15<span class="text"> missing</span></button>
             <button type="button" class="exc show_exc button_toggle_exc" value="exc" data-shortcut="x" title="Toggle lines excluded">0<span class="text"> excluded</span></button>
         </h2>
         <p class="text">
@@ -65,7 +65,7 @@
             <a id="nextFileLink" class="nav" href="z_7ed45afdb7671d83_Config_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.13.4">coverage.py v7.13.4</a>,
-            created at 2026-02-22 17:37 +0000
+            created at 2026-02-24 17:41 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -93,8 +93,8 @@
     <p class="pln"><span class="n"><a id="t11" href="#t11">11</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t12" href="#t12">12</a></span><span class="t"><span class="key">def</span> <span class="nam">get_current_user_id</span><span class="op">(</span><span class="nam">creds</span><span class="op">:</span> <span class="nam">HTTPAuthorizationCredentials</span> <span class="op">=</span> <span class="nam">Depends</span><span class="op">(</span><span class="nam">security</span><span class="op">)</span><span class="op">)</span> <span class="op">-></span> <span class="nam">str</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t13" href="#t13">13</a></span><span class="t">    <span class="str">"""</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t14" href="#t14">14</a></span><span class="t"><span class="str">    Resolve current user from Bearer token by verifying token against Firebase.</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t15" href="#t15">15</a></span><span class="t"><span class="str">    Falls back to in-memory mapping only for backward compatibility.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t14" href="#t14">14</a></span><span class="t"><span class="str">    Resolve current user from Bearer token by verifying token via firebase-admin (stateless).</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t15" href="#t15">15</a></span><span class="t"><span class="str">    Legacy in-memory fallback is retained but deprecated.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t16" href="#t16">16</a></span><span class="t"><span class="str">    """</span>&nbsp;</span><span class="r"></span></p>
     <p class="mis show_mis"><span class="n"><a id="t17" href="#t17">17</a></span><span class="t">    <span class="nam">token</span> <span class="op">=</span> <span class="nam">creds</span><span class="op">.</span><span class="nam">credentials</span> <span class="key">if</span> <span class="nam">creds</span> <span class="key">else</span> <span class="key">None</span>&nbsp;</span><span class="r"></span></p>
     <p class="mis show_mis"><span class="n"><a id="t18" href="#t18">18</a></span><span class="t">    <span class="key">if</span> <span class="key">not</span> <span class="nam">token</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
@@ -114,14 +114,17 @@
     <p class="mis show_mis"><span class="n"><a id="t32" href="#t32">32</a></span><span class="t">    <span class="key">if</span> <span class="nam">verified</span> <span class="key">and</span> <span class="nam">verified</span><span class="op">.</span><span class="nam">get</span><span class="op">(</span><span class="str">"user_id"</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="mis show_mis"><span class="n"><a id="t33" href="#t33">33</a></span><span class="t">        <span class="key">return</span> <span class="nam">verified</span><span class="op">[</span><span class="str">"user_id"</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t34" href="#t34">34</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t35" href="#t35">35</a></span><span class="t">    <span class="com"># legacy fallback: keep compatibility while clients migrate</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t35" href="#t35">35</a></span><span class="t">    <span class="com"># legacy fallback: keep compatibility while clients migrate (deprecated)</span>&nbsp;</span><span class="r"></span></p>
     <p class="mis show_mis"><span class="n"><a id="t36" href="#t36">36</a></span><span class="t">    <span class="nam">user_id</span> <span class="op">=</span> <span class="nam">firebase</span><span class="op">.</span><span class="nam">get_user_id_by_token</span><span class="op">(</span><span class="nam">token</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="mis show_mis"><span class="n"><a id="t37" href="#t37">37</a></span><span class="t">    <span class="key">if</span> <span class="nam">user_id</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t38" href="#t38">38</a></span><span class="t">        <span class="key">return</span> <span class="nam">user_id</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t39" href="#t39">39</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t40" href="#t40">40</a></span><span class="t">    <span class="key">raise</span> <span class="nam">HTTPException</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t41" href="#t41">41</a></span><span class="t">        <span class="nam">status_code</span><span class="op">=</span><span class="nam">status</span><span class="op">.</span><span class="nam">HTTP_401_UNAUTHORIZED</span><span class="op">,</span> <span class="nam">detail</span><span class="op">=</span><span class="str">"Invalid or expired token"</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t42" href="#t42">42</a></span><span class="t">    <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis show_mis"><span class="n"><a id="t38" href="#t38">38</a></span><span class="t">        <span class="nam">logger</span><span class="op">.</span><span class="nam">warning</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t39" href="#t39">39</a></span><span class="t">            <span class="str">"Using legacy in-memory token fallback; consider migrating to stateless idTokens"</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t40" href="#t40">40</a></span><span class="t">        <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis show_mis"><span class="n"><a id="t41" href="#t41">41</a></span><span class="t">        <span class="key">return</span> <span class="nam">user_id</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t42" href="#t42">42</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="mis show_mis"><span class="n"><a id="t43" href="#t43">43</a></span><span class="t">    <span class="key">raise</span> <span class="nam">HTTPException</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t44" href="#t44">44</a></span><span class="t">        <span class="nam">status_code</span><span class="op">=</span><span class="nam">status</span><span class="op">.</span><span class="nam">HTTP_401_UNAUTHORIZED</span><span class="op">,</span> <span class="nam">detail</span><span class="op">=</span><span class="str">"Invalid or expired token"</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t45" href="#t45">45</a></span><span class="t">    <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
 </main>
 <footer>
     <div class="content">
@@ -131,7 +134,7 @@
             <a class="nav" href="z_7ed45afdb7671d83_Config_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.13.4">coverage.py v7.13.4</a>,
-            created at 2026-02-22 17:37 +0000
+            created at 2026-02-24 17:41 +0000
         </p>
     </div>
 </footer>
