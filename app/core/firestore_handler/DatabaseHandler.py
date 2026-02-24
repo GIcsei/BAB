@@ -1,4 +1,4 @@
-﻿import logging
+import logging
 from typing import Collection, List
 
 from app.core.firestore_handler.DataDescriptor import Document
@@ -24,6 +24,7 @@ class Database:
 
     def __init__(self):
         fb = Firebase()
+        self.fb = fb
         self.database_url = f"https://firestore.googleapis.com/v1/projects/{fb.projectId}/databases/(default)/documents"
         self.requests = fb.requests
         self.key = fb.api_key
@@ -31,7 +32,8 @@ class Database:
         self.build_query = {}
         self.last_push_time = 0
         self.last_rand_chars = []
-        self.token = fb.token
+        # do not cache token here; read live from fb.token to avoid staleness
+        # self.token = fb.token
 
     def order_by_key(self):
         self.build_query["orderBy"] = "$key"
@@ -67,7 +69,7 @@ class Database:
 
     def listDocuments(self, token=None):
         if token is None:
-            token = self.token
+            token = self.fb.token
         header = self.build_headers(token)
         url = self.build_request_url()
         response = self.requests.get(url=url, headers=header)
@@ -108,6 +110,8 @@ class Database:
     def _request(self, token, json_kwargs={}):
         request_ref = self.build_request_url()
         # headers
+        if token is None:
+            token = self.fb.token
         headers = self.build_headers(token)
         # do request
         if self.build_query.get("StringQuery"):
@@ -143,7 +147,7 @@ class Database:
 
     def get(self, token=None, json_kwargs={}):
         if token is None:
-            token = self.token
+            token = self.fb.token
         build_query = self.build_query
         query_key = self.path.split("/")[-1]
 
@@ -169,6 +173,8 @@ class Database:
         return response_dict
 
     def push(self, data, token=None, json_kwargs={}):
+        if token is None:
+            token = self.fb.token
         request_ref = self.build_request_url()
         self.path = ""
         headers = self.build_headers(token)
@@ -181,6 +187,8 @@ class Database:
         return request_object.json()
 
     def set(self, data, token=None, json_kwargs={}):
+        if token is None:
+            token = self.fb.token
         request_ref = self.build_request_url()
         self.path = ""
         headers = self.build_headers(token)
@@ -193,6 +201,8 @@ class Database:
         return request_object.json()
 
     def update(self, data, token=None, json_kwargs={}):
+        if token is None:
+            token = self.fb.token
         request_ref = self.build_request_url()
         self.path = ""
         headers = self.build_headers(token)
@@ -206,7 +216,7 @@ class Database:
 
     def remove(self, token=None):
         if token is None:
-            token = self.token
+            token = self.fb.token
         request_ref = self.build_request_url()
         self.path = ""
         headers = self.build_headers(token)
