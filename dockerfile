@@ -20,7 +20,7 @@ RUN groupadd -g 1201 appuser && \
 WORKDIR /app
 
 # Copy dependency files
-COPY pyproject.toml uv.lock ./
+ADD pyproject.toml uv.lock ./
 
 # Activate uv virtualenv path
 ENV PATH="/app/.venv/bin:$PATH"
@@ -30,8 +30,8 @@ RUN uv lock
 RUN uv sync --frozen --no-dev
 
 # Copy source into the image so production/TrueNAS runs do not depend on bind mounts
-COPY app ./app
-COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
+ADD app ./app
+ADD docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod 0755 /usr/local/bin/entrypoint.sh
 
 # Change ownership
