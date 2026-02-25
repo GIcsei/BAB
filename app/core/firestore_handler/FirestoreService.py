@@ -2,7 +2,7 @@
 
 import json
 from functools import wraps
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
 
 from app.core.firestore_handler.DataDescriptor import Collection, Document
 from app.core.firestore_handler.Query import FirestoreQueryBuilder
@@ -64,15 +64,23 @@ class FirestoreService:
         raise_detailed_error(response)
         return response.json()
 
-    def set_document(self, path: str, data: Dict[str, Any], token: Optional[Dict[str, Any]] = None):
+    def set_document(
+        self, path: str, data: Dict[str, Any], token: Optional[Dict[str, Any]] = None
+    ):
         url = self._build_url(path)
-        response = self.requests.put(url, headers=self._build_headers(token), data=json.dumps(data))
+        response = self.requests.put(
+            url, headers=self._build_headers(token), data=json.dumps(data)
+        )
         raise_detailed_error(response)
         return response.json()
 
-    def update_document(self, path: str, data: Dict[str, Any], token: Optional[Dict[str, Any]] = None):
+    def update_document(
+        self, path: str, data: Dict[str, Any], token: Optional[Dict[str, Any]] = None
+    ):
         url = self._build_url(path)
-        response = self.requests.patch(url, headers=self._build_headers(token), data=json.dumps(data))
+        response = self.requests.patch(
+            url, headers=self._build_headers(token), data=json.dumps(data)
+        )
         raise_detailed_error(response)
         return response.json()
 
@@ -82,16 +90,24 @@ class FirestoreService:
         raise_detailed_error(response)
         return response.json()
 
-    def create_document(self, path: str, data: Dict[str, Any], token: Optional[Dict[str, Any]] = None):
+    def create_document(
+        self, path: str, data: Dict[str, Any], token: Optional[Dict[str, Any]] = None
+    ):
         url = self._build_url(path)
-        response = self.requests.post(url, headers=self._build_headers(token), data=json.dumps(data))
+        response = self.requests.post(
+            url, headers=self._build_headers(token), data=json.dumps(data)
+        )
         raise_detailed_error(response)
         return response.json()
 
     @deserialize_response
-    def run_query(self, collection: str, query_string: str, token: Optional[Dict[str, Any]] = None):
+    def run_query(
+        self, collection: str, query_string: str, token: Optional[Dict[str, Any]] = None
+    ):
         url = self._build_url("runQuery")
         query_payload = FirestoreQueryBuilder(collection).build_query(query_string)
-        response = self.requests.post(url, headers=self._build_headers(token), data=json.dumps(query_payload))
+        response = self.requests.post(
+            url, headers=self._build_headers(token), data=json.dumps(query_payload)
+        )
         raise_detailed_error(response)
         return response.json()
