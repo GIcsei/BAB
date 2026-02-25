@@ -52,6 +52,21 @@ def test_login_failure_returns_401():
     assert r.status_code == 401
 
 
+def test_login_failure_with_login_failed_error_returns_401():
+    """LoginFailedError specifically triggers the first except branch (lines 25-26)."""
+    from app.core.exceptions import LoginFailedError
+
+    with patch(
+        "app.routers.login.login_user",
+        side_effect=LoginFailedError("invalid creds"),
+    ):
+        r = client.post(
+            "/user/login",
+            json={"email": "fail@example.com", "password": "bad"},
+        )
+    assert r.status_code == 401
+
+
 def test_login_invalid_email_returns_422():
     r = client.post(
         "/user/login",
@@ -129,3 +144,12 @@ def test_next_run_no_job_returns_404():
     with patch("app.routers.login.scheduler", mock_scheduler):
         r = client.post("/user/next_run")
     assert r.status_code == 404
+
+
+def test_next_run_generic_exception_returns_500():
+    """Generic exception in next_run triggers lines 79-81."""
+    mock_scheduler = MagicMock()
+    mock_scheduler.get_next_run_for_user.side_effect = RuntimeError("scheduler down")
+    with patch("app.routers.login.scheduler", mock_scheduler):
+        r = client.post("/user/next_run")
+    assert r.status_code in (500, 502)
