@@ -1,122 +1,21 @@
-import asyncio
-import json
 import logging
-import threading
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Dict, Optional
 
-import requests
-from firebase_admin import auth as fauth
-
+from app.application.services.token_service import TokenService
 from app.core.config import get_settings
-from app.core.firebase_init import (
-    get_project_id,
-    initialize_firebase_admin,
-    is_testing_env,
-)
-from app.core.firestore_handler.FirestoreService import FirestoreService
-from app.core.firestore_handler.User import (
-    Auth,  # kept only if refresh via REST is still needed
-)
+from app.core.firebase_init import get_project_id
+from app.infrastructure.firebase.auth import FirebaseAuthAdapter
+from app.infrastructure.firebase.firestore import FirestoreAdapter
 
 logger = logging.getLogger(__name__)
 
 _DEFAULT_FIREBASE = None
 
 
-class TokenPersistence:
-    """
-    Responsible only for reading/writing per-user token files.
-    Provides sync and async helpers. Uses asyncio.to_thread to avoid blocking
-    FastAPI event loop when called from async code.
-    """
-
-    @staticmethod
-    def _read_json(path: Path) -> Optional[Dict[str, Any]]:
-        try:
-            with open(path, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except FileNotFoundError:
-            return None
-        except Exception:
-            logger.exception("Failed to read token file %s", path)
-            return None
-
-    @staticmethod
-    def _write_json(path: Path, data: Dict[str, Any]) -> bool:
-        try:
-            path.parent.mkdir(parents=True, exist_ok=True)
-            with open(path, "w", encoding="utf-8") as f:
-                json.dump(data, f)
-            return True
-        except Exception:
-            logger.exception("Failed to write token file %s", path)
-            return False
-
-    async def read_json_async(self, path: Path) -> Optional[Dict[str, Any]]:
-        return await asyncio.to_thread(self._read_json, path)
-
-    async def write_json_async(self, path: Path, data: Dict[str, Any]) -> bool:
-        return await asyncio.to_thread(self._write_json, path, data)
-
-    # Synchronous helpers for non-async callers (keeps backward compatibility)
-    def read_json(self, path: Path) -> Optional[Dict[str, Any]]:
-        return self._read_json(path)
-
-    def write_json(self, path: Path, data: Dict[str, Any]) -> bool:
-        return self._write_json(path, data)
-
-
-class TokenRegistry:
-    """
-    Thread-safe in-memory token registry. Keeps per-user token dicts and an
-    active (session) token pointer. All mutation guarded by an RLock.
-    """
-
-    def __init__(self):
-        self._tokens: Dict[str, Dict[str, Any]] = {}
-        self._active_user: Optional[str] = None
-        self._lock = threading.RLock()
-
-    def register(self, user_id: str, token_data: Dict[str, Any]) -> None:
-        with self._lock:
-            self._tokens[user_id] = dict(token_data)
-
-    def get(self, user_id: str) -> Optional[Dict[str, Any]]:
-        with self._lock:
-            token = self._tokens.get(user_id)
-            return dict(token) if token is not None else None
-
-    def remove(self, user_id: str) -> None:
-        with self._lock:
-            self._tokens.pop(user_id, None)
-            if self._active_user == user_id:
-                self._active_user = None
-
-    def set_active(self, user_id: str) -> None:
-        with self._lock:
-            if user_id not in self._tokens:
-                raise ValueError(f"No token registered for user {user_id}")
-            self._active_user = user_id
-
-    def get_active_token(self) -> Optional[Dict[str, Any]]:
-        with self._lock:
-            if self._active_user:
-                return dict(self._tokens.get(self._active_user))
-            return None
-
-    def find_user_by_id_token(self, id_token: str) -> Optional[str]:
-        with self._lock:
-            for uid, tok in self._tokens.items():
-                if tok.get("idToken") == id_token:
-                    return uid
-        return None
-
-
 class Firebase:
     """
-    Application-scoped Firebase manager.
-    Uses firebase-admin for token verification; projectId from service account.
+    Lightweight facade that composes Firestore adapter, token service, and auth verifier.
     """
 
     def __new__(cls, config: Optional[dict] = None):
@@ -134,197 +33,63 @@ class Firebase:
         if config is None:
             return
 
+        settings = get_settings()
         self.projectId = config.get("projectId") or get_project_id(allow_default=True)
-        self.requests = requests.Session()
-        self._auth_client: Optional[Auth] = None
-        self._persistence = TokenPersistence()
-        self._registry = TokenRegistry()
-        self._lock = threading.RLock()
-        self.TOKEN_FILE: Optional[Path] = None
-        self._database: Optional[FirestoreService] = None
+        self.api_key = config.get("apiKey") or settings.firebase_api_key
+        if not self.api_key:
+            raise ValueError("FIREBASE_API_KEY is not configured")
 
-        for scheme in ("http://", "https://"):
-            self.requests.mount(scheme, requests.adapters.HTTPAdapter(max_retries=3))
+        self.firestore_adapter = FirestoreAdapter(self.projectId, self.api_key)
+        self.token_service = TokenService(self.api_key, self.firestore_adapter.requests)
+        self.auth_adapter = FirebaseAuthAdapter()
 
         self._initialized = True
         global _DEFAULT_FIREBASE
         _DEFAULT_FIREBASE = self
 
-    def _ensure_auth_client(self) -> Auth:
-        with self._lock:
-            if self._auth_client is None:
-                self._auth_client = Auth(self.api_key, self.requests)
-            return self._auth_client
-
     def auth(self, token_json: Path):
-        auth_client = self._ensure_auth_client()
-        self.TOKEN_FILE = token_json
-        token = None
-        old_token = self.load_login_token()
-        if old_token:
-            try:
-                token = auth_client.refresh(old_token.get("refreshToken"))
-            except Exception:
-                logger.exception(
-                    "Failed to refresh token from file; will use stored token"
-                )
-                token = old_token
-        return auth_client, token
+        return self.token_service.auth(token_json)
 
-    def save_login_token(self, token_data: Dict[str, Any]):
-        if not self.TOKEN_FILE:
-            raise ValueError("TOKEN_FILE is not set for Firebase instance")
-        self._persistence.write_json(self.TOKEN_FILE, token_data)
+    def save_login_token(self, token_data: Dict[str, str]):
+        self.token_service.save_login_token(token_data)
 
-    def load_login_token(self) -> Optional[Dict[str, Any]]:
-        if not self.TOKEN_FILE:
-            return None
-        return self._persistence.read_json(self.TOKEN_FILE)
+    def load_login_token(self) -> Optional[Dict[str, str]]:
+        return self.token_service.load_login_token()
 
     def clear_token(self):
-        if self.TOKEN_FILE and self.TOKEN_FILE.exists():
-            try:
-                self.TOKEN_FILE.unlink()
-            except Exception:
-                logger.exception("Failed to clear TOKEN_FILE %s", self.TOKEN_FILE)
+        self.token_service.clear_token()
 
     def register_user_tokens(
         self,
         user_id: str,
-        token: Dict[str, Any],
+        token: Dict[str, str],
         credentials_path: Optional[Path] = None,
     ) -> None:
-        self._registry.register(user_id, token)
-        if credentials_path:
-            try:
-                self._persistence.write_json(credentials_path, token)
-            except Exception:
-                logger.exception("Failed to persist credentials for user %s", user_id)
+        self.token_service.register_user_tokens(user_id, token, credentials_path)
 
     def load_tokens_from_dir(self, base_dir: Path, refresh: bool = True) -> None:
-        base_dir = Path(base_dir)
-        if not base_dir.exists():
-            logger.info("Base directory for user tokens does not exist: %s", base_dir)
-            return
+        self.token_service.load_tokens_from_dir(base_dir, refresh)
 
-        auth_client = self._ensure_auth_client()
+    def refresh_token(self, user_id: str) -> Dict[str, str]:
+        return self.token_service.refresh_token(user_id)
 
-        for child in base_dir.iterdir():
-            if not child.is_dir():
-                continue
-            cred_path = child / "credentials.json"
-            token_data = self._persistence.read_json(cred_path)
-            if not token_data:
-                logger.warning(
-                    "No credentials.json found for user directory: %s", child
-                )
-                continue
+    def get_user_token(self, user_id: str) -> Optional[Dict[str, str]]:
+        return self.token_service.get_user_token(user_id)
 
-            user_id = child.name
-            stored = token_data
-            if refresh and stored.get("refreshToken"):
-                try:
-                    refreshed = auth_client.refresh(stored["refreshToken"])
-                    normalized = {
-                        "userId": refreshed.get("userId")
-                        or refreshed.get("user_id")
-                        or stored.get("userId"),
-                        "idToken": refreshed.get("idToken")
-                        or refreshed.get("id_token"),
-                        "refreshToken": refreshed.get("refreshToken")
-                        or refreshed.get("refresh_token"),
-                        "email": stored.get("email"),
-                    }
-                    stored = normalized
-                    try:
-                        self._persistence.write_json(cred_path, stored)
-                    except Exception:
-                        logger.debug("Failed to write refreshed token for %s", user_id)
-                except Exception:
-                    logger.exception("Failed to refresh token for user %s", user_id)
-
-            self._registry.register(user_id, stored)
-
-    def refresh_token(self, user_id: str) -> Dict[str, Any]:
-        """
-        Refresh a registered user's tokens deterministically:
-        - Require that a token exists for that user
-        - Use Auth to refresh and update in-memory + persisted file (if present)
-        """
-        token = self._registry.get(user_id)
-        if not token:
-            raise ValueError(f"No token found for user {user_id} to refresh")
-
-        auth_client = self._ensure_auth_client()
-        refreshed = auth_client.refresh(token["refreshToken"])
-        normalized = {
-            "userId": refreshed.get("userId")
-            or refreshed.get("user_id")
-            or token.get("userId"),
-            "idToken": refreshed.get("idToken") or refreshed.get("id_token"),
-            "refreshToken": refreshed.get("refreshToken")
-            or refreshed.get("refresh_token"),
-            "email": token.get("email"),
-        }
-
-        self._registry.register(user_id, normalized)
-
-        try:
-            base = get_settings().app_user_data_dir
-            cred_path = base / user_id / "credentials.json"
-            if cred_path.parent.exists():
-                self._persistence.write_json(cred_path, normalized)
-        except Exception:
-            logger.debug("Could not persist refreshed token for %s", user_id)
-
-        return normalized
-
-    def get_user_token(self, user_id: str) -> Optional[Dict[str, Any]]:
-        return self._registry.get(user_id)
-
-    def set_active_user(self, user_id: str) -> Optional[Dict[str, Any]]:
-        token = self._registry.get(user_id)
-        if not token:
-            raise ValueError(f"No token registered for user {user_id}")
-        return token
+    def set_active_user(self, user_id: str) -> Optional[Dict[str, str]]:
+        return self.token_service.set_active_user(user_id)
 
     def clear_user(self, user_id: str) -> None:
-        try:
-            current = self.token
-        except Exception:
-            current = None
+        self.token_service.clear_user(user_id)
 
-        self._registry.remove(user_id)
-
-        if current and current.get("userId") == user_id:
-            self.token = None
-
-    def verify_id_token(self, id_token: str) -> Optional[Dict[str, Any]]:
-        if not id_token:
-            return None
-
-        app = initialize_firebase_admin()
-        if app is None and is_testing_env():
-            logger.info("Skipping firebase-admin token verification in test mode")
-            return None
-
-        try:
-            decoded = fauth.verify_id_token(id_token)
-            return {
-                "user_id": decoded.get("uid") or decoded.get("user_id"),
-                "email": decoded.get("email"),
-            }
-        except Exception:
-            logger.exception("Failed to verify id token via firebase-admin")
-            return None
+    def verify_id_token(self, id_token: str) -> Optional[Dict[str, str]]:
+        return self.auth_adapter.verify_id_token(id_token)
 
     def get_user_id_by_token(self, access_token: str) -> Optional[str]:
-        return self._registry.find_user_by_id_token(access_token)
+        return self.token_service.get_user_id_by_token(access_token)
 
-    def database(self) -> FirestoreService:
-        if self._database is None:
-            self._database = FirestoreService(self)
-        return self._database
+    def database(self):
+        return self.firestore_adapter.database()
 
 
 def initialize_app(config: dict) -> Firebase:

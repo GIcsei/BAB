@@ -30,6 +30,7 @@ class Settings:
     google_application_credentials: Optional[Path]
     firebase_project_id: Optional[str]
     firebase_test_project_id: Optional[str]
+    firebase_api_key: Optional[str]
     log_level: str
     log_file: str
     log_json: bool
@@ -66,6 +67,7 @@ def get_settings() -> Settings:
 
     firebase_project_id = os.getenv("FIREBASE_PROJECT_ID")
     firebase_test_project_id = os.getenv("FIREBASE_TEST_PROJECT_ID")
+    firebase_api_key = os.getenv("FIREBASE_API_KEY")
 
     log_level = os.getenv("LOG_LEVEL", "INFO").upper()
     log_file = os.getenv("LOG_FILE", "")
@@ -95,6 +97,7 @@ def get_settings() -> Settings:
         google_application_credentials=google_application_credentials,
         firebase_project_id=firebase_project_id,
         firebase_test_project_id=firebase_test_project_id,
+        firebase_api_key=firebase_api_key,
         log_level=log_level,
         log_file=log_file,
         log_json=log_json,

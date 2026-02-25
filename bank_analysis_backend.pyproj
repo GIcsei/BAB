@@ -26,6 +26,7 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="app\application\services\token_service.py" />
     <Compile Include="app\core\config.py" />
     <Compile Include="app\core\error_mapping.py" />
     <Compile Include="app\core\exceptions.py" />
@@ -45,6 +46,8 @@
     <Compile Include="app\core\netbank\getReport.py" />
     <Compile Include="app\core\netbank\utils.py" />
     <Compile Include="app\core\__init__.py" />
+    <Compile Include="app\infrastructure\firebase\auth.py" />
+    <Compile Include="app\infrastructure\firebase\firestore.py" />
     <Compile Include="app\infrastructure\sched\scheduler.py" />
     <Compile Include="app\infrastructure\sched\__init__.py" />
     <Compile Include="app\main.py" />
@@ -66,10 +69,13 @@
     <Folder Include=".github\" />
     <Folder Include=".github\workflows\" />
     <Folder Include="app\" />
+    <Folder Include="app\application\" />
+    <Folder Include="app\application\services\" />
     <Folder Include="app\core\" />
     <Folder Include="app\core\firestore_handler\" />
     <Folder Include="app\core\netbank\" />
     <Folder Include="app\infrastructure\" />
+    <Folder Include="app\infrastructure\firebase\" />
     <Folder Include="app\infrastructure\sched\" />
     <Folder Include="app\routers\" />
     <Folder Include="app\routers\__pycache__\" />
