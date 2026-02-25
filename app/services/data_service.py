@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import os
 import pickle
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -9,6 +8,7 @@ from typing import Any, Dict, List, Optional
 import numpy as np
 import pandas as pd
 
+from app.core.config import get_settings
 from app.core.exceptions import (
     DeserializationDisabledError,
     DeserializationError,
@@ -21,14 +21,8 @@ logger = logging.getLogger(__name__)
 # Thread pool for blocking I/O operations
 _executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="data_service")
 
-# Feature flag to allow unsafe deserialization (default: disabled in prod)
-_ALLOW_UNSAFE_DESERIALIZE = os.getenv(
-    "APP_ALLOW_UNSAFE_DESERIALIZE", "false"
-).lower() in (
-    "1",
-    "true",
-    "yes",
-)
+settings = get_settings()
+_ALLOW_UNSAFE_DESERIALIZE = settings.allow_unsafe_deserialize
 
 
 def _safe_basename(filename: str) -> str:
