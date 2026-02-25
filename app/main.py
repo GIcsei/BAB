@@ -9,10 +9,11 @@ from fastapi.responses import JSONResponse
 
 from app.core.error_mapping import exception_to_http, get_error_response
 from app.core.exceptions import AppException
+from app.core.firebase_init import is_testing_env
 from app.core.health import get_health
 from app.core.logging_config import configure_logging
 from app.routers import data_plot, login, netbank_credentials
-from app.services.login_service import firebase
+from app.services.login_service import get_firebase
 from app.services.scheduler import scheduler
 
 app = FastAPI(title="Bank analysis backend")
@@ -53,6 +54,14 @@ async def startup_event():
     logger.info("=" * 60)
 
     try:
+        if is_testing_env():
+            logger.info("Test environment detected; skipping Firebase/token initialization")
+            health.mark_component_ready("scheduler", "skipped_in_tests")
+            health.mark_component_ready("tokens", "skipped_in_tests")
+            health.mark_component_ready("firebase", "skipped_in_tests")
+            health.mark_startup_complete()
+            return
+
         base_data_dir = Path(os.getenv("APP_USER_DATA_DIR", "/var/app/user_data"))
         target_hour = int(os.getenv("APP_JOB_HOUR", "18"))
         target_minute = int(os.getenv("APP_JOB_MINUTE", "0"))
@@ -70,6 +79,7 @@ async def startup_event():
                 "Scheduler lock not acquired; skipping scheduler restore in this process"
             )
 
+        firebase = get_firebase()
         # Load persisted tokens
         try:
             firebase.load_tokens_from_dir(base_data_dir, refresh=True)
