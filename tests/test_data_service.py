@@ -5,9 +5,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from app.services import data_service
-
 os.environ.setdefault("APP_ALLOW_UNSAFE_DESERIALIZE", "true")
+from app.services import data_service
 
 
 def test_list_pickles_for_user_empty(tmp_path: Path):
