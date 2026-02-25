@@ -58,15 +58,22 @@ def test_list_pickles_stat_error_for_pkl_files(tmp_path):
     pkl_file.write_bytes(pickle.dumps([1, 2, 3]))
 
     original_stat = Path.stat
+    stat_call_count = [0]
 
     def failing_stat(self, **kwargs):
+        result = original_stat(self, **kwargs)
         if self.suffix == ".pkl":
-            raise OSError("stat failed")
-        return original_stat(self, **kwargs)
+            stat_call_count[0] += 1
+            # First call is from is_file() - return normal result
+            # Second call is from p.stat().st_size - raise
+            if stat_call_count[0] > 1:
+                raise OSError("stat failed on second call")
+        return result
 
     with patch.object(Path, "stat", failing_stat):
         result = list_pickles_for_user(tmp_path, "u1")
 
+    # The exception is caught and the file is skipped
     assert result == []
 
 
