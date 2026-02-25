@@ -10,14 +10,33 @@ from app.services.scheduler import scheduler
 
 logger = logging.getLogger(__name__)
 
+# Load Firebase config from environment (fail-fast if required keys missing)
+FIREBASE_API_KEY = os.getenv("FIREBASE_API_KEY")
+FIREBASE_PROJECT_ID = os.getenv("FIREBASE_PROJECT_ID")
+FIREBASE_AUTH_DOMAIN = os.getenv("FIREBASE_AUTH_DOMAIN", "")
+FIREBASE_DATABASE_URL = os.getenv("FIREBASE_DATABASE_URL", "")
+FIREBASE_STORAGE_BUCKET = os.getenv("FIREBASE_STORAGE_BUCKET", "")
+
+missing = []
+if not FIREBASE_API_KEY:
+    missing.append("FIREBASE_API_KEY")
+if not FIREBASE_PROJECT_ID:
+    missing.append("FIREBASE_PROJECT_ID")
+
+if missing:
+    raise RuntimeError(
+        f"Missing required Firebase configuration environment variables: {', '.join(missing)}"
+    )
+
 config = {
-    "apiKey": "AIzaSyC9rGGx4XNmOXqZCi8ni9B8NkylFtdRbS4",
-    "authDomain": "ersterepgen.firebaseapp.com",
-    "databaseURL": "https://ersterepgen.firebaseio.com/",
-    "storageBucket": "ersterepgen.firebasestorage.app",
-    "projectId": "ersterepgen",
+    "apiKey": FIREBASE_API_KEY,
+    "authDomain": FIREBASE_AUTH_DOMAIN,
+    "databaseURL": FIREBASE_DATABASE_URL,
+    "storageBucket": FIREBASE_STORAGE_BUCKET,
+    "projectId": FIREBASE_PROJECT_ID,
 }
 
+# Initialize Firebase manager at import time so failures are fast in startup
 firebase = initialize_app(config)
 
 
@@ -93,10 +112,8 @@ def login_user(data: LoginRequest) -> LoginResponse:
                 "chmod on credentials file may not be supported in this environment"
             )
 
-        # Register token in Firebase singleton via API and set token as active for this session
-        # (use the new register_user_tokens API instead of direct user_tokens mutation)
+        # Register token in Firebase singleton via API (no global 'active' token set)
         firebase.register_user_tokens(user_id, token_copy, cred_path)
-        firebase.set_active_user(user_id)
         logger.info("User %s logged in and token registered", user_id)
 
         # schedule job using daily target hour/minute from environment (fallback to 18:00)
