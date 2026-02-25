@@ -1,8 +1,7 @@
-"""Tests for TokenRegistry and TokenPersistence in QueryHandler."""
+"""Tests for TokenRegistry and TokenPersistence in token_service."""
 
 import pytest
-
-from app.core.firestore_handler.QueryHandler import TokenPersistence, TokenRegistry
+from app.application.services.token_service import TokenPersistence, TokenRegistry
 
 # ── TokenRegistry ──────────────────────────────────────────────────────────
 

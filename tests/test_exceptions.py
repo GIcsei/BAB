@@ -7,9 +7,6 @@ from app.core.exceptions import (
     DeserializationDisabledError,
     DeserializationError,
     ExternalServiceException,
-)
-from app.core.exceptions import FileNotFoundError as AppFileNotFoundError
-from app.core.exceptions import (
     FileSizeExceededError,
     FirebaseError,
     IdentityToolkitError,
@@ -24,6 +21,7 @@ from app.core.exceptions import (
     StorageException,
     TokenExpiredError,
 )
+from app.core.exceptions import FileNotFoundError as AppFileNotFoundError
 
 # ── AppException base ──────────────────────────────────────────────────────
 

@@ -7,18 +7,15 @@ os.environ.setdefault("APP_ALLOW_UNSAFE_DESERIALIZE", "true")
 
 import pandas as pd
 import pytest
-from fastapi.testclient import TestClient
-
 from app.core.auth import get_current_user_id
 from app.core.exceptions import (
     DeserializationDisabledError,
     DeserializationError,
-)
-from app.core.exceptions import FileNotFoundError as AppFileNotFoundError
-from app.core.exceptions import (
     FileSizeExceededError,
 )
+from app.core.exceptions import FileNotFoundError as AppFileNotFoundError
 from app.main import app
+from fastapi.testclient import TestClient
 
 
 @pytest.fixture(autouse=True)

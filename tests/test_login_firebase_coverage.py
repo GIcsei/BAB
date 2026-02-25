@@ -11,14 +11,8 @@ import pytest
 
 def test_login_user_chmod_user_dir_fails(tmp_path, monkeypatch):
     """login_user handles chmod failure on user_dir."""
-    monkeypatch.setenv("APP_USER_DATA_DIR", str(tmp_path))
-
     from app.schemas.login import LoginRequest
     from app.services.login_service import login_user
-
-    mock_firebase = MagicMock()
-    mock_firebase.auth.return_value = (MagicMock(), None)
-    mock_firebase.register_user_tokens = MagicMock()
 
     mock_user = {
         "idToken": "tok",
@@ -27,20 +21,26 @@ def test_login_user_chmod_user_dir_fails(tmp_path, monkeypatch):
     }
     mock_auth_client = MagicMock()
     mock_auth_client.sign_in_with_email_and_password.return_value = mock_user
+
+    mock_firebase = MagicMock()
     mock_firebase.auth.return_value = (mock_auth_client, None)
+    mock_firebase.register_user_tokens = MagicMock()
 
     mock_scheduler = MagicMock()
+    mock_settings = MagicMock()
+    mock_settings.app_user_data_dir = tmp_path
+    mock_settings.app_job_hour = 18
+    mock_settings.app_job_minute = 0
 
     with (
-        patch("app.services.login_service.get_firebase", return_value=mock_firebase),
+        patch("app.services.login_service._get_settings", return_value=mock_settings),
         patch(
             "app.services.login_service.os.chmod",
             side_effect=OSError("chmod unsupported"),
         ),
-        patch("app.services.login_service.scheduler", mock_scheduler),
     ):
         data = LoginRequest(email="user@example.com", password="pw")
-        result = login_user(data)
+        result = login_user(data, mock_scheduler, mock_firebase)
 
     assert result.access_token == "tok"
 
@@ -50,8 +50,6 @@ def test_login_user_chmod_user_dir_fails(tmp_path, monkeypatch):
 
 def test_login_user_chmod_cred_file_fails(tmp_path, monkeypatch):
     """login_user handles chmod failure on credentials file."""
-    monkeypatch.setenv("APP_USER_DATA_DIR", str(tmp_path))
-
     from app.schemas.login import LoginRequest
     from app.services.login_service import login_user
 
@@ -77,14 +75,17 @@ def test_login_user_chmod_cred_file_fails(tmp_path, monkeypatch):
         return original_chmod(path, mode)
 
     mock_scheduler = MagicMock()
+    mock_settings = MagicMock()
+    mock_settings.app_user_data_dir = tmp_path
+    mock_settings.app_job_hour = 18
+    mock_settings.app_job_minute = 0
 
     with (
-        patch("app.services.login_service.get_firebase", return_value=mock_firebase),
+        patch("app.services.login_service._get_settings", return_value=mock_settings),
         patch("app.services.login_service.os.chmod", side_effect=selective_chmod),
-        patch("app.services.login_service.scheduler", mock_scheduler),
     ):
         data = LoginRequest(email="user@example.com", password="pw")
-        result = login_user(data)
+        result = login_user(data, mock_scheduler, mock_firebase)
 
     assert result.access_token == "tok"
 
@@ -94,8 +95,6 @@ def test_login_user_chmod_cred_file_fails(tmp_path, monkeypatch):
 
 def test_logout_user_unlink_exception(tmp_path, monkeypatch):
     """logout_user handles exception when removing credentials file."""
-    monkeypatch.setenv("APP_USER_DATA_DIR", str(tmp_path))
-
     from app.services.login_service import logout_user
 
     user_id = "u_logout"
@@ -106,18 +105,17 @@ def test_logout_user_unlink_exception(tmp_path, monkeypatch):
 
     mock_firebase = MagicMock()
     mock_scheduler = MagicMock()
-
-    Path.unlink
+    mock_settings = MagicMock()
+    mock_settings.app_user_data_dir = tmp_path
 
     def failing_unlink(self, missing_ok=False):
         raise OSError("cannot remove")
 
     with (
-        patch("app.services.login_service.get_firebase", return_value=mock_firebase),
-        patch("app.services.login_service.scheduler", mock_scheduler),
+        patch("app.services.login_service._get_settings", return_value=mock_settings),
         patch.object(Path, "unlink", failing_unlink),
     ):
-        result = logout_user(user_id)
+        result = logout_user(user_id, mock_scheduler, mock_firebase)
 
     # Should still return True despite unlink failure
     assert result is True
@@ -177,9 +175,8 @@ def test_initialize_firebase_admin_reuses_existing_app(monkeypatch):
 
 def test_initialize_firebase_admin_reuses_firebase_admin_app(monkeypatch):
     """initialize_firebase_admin reuses existing firebase_admin app."""
-    import firebase_admin
-
     import app.core.firebase_init as fi_mod
+    import firebase_admin
 
     original_app = fi_mod._firebase_app
     fi_mod._firebase_app = None

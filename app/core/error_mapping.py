@@ -5,11 +5,10 @@ Centralizes error-to-response logic for consistent API behavior.
 
 from typing import Any, Dict
 
-from fastapi import HTTPException
-
 from app.core.exceptions import (
     AppException,
 )
+from fastapi import HTTPException
 
 
 def exception_to_http(exc: Exception) -> HTTPException:

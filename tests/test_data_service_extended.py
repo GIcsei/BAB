@@ -2,6 +2,7 @@
 
 import os
 import pickle
+from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
@@ -165,13 +166,15 @@ def test_preview_file_not_found_raises(tmp_path):
 
 
 def test_preview_deserialization_disabled(tmp_path, monkeypatch):
-    monkeypatch.setattr(data_service, "_ALLOW_UNSAFE_DESERIALIZE", False)
-    base = tmp_path / "data"
-    user = base / "u1"
-    user.mkdir(parents=True)
-    (user / "x.pkl").write_bytes(b"data")
-    with pytest.raises(DeserializationDisabledError):
-        preview_pickle_file(base, "u1", "x.pkl")
+    with patch(
+        "app.services.data_service._allow_unsafe_deserialize", return_value=False
+    ):
+        base = tmp_path / "data"
+        user = base / "u1"
+        user.mkdir(parents=True)
+        (user / "x.pkl").write_bytes(b"data")
+        with pytest.raises(DeserializationDisabledError):
+            preview_pickle_file(base, "u1", "x.pkl")
 
 
 # ── extract_series – more branches ────────────────────────────────────────

@@ -2,9 +2,8 @@
 
 from unittest.mock import MagicMock
 
-import pytest
-
 import app.core.firestore_handler.QueryHandler as qh_mod
+import pytest
 from app.core.firestore_handler.QueryHandler import initialize_app
 
 

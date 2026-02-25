@@ -1,16 +1,13 @@
-"""Tests for remaining QueryHandler and TokenPersistence coverage."""
+"""Tests for remaining QueryHandler / TokenService / TokenPersistence coverage."""
 
 import asyncio
 import json
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 import app.core.firestore_handler.QueryHandler as qh_mod
-from app.core.firestore_handler.QueryHandler import (
-    TokenPersistence,
-    initialize_app,
-)
+import pytest
+from app.application.services.token_service import TokenPersistence
+from app.core.firestore_handler.QueryHandler import initialize_app
 
 
 @pytest.fixture(autouse=True)
@@ -62,15 +59,15 @@ def test_write_json_async(tmp_path):
     assert json.loads(path.read_text()) == {"async": True}
 
 
-# ── _ensure_auth_client creates new client ────────────────────────────────
+# ── TokenService._ensure_auth_client creates new client ──────────────────
 
 
 def test_ensure_auth_client_creates_new(tmp_path):
     """_ensure_auth_client creates an Auth instance when _auth_client is None."""
     fb = _make_fb_with_api_key()
-    fb._auth_client = None  # force None
+    fb.token_service._auth_client = None  # force None
 
-    auth_client = fb._ensure_auth_client()
+    auth_client = fb.token_service._ensure_auth_client()
     assert auth_client is not None
     from app.core.firestore_handler.User import Auth
 
@@ -83,7 +80,7 @@ def test_ensure_auth_client_creates_new(tmp_path):
 def test_load_tokens_skips_non_dirs(tmp_path):
     """load_tokens_from_dir skips regular files in the base_dir."""
     fb = _make_fb_with_api_key()
-    fb._auth_client = MagicMock()
+    fb.token_service._auth_client = MagicMock()
 
     # Create a file (not a dir) in tmp_path
     (tmp_path / "somefile.txt").write_text("data")
@@ -104,7 +101,9 @@ def test_register_user_tokens_write_exception(tmp_path):
     cred_path = tmp_path / "u1" / "credentials.json"
     cred_path.parent.mkdir()
 
-    with patch.object(fb._persistence, "write_json", side_effect=OSError("no space")):
+    with patch.object(
+        fb.token_service._persistence, "write_json", side_effect=OSError("no space")
+    ):
         # Should not raise
         fb.register_user_tokens("u1", {"idToken": "tok"}, credentials_path=cred_path)
 
@@ -112,59 +111,70 @@ def test_register_user_tokens_write_exception(tmp_path):
     assert fb.get_user_token("u1") is not None
 
 
-# ── refresh_token – persistence failure (lines 273-274) ──────────────────
+# ── refresh_token – persistence failure ──────────────────────────────────
 
 
 def test_refresh_token_persistence_failure(tmp_path, monkeypatch):
     """refresh_token continues if persistence write fails."""
     monkeypatch.setenv("APP_USER_DATA_DIR", str(tmp_path))
     fb = _make_fb_with_api_key()
-    fb._registry.register("u1", {"idToken": "old", "refreshToken": "ref"})
+    fb.token_service._registry.register("u1", {"idToken": "old", "refreshToken": "ref"})
 
     mock_auth = MagicMock()
     mock_auth.refresh.return_value = {"idToken": "new", "refreshToken": "new_ref"}
-    fb._auth_client = mock_auth
+    fb.token_service._auth_client = mock_auth
 
-    with patch.object(fb._persistence, "write_json", side_effect=OSError("disk full")):
+    with patch.object(
+        fb.token_service._persistence, "write_json", side_effect=OSError("disk full")
+    ):
         result = fb.refresh_token("u1")
 
     # Token was still refreshed in memory
     assert result["idToken"] == "new"
 
 
-# ── clear_user – active user token reset (line 296) ──────────────────────
+# ── clear_user – active user token reset ─────────────────────────────────
 
 
-def test_clear_user_resets_active_token():
-    """clear_user sets self.token=None when the cleared user is the active user."""
+def test_clear_user_removes_token():
+    """clear_user removes a user's token from the registry."""
     fb = _make_fb_with_api_key()
-    fb._registry.register("u1", {"idToken": "tok", "userId": "u1"})
-
-    # Set the token attribute to simulate an active user
-    fb.token = {"userId": "u1", "idToken": "tok"}
+    fb.token_service._registry.register("u1", {"idToken": "tok", "userId": "u1"})
 
     fb.clear_user("u1")
 
-    # token should be cleared since u1 was active
-    assert fb.token is None
+    assert fb.get_user_token("u1") is None
 
 
-def test_clear_user_does_not_clear_other_active_user():
-    """clear_user does NOT reset self.token if a different user is active."""
+def test_clear_user_does_not_affect_other_users():
+    """clear_user does NOT remove other users' tokens."""
     fb = _make_fb_with_api_key()
-    fb._registry.register("u1", {"idToken": "tok1"})
-    fb._registry.register("u2", {"idToken": "tok2"})
+    fb.token_service._registry.register("u1", {"idToken": "tok1"})
+    fb.token_service._registry.register("u2", {"idToken": "tok2"})
 
-    fb.token = {"userId": "u2", "idToken": "tok2"}  # u2 is active
-
-    fb.clear_user("u1")  # remove u1, not active
+    fb.clear_user("u1")
 
     # u2's token should remain
-    assert fb.token is not None
-    assert fb.token["userId"] == "u2"
+    assert fb.get_user_token("u2") is not None
+    assert fb.get_user_token("u2")["idToken"] == "tok2"
 
 
-# ── verify_id_token in non-test mode (lines 307-315) ─────────────────────
+# ── verify_id_token in non-test mode ─────────────────────────────────────
+
+
+def test_verify_id_token_returns_none_in_test_mode():
+    """In test mode, verify_id_token returns None without calling firebase-admin."""
+    fb = _make_fb_with_api_key()
+    result = fb.verify_id_token("some_token")
+    # In test mode (PYTEST_RUNNING=1), returns None
+    assert result is None
+
+
+def test_verify_id_token_empty_token_returns_none():
+    """verify_id_token returns None for empty token."""
+    fb = _make_fb_with_api_key()
+    result = fb.verify_id_token("")
+    assert result is None
 
 
 def test_verify_id_token_uses_firebase_admin_in_non_test_mode():
@@ -175,14 +185,15 @@ def test_verify_id_token_uses_firebase_admin_in_non_test_mode():
 
     with (
         patch(
-            "app.core.firestore_handler.QueryHandler.is_testing_env", return_value=False
+            "app.infrastructure.firebase.auth.is_testing_env",
+            return_value=False,
         ),
         patch(
-            "app.core.firestore_handler.QueryHandler.initialize_firebase_admin",
+            "app.infrastructure.firebase.auth.initialize_firebase_admin",
             return_value=MagicMock(),
         ),
         patch(
-            "app.core.firestore_handler.QueryHandler.fauth.verify_id_token",
+            "app.infrastructure.firebase.auth.fauth.verify_id_token",
             return_value=mock_decoded,
         ),
     ):
@@ -198,14 +209,15 @@ def test_verify_id_token_firebase_admin_exception():
 
     with (
         patch(
-            "app.core.firestore_handler.QueryHandler.is_testing_env", return_value=False
+            "app.infrastructure.firebase.auth.is_testing_env",
+            return_value=False,
         ),
         patch(
-            "app.core.firestore_handler.QueryHandler.initialize_firebase_admin",
+            "app.infrastructure.firebase.auth.initialize_firebase_admin",
             return_value=MagicMock(),
         ),
         patch(
-            "app.core.firestore_handler.QueryHandler.fauth.verify_id_token",
+            "app.infrastructure.firebase.auth.fauth.verify_id_token",
             side_effect=Exception("auth error"),
         ),
     ):

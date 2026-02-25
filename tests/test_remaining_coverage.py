@@ -4,9 +4,8 @@ import json
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 import app.core.firestore_handler.QueryHandler as qh_mod
+import pytest
 from app.core.firestore_handler.QueryHandler import initialize_app
 
 
@@ -59,10 +58,12 @@ def test_load_tokens_refresh_write_fails(tmp_path):
         "refreshToken": "new_ref",
         "userId": "u1",
     }
-    fb._auth_client = mock_auth_client
+    fb.token_service._auth_client = mock_auth_client
 
     # Make persistence write fail
-    with patch.object(fb._persistence, "write_json", side_effect=OSError("no space")):
+    with patch.object(
+        fb.token_service._persistence, "write_json", side_effect=OSError("no space")
+    ):
         fb.load_tokens_from_dir(tmp_path, refresh=True)
 
     # Token was still registered even though write failed
@@ -76,7 +77,7 @@ def test_refresh_token_persistence_write_fails_with_user_dir(tmp_path, monkeypat
     """refresh_token handles write failure when parent dir exists."""
     monkeypatch.setenv("APP_USER_DATA_DIR", str(tmp_path))
     fb = _make_fb()
-    fb._registry.register("u1", {"idToken": "old", "refreshToken": "ref"})
+    fb.token_service._registry.register("u1", {"idToken": "old", "refreshToken": "ref"})
 
     mock_auth_client = MagicMock()
     mock_auth_client.refresh.return_value = {
@@ -84,12 +85,14 @@ def test_refresh_token_persistence_write_fails_with_user_dir(tmp_path, monkeypat
         "refreshToken": "new_ref",
         "userId": "u1",
     }
-    fb._auth_client = mock_auth_client
+    fb.token_service._auth_client = mock_auth_client
 
     # Create the user directory so cred_path.parent.exists() is True
     (tmp_path / "u1").mkdir()
 
-    with patch.object(fb._persistence, "write_json", side_effect=OSError("disk full")):
+    with patch.object(
+        fb.token_service._persistence, "write_json", side_effect=OSError("disk full")
+    ):
         result = fb.refresh_token("u1")
 
     # Token was refreshed in memory despite persistence failure
@@ -106,7 +109,10 @@ def test_start_job_chmod_fails(tmp_path):
     sched = Scheduler()
     sched._start_worker_if_needed = MagicMock()
 
-    with patch("app.services.scheduler.os.chmod", side_effect=OSError("not supported")):
+    with patch(
+        "app.infrastructure.sched.scheduler.os.chmod",
+        side_effect=OSError("not supported"),
+    ):
         job = sched.start_job_for_user("u1", tmp_path / "u1", 18, 0)
 
     assert job is not None

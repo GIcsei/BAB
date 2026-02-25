@@ -2,9 +2,8 @@
 
 from unittest.mock import MagicMock
 
-import pytest
-
 import app.core.firestore_handler.QueryHandler as qh_mod
+import pytest
 from app.core.firestore_handler.QueryHandler import initialize_app
 
 
@@ -164,9 +163,6 @@ def test_generate_key_duplicate_time(monkeypatch):
         m.setattr(
             "app.core.firestore_handler.DatabaseHandler.time.time",
             lambda: now_ms / 1000.0,
-        )
-        m.setattr(
-            "app.core.firestore_handler.DatabaseHandler.time.floor", lambda x: int(x)
         )
         key = db.generate_key()
     assert len(key) == 20
