@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 from typing import Optional
 
-from app.core.firebase_init import initialize_firebase_admin, get_project_id
+from app.core.firebase_init import get_project_id, initialize_firebase_admin
 from app.core.firestore_handler.QueryHandler import initialize_app
 from app.schemas.login import LoginRequest, LoginResponse
 from app.services.scheduler import scheduler
