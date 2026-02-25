@@ -1,6 +1,7 @@
 # FastAPI (backend)
 
 import logging
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
@@ -8,15 +9,104 @@ from fastapi.responses import JSONResponse
 from app.core.config import get_settings
 from app.core.error_mapping import exception_to_http, get_error_response
 from app.core.exceptions import AppException
-from app.core.firebase_init import is_testing_env
+from app.core.firebase_init import (
+    get_project_id,
+    initialize_firebase_admin,
+    is_testing_env,
+)
+from app.core.firestore_handler.QueryHandler import Firebase, initialize_app
 from app.core.health import get_health
 from app.core.logging_config import configure_logging
-from app.infrastructure.sched.scheduler import Scheduler, create_scheduler
 from app.routers import data_plot, login, netbank_credentials
-from app.services.login_service import get_firebase
+from app.services.scheduler import Scheduler, create_scheduler
 
-app = FastAPI(title="Bank analysis backend")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    configure_logging()
+    logger = logging.getLogger(__name__)
+    health = get_health()
+    settings = get_settings()
+
+    app.state.scheduler = None
+    app.state.firebase = None
+
+    logger.info("=" * 60)
+    logger.info("Starting application startup sequence")
+    logger.info("=" * 60)
+
+    try:
+        if is_testing_env():
+            logger.info(
+                "Test environment detected; skipping Firebase/token initialization"
+            )
+            health.mark_component_ready("scheduler", "skipped_in_tests")
+            health.mark_component_ready("tokens", "skipped_in_tests")
+            health.mark_component_ready("firebase", "skipped_in_tests")
+            health.mark_startup_complete()
+            yield
+            return
+
+        initialize_firebase_admin()
+
+        firebase = initialize_app(
+            {
+                "projectId": get_project_id(allow_default=True),
+                "apiKey": settings.firebase_api_key,
+            }
+        )
+        app.state.firebase = firebase
+
+        scheduler = create_scheduler(firebase_provider=lambda: app.state.firebase)
+        app.state.scheduler = scheduler
+
+        base_data_dir = settings.app_user_data_dir
+        target_hour = settings.app_job_hour
+        target_minute = settings.app_job_minute
+
+        logger.debug("Base data directory: %s", base_data_dir)
+        logger.debug("Daily job scheduled at %02d:%02d", target_hour, target_minute)
+
+        if scheduler is not None:
+            scheduler.restore_jobs_from_dir(base_data_dir, target_hour, target_minute)
+            health.mark_component_ready("scheduler")
+            logger.info("Scheduler jobs restored successfully")
+        else:
+            logger.warning(
+                "Scheduler lock not acquired; skipping scheduler restore in this process"
+            )
+            health.mark_component_ready("scheduler", "lock_not_acquired")
+
+        try:
+            firebase.load_tokens_from_dir(base_data_dir, refresh=True)
+            health.mark_component_ready("tokens")
+            logger.info("User tokens loaded successfully")
+        except Exception as exc:
+            health.mark_component_ready("tokens", str(exc))
+            logger.exception("Failed to load user tokens: %s", exc)
+            raise
+
+        health.mark_component_ready("firebase")
+        health.mark_startup_complete()
+
+        logger.info("=" * 60)
+        logger.info("Application startup complete")
+        logger.info("=" * 60)
+
+        yield
+    except Exception as exc:
+        logger.critical("Startup failed; application will not accept requests: %s", exc)
+        raise
+    finally:
+        scheduler = getattr(app.state, "scheduler", None)
+        if scheduler:
+            scheduler.stop_all()
+            logger.info("Scheduler stopped")
+
+
+app = FastAPI(title="Bank analysis backend", lifespan=lifespan)
 app.state.scheduler: Scheduler | None = None
+app.state.firebase: Firebase | None = None
 
 
 @app.middleware("http")
@@ -36,80 +126,6 @@ async def error_handling_middleware(request: Request, call_next):
             status_code=500,
             content=get_error_response(exc),
         )
-
-
-@app.on_event("startup")
-async def startup_event():
-    """
-    Readiness-aware startup: configure logging, restore jobs, load tokens.
-    Marks application ready only after all components are initialized.
-    Fails fast on configuration errors.
-    """
-    configure_logging()
-    logger = logging.getLogger(__name__)
-    health = get_health()
-    settings = get_settings()
-
-    logger.info("=" * 60)
-    logger.info("Starting application startup sequence")
-    logger.info("=" * 60)
-
-    try:
-        if is_testing_env():
-            logger.info(
-                "Test environment detected; skipping Firebase/token initialization"
-            )
-            health.mark_component_ready("scheduler", "skipped_in_tests")
-            health.mark_component_ready("tokens", "skipped_in_tests")
-            health.mark_component_ready("firebase", "skipped_in_tests")
-            health.mark_startup_complete()
-            return
-
-        base_data_dir = settings.app_user_data_dir
-        target_hour = settings.app_job_hour
-        target_minute = settings.app_job_minute
-
-        logger.debug("Base data directory: %s", base_data_dir)
-        logger.debug("Daily job scheduled at %02d:%02d", target_hour, target_minute)
-
-        scheduler = create_scheduler()
-        app.state.scheduler = scheduler
-
-        # Restore scheduler jobs
-        if scheduler is not None:
-            scheduler.restore_jobs_from_dir(base_data_dir, target_hour, target_minute)
-            health.mark_component_ready("scheduler")
-            logger.info("Scheduler jobs restored successfully")
-        else:
-            logger.warning(
-                "Scheduler lock not acquired; skipping scheduler restore in this process"
-            )
-            health.mark_component_ready("scheduler", "lock_not_acquired")
-
-        firebase = get_firebase()
-        # Load persisted tokens
-        try:
-            firebase.load_tokens_from_dir(base_data_dir, refresh=True)
-            health.mark_component_ready("tokens")
-            logger.info("User tokens loaded successfully")
-        except Exception as exc:
-            health.mark_component_ready("tokens", str(exc))
-            logger.exception("Failed to load user tokens: %s", exc)
-            raise
-
-        # Mark Firebase as ready (was initialized at import time)
-        health.mark_component_ready("firebase")
-
-        # All components ready
-        health.mark_startup_complete()
-
-        logger.info("=" * 60)
-        logger.info("Application startup complete")
-        logger.info("=" * 60)
-
-    except Exception as exc:
-        logger.critical("Startup failed; application will not accept requests: %s", exc)
-        raise
 
 
 @app.get("/")

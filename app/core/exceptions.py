@@ -1,5 +1,4 @@
-"""
-Typed exception hierarchy for Bank Analysis Backend.
+"""Typed exception hierarchy for Bank Analysis Backend.
 Enables narrow exception handling and consistent error mapping to HTTP responses.
 """
 
