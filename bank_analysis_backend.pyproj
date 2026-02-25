@@ -26,6 +26,7 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="app\core\config.py" />
     <Compile Include="app\core\error_mapping.py" />
     <Compile Include="app\core\exceptions.py" />
     <Compile Include="app\core\firebase_init.py" />
