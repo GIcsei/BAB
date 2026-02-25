@@ -7,7 +7,6 @@ Structured logging configuration with token redaction.
 
 import json
 import logging
-import logging
 import sys
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
