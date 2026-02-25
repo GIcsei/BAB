@@ -7,7 +7,6 @@ from typing import Any, Dict, List, Optional
 
 import numpy as np
 import pandas as pd
-
 from app.core.config import get_settings
 from app.core.exceptions import (
     DeserializationDisabledError,

@@ -2,9 +2,8 @@
 
 import os
 
-import pytest
-
 import app.core.netbank.credentials as creds_mod
+import pytest
 from app.core.netbank.credentials import (
     delete_user_credentials,
     load_user_credentials,

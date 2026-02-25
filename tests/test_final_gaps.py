@@ -58,11 +58,9 @@ def test_perform_task_inner_firebase_exception(tmp_path):
     mock_firebase.load_tokens_from_dir.side_effect = ValueError("load fails")
     # Both fail -> inner exception at lines 115-121
 
-    with (
-        patch("app.services.login_service.firebase", mock_firebase),
-        patch.dict("sys.modules", {"app.core.netbank.getReport": fake_mod}),
-    ):
+    with patch.dict("sys.modules", {"app.core.netbank.getReport": fake_mod}):
         job = _Job("u1", tmp_path)
+        job._firebase_provider = lambda: mock_firebase
         job._perform_task()  # should not raise despite inner exception
 
     mock_broker.get_report.assert_called_once()

@@ -1,5 +1,6 @@
 import logging
 import os
+import sys
 
 from app.core.logging_config import (
     StructuredFormatter,
@@ -20,15 +21,32 @@ def test_token_redacting_filter_redacts_tokens():
         exc_info=None,
     )
     assert filt.filter(record) is True
-    assert record.getMessage() == "Bearer token=abc123"
+    # After filtering, the message is redacted
     assert record.msg == "[REDACTED SENSITIVE DATA]"
+    assert record.getMessage() == "[REDACTED SENSITIVE DATA]"
+
+
+def test_token_redacting_filter_passes_safe_messages():
+    filt = TokenRedactingFilter()
+    record = logging.LogRecord(
+        name="app.test",
+        level=logging.INFO,
+        pathname="",
+        lineno=0,
+        msg="Safe log message with no secrets",
+        args=(),
+        exc_info=None,
+    )
+    assert filt.filter(record) is True
+    assert record.getMessage() == "Safe log message with no secrets"
 
 
 def test_structured_formatter_json_includes_exception():
     fmt = StructuredFormatter(use_json=True)
     try:
         raise ValueError("boom")
-    except ValueError as exc_info:  # type: ignore
+    except ValueError:
+        exc_info = sys.exc_info()
         record = logging.LogRecord(
             name="app.test",
             level=logging.ERROR,
@@ -36,7 +54,7 @@ def test_structured_formatter_json_includes_exception():
             lineno=0,
             msg="something failed",
             args=(),
-            exc_info=exc_info.__traceback__,
+            exc_info=exc_info,
         )
     import json
 
@@ -52,13 +70,19 @@ def test_configure_logging_default(tmp_path):
 
 
 def test_configure_logging_with_log_file(tmp_path, monkeypatch):
+    import app.core.config as cfg
+
     log_file = str(tmp_path / "test.log")
     monkeypatch.setenv("LOG_FILE", log_file)
     monkeypatch.setenv("LOG_LEVEL", "DEBUG")
-    configure_logging()
-    logger = logging.getLogger("app")
-    logger.info("test log entry")
-    assert os.path.exists(log_file)
+    cfg._SETTINGS = None  # force re-read with new env vars
+    try:
+        configure_logging()
+        logger = logging.getLogger("app")
+        logger.info("test log entry")
+        assert os.path.exists(log_file)
+    finally:
+        cfg._SETTINGS = None  # reset so other tests are not affected
 
 
 def test_configure_logging_json_mode(monkeypatch):

@@ -1,11 +1,10 @@
 import logging
 
-from fastapi import Depends, HTTPException, Request
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-
 from app.core.error_mapping import exception_to_http
 from app.core.exceptions import InvalidTokenError, MissingTokenError
 from app.core.firestore_handler.QueryHandler import Firebase
+from fastapi import Depends, HTTPException, Request
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 logger = logging.getLogger(__name__)
 security = HTTPBearer()

@@ -2,9 +2,8 @@
 
 import json
 
-import pytest
-
 import app.core.firestore_handler.QueryHandler as qh_mod
+import pytest
 from app.core.firestore_handler.QueryHandler import (
     Firebase,
     initialize_app,
@@ -65,14 +64,14 @@ def test_firebase_no_singleton_raises():
 
 def test_save_login_token_no_token_file_raises():
     fb = initialize_app({"projectId": "p"})
-    fb.TOKEN_FILE = None
+    fb.token_service._token_file = None
     with pytest.raises(ValueError, match="TOKEN_FILE is not set"):
         fb.save_login_token({"idToken": "tok"})
 
 
 def test_save_and_load_login_token(tmp_path):
     fb = initialize_app({"projectId": "p"})
-    fb.TOKEN_FILE = tmp_path / "token.json"
+    fb.token_service._token_file = tmp_path / "token.json"
     fb.save_login_token({"idToken": "abc", "refreshToken": "def"})
     loaded = fb.load_login_token()
     assert loaded["idToken"] == "abc"
@@ -80,7 +79,7 @@ def test_save_and_load_login_token(tmp_path):
 
 def test_load_login_token_no_token_file():
     fb = initialize_app({"projectId": "p"})
-    fb.TOKEN_FILE = None
+    fb.token_service._token_file = None
     assert fb.load_login_token() is None
 
 
@@ -89,15 +88,15 @@ def test_load_login_token_no_token_file():
 
 def test_clear_token_removes_file(tmp_path):
     fb = initialize_app({"projectId": "p"})
-    fb.TOKEN_FILE = tmp_path / "tok.json"
-    fb.TOKEN_FILE.write_text('{"idToken": "x"}')
+    fb.token_service._token_file = tmp_path / "tok.json"
+    fb.token_service._token_file.write_text('{"idToken": "x"}')
     fb.clear_token()
-    assert not fb.TOKEN_FILE.exists()
+    assert not fb.token_service._token_file.exists()
 
 
 def test_clear_token_no_file_noop(tmp_path):
     fb = initialize_app({"projectId": "p"})
-    fb.TOKEN_FILE = tmp_path / "nonexistent.json"
+    fb.token_service._token_file = tmp_path / "nonexistent.json"
     fb.clear_token()  # should not raise
 
 
@@ -111,14 +110,14 @@ def test_register_user_tokens(tmp_path):
     cred_path.parent.mkdir(parents=True)
 
     fb.register_user_tokens("u1", token, credentials_path=cred_path)
-    assert fb._registry.get("u1")["idToken"] == "tok"
+    assert fb.token_service._registry.get("u1")["idToken"] == "tok"
     assert cred_path.exists()
 
 
 def test_register_user_tokens_no_path():
     fb = initialize_app({"projectId": "p"})
     fb.register_user_tokens("u2", {"idToken": "t"}, credentials_path=None)
-    assert fb._registry.get("u2")["idToken"] == "t"
+    assert fb.token_service._registry.get("u2")["idToken"] == "t"
 
 
 # ── Firebase.get_user_token ────────────────────────────────────────────────
@@ -126,7 +125,7 @@ def test_register_user_tokens_no_path():
 
 def test_get_user_token():
     fb = initialize_app({"projectId": "p"})
-    fb._registry.register("u3", {"idToken": "xyz"})
+    fb.token_service._registry.register("u3", {"idToken": "xyz"})
     assert fb.get_user_token("u3")["idToken"] == "xyz"
 
 
@@ -140,7 +139,7 @@ def test_get_user_token_missing():
 
 def test_set_active_user():
     fb = initialize_app({"projectId": "p"})
-    fb._registry.register("u4", {"idToken": "t"})
+    fb.token_service._registry.register("u4", {"idToken": "t"})
     token = fb.set_active_user("u4")
     assert token["idToken"] == "t"
 
@@ -156,7 +155,7 @@ def test_set_active_user_missing_raises():
 
 def test_clear_user():
     fb = initialize_app({"projectId": "p"})
-    fb._registry.register("u5", {"idToken": "t"})
+    fb.token_service._registry.register("u5", {"idToken": "t"})
     fb.clear_user("u5")
     assert fb.get_user_token("u5") is None
 
@@ -171,7 +170,7 @@ def test_clear_user_not_registered():
 
 def test_get_user_id_by_token():
     fb = initialize_app({"projectId": "p"})
-    fb._registry.register("u6", {"idToken": "unique_tok_789"})
+    fb.token_service._registry.register("u6", {"idToken": "unique_tok_789"})
     found = fb.get_user_id_by_token("unique_tok_789")
     assert found == "u6"
 

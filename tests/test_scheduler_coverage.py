@@ -109,7 +109,8 @@ def test_perform_task_mkdir_failure(tmp_path):
     job = _Job("u1", tmp_path / "newdir")
 
     with patch(
-        "app.services.scheduler.Path.mkdir", side_effect=OSError("permission denied")
+        "app.infrastructure.sched.scheduler.Path.mkdir",
+        side_effect=OSError("permission denied"),
     ):
         # should not raise
         job._perform_task()
@@ -127,11 +128,11 @@ def test_perform_task_chmod_failure(tmp_path):
     fake_mod = _mock_erste_module(mock_broker)
 
     with (
-        patch("app.services.login_service.firebase", mock_firebase),
         patch.dict("sys.modules", {"app.core.netbank.getReport": fake_mod}),
         patch("os.chmod", side_effect=OSError("not supported")),
     ):
         job = _Job("u1", tmp_path)
+        job._firebase_provider = lambda: mock_firebase
         job._perform_task()  # should not raise
 
 
@@ -150,11 +151,9 @@ def test_perform_task_firebase_all_methods_fail(tmp_path):
     mock_firebase.set_active_user.side_effect = RuntimeError("set_active fails")
     mock_firebase.load_tokens_from_dir.side_effect = RuntimeError("load fails")
 
-    with (
-        patch("app.services.login_service.firebase", mock_firebase),
-        patch.dict("sys.modules", {"app.core.netbank.getReport": fake_mod}),
-    ):
+    with (patch.dict("sys.modules", {"app.core.netbank.getReport": fake_mod}),):
         job = _Job("u1", tmp_path)
+        job._firebase_provider = lambda: mock_firebase
         job._perform_task()  # should not raise
 
     mock_broker.get_report.assert_called_once()
@@ -172,11 +171,9 @@ def test_perform_task_result_file_stat_fails(tmp_path):
 
     fake_mod = _mock_erste_module(mock_broker)
 
-    with (
-        patch("app.services.login_service.firebase", mock_firebase),
-        patch.dict("sys.modules", {"app.core.netbank.getReport": fake_mod}),
-    ):
+    with (patch.dict("sys.modules", {"app.core.netbank.getReport": fake_mod}),):
         job = _Job("u1", tmp_path)
+        job._firebase_provider = lambda: mock_firebase
         # file doesn't exist so stat will fail -> size = None
         job._perform_task()
 

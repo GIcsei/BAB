@@ -3,7 +3,6 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 from app.services.login_service import _extract_user_id, logout_user
 
 # ── _extract_user_id ───────────────────────────────────────────────────────
@@ -48,13 +47,12 @@ def test_extract_user_id_none_when_all_none():
 
 def test_logout_user_empty_user_id_raises():
     with pytest.raises(ValueError, match="User not found"):
-        logout_user("")
+        logout_user("", MagicMock(), MagicMock())
 
 
 def test_logout_user_removes_credentials(tmp_path, monkeypatch):
     """logout_user should stop job, remove cred file, clear firebase registry."""
     uid = "testuser"
-    monkeypatch.setenv("APP_USER_DATA_DIR", str(tmp_path))
 
     # Create a fake credential file
     user_dir = tmp_path / uid
@@ -62,15 +60,13 @@ def test_logout_user_removes_credentials(tmp_path, monkeypatch):
     cred_file = user_dir / "credentials.json"
     cred_file.write_text('{"idToken": "tok"}')
 
-    # Mock scheduler.stop_job_for_user and get_firebase().clear_user
     mock_scheduler = MagicMock()
     mock_firebase = MagicMock()
+    mock_settings = MagicMock()
+    mock_settings.app_user_data_dir = tmp_path
 
-    with (
-        patch("app.services.login_service.scheduler", mock_scheduler),
-        patch("app.services.login_service.get_firebase", return_value=mock_firebase),
-    ):
-        result = logout_user(uid)
+    with patch("app.services.login_service._get_settings", return_value=mock_settings):
+        result = logout_user(uid, mock_scheduler, mock_firebase)
 
     assert result is True
     assert not cred_file.exists()
@@ -81,15 +77,13 @@ def test_logout_user_removes_credentials(tmp_path, monkeypatch):
 def test_logout_user_no_cred_file(tmp_path, monkeypatch):
     """logout_user should succeed even when credentials.json doesn't exist."""
     uid = "no_cred_user"
-    monkeypatch.setenv("APP_USER_DATA_DIR", str(tmp_path))
 
     mock_scheduler = MagicMock()
     mock_firebase = MagicMock()
+    mock_settings = MagicMock()
+    mock_settings.app_user_data_dir = tmp_path
 
-    with (
-        patch("app.services.login_service.scheduler", mock_scheduler),
-        patch("app.services.login_service.get_firebase", return_value=mock_firebase),
-    ):
-        result = logout_user(uid)
+    with patch("app.services.login_service._get_settings", return_value=mock_settings):
+        result = logout_user(uid, mock_scheduler, mock_firebase)
 
     assert result is True

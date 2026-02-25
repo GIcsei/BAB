@@ -5,7 +5,6 @@ import time
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 from app.services.scheduler import Scheduler, _Job
 
 # ── _start_worker_if_needed (lines 171-179) ────────────────────────────────
@@ -100,7 +99,8 @@ def test_start_job_mkdir_failure(tmp_path):
     sched._start_worker_if_needed = MagicMock()
 
     with patch(
-        "app.services.scheduler.Path.mkdir", side_effect=PermissionError("denied")
+        "app.infrastructure.sched.scheduler.Path.mkdir",
+        side_effect=PermissionError("denied"),
     ):
         with pytest.raises(PermissionError):
             sched.start_job_for_user("u1", tmp_path / "u1", 18, 0)

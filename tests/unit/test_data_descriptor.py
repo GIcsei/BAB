@@ -1,5 +1,4 @@
 import pytest
-
 from app.core.firestore_handler.DataDescriptor import Document
 
 

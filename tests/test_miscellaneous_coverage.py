@@ -3,13 +3,12 @@
 import os
 import pickle
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 os.environ.setdefault("APP_ALLOW_UNSAFE_DESERIALIZE", "true")
 
 import pandas as pd
 import pytest
-
 from app.services import data_service
 from app.services.data_service import (
     _to_json_serializable,
@@ -166,10 +165,9 @@ def test_extract_series_async(tmp_path):
 
 def test_list_files_exception_returns_500():
     """list_files should return 500 for unexpected errors."""
-    from fastapi.testclient import TestClient
-
     from app.core.auth import get_current_user_id
     from app.main import app
+    from fastapi.testclient import TestClient
 
     app.dependency_overrides[get_current_user_id] = lambda: "u1"
     client = TestClient(app, raise_server_exceptions=False)
@@ -189,13 +187,20 @@ def test_list_files_exception_returns_500():
 
 def test_login_validation_error_returns_422():
     """Login with invalid email format returns 422."""
+    from app.core.auth import get_firebase_dep
+    from app.main import app
+    from app.routers.login import get_scheduler_dep
     from fastapi.testclient import TestClient
 
-    from app.main import app
-
+    app.dependency_overrides[get_firebase_dep] = lambda: MagicMock()
+    app.dependency_overrides[get_scheduler_dep] = lambda: MagicMock()
     client = TestClient(app, raise_server_exceptions=False)
-    r = client.post("/user/login", json={"email": "not-an-email", "password": "pw"})
-    assert r.status_code == 422
+    try:
+        r = client.post("/user/login", json={"email": "not-an-email", "password": "pw"})
+        assert r.status_code == 422
+    finally:
+        app.dependency_overrides.pop(get_firebase_dep, None)
+        app.dependency_overrides.pop(get_scheduler_dep, None)
 
 
 # ── routers/login.py lines 79-81 (logout exception) ─────────────────────
@@ -203,26 +208,34 @@ def test_login_validation_error_returns_422():
 
 def test_logout_exception_returns_500():
     """logout route returns 500 when logout_user raises an unexpected error."""
+    from app.core.auth import get_current_user_id, get_firebase_dep
+    from app.main import app
+    from app.routers.login import get_scheduler_dep
     from fastapi.testclient import TestClient
 
-    from app.core.auth import get_current_user_id
-    from app.main import app
-
     app.dependency_overrides[get_current_user_id] = lambda: "u1"
+    app.dependency_overrides[get_firebase_dep] = lambda: MagicMock()
+    app.dependency_overrides[get_scheduler_dep] = lambda: MagicMock()
     client = TestClient(app, raise_server_exceptions=False)
 
-    with patch("app.routers.login.logout_user", side_effect=RuntimeError("unexpected")):
-        r = client.post("/user/logout")
-    assert r.status_code in (500, 502)
-
-    app.dependency_overrides.pop(get_current_user_id, None)
+    try:
+        with patch(
+            "app.routers.login.logout_user", side_effect=RuntimeError("unexpected")
+        ):
+            r = client.post("/user/logout")
+        assert r.status_code in (500, 502)
+    finally:
+        app.dependency_overrides.pop(get_current_user_id, None)
+        app.dependency_overrides.pop(get_firebase_dep, None)
+        app.dependency_overrides.pop(get_scheduler_dep, None)
 
 
 # ── login_service – firebase singleton line 21 ────────────────────────────
 
 
-def test_login_service_firebase_module_level():
-    """The module-level firebase variable in login_service is set."""
+def test_login_service_has_login_user_function():
+    """login_service module exports login_user function."""
     import app.services.login_service as ls
 
-    assert ls.firebase is not None
+    assert hasattr(ls, "login_user")
+    assert callable(ls.login_user)

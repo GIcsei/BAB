@@ -5,10 +5,8 @@ import json
 import os
 from unittest.mock import patch
 
-import pytest
-from cryptography.fernet import Fernet
-
 import app.core.netbank.credentials as creds_mod
+import pytest
 from app.core.netbank.credentials import (
     _CLASS_TAG,
     _cred_path_for_dir,
@@ -18,6 +16,7 @@ from app.core.netbank.credentials import (
     load_user_credentials,
     save_user_credentials,
 )
+from cryptography.fernet import Fernet
 
 
 @pytest.fixture(autouse=True)

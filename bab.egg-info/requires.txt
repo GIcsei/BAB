@@ -1,0 +1,15 @@
+cryptography>=44.0.2
+fastapi[standard]>=0.115.12
+fastapi-cli[standard]>=0.0.7
+firestore>=0.0.8
+jwcrypto>=1.5.6
+pycryptodome>=3.22.0
+PyJWT>=2.9.0
+sseclient>=0.0.27
+uvicorn[standard]>=0.34.2
+requests>=2.31.0
+selenium>=4.9.0
+pandas>=2.2.0
+openpyxl>=3.1.0
+xlrd>=2.0.1
+firebase-admin>=7.1.0

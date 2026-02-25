@@ -123,18 +123,29 @@ def test_initialize_firebase_admin_with_service_account(tmp_path, monkeypatch):
 # ── login_service – _FirebaseAccessor.__getattr__ (line 21) ───────────────
 
 
-def test_firebase_accessor_getattr():
-    """_FirebaseAccessor.__getattr__ delegates attribute access to get_firebase()."""
-    import app.services.login_service as ls
+def test_login_user_accepts_explicit_firebase_and_scheduler(tmp_path, monkeypatch):
+    """login_user works with explicit firebase and scheduler params."""
+    mock_auth_client = MagicMock()
+    mock_auth_client.sign_in_with_email_and_password.return_value = {
+        "idToken": "tok",
+        "refreshToken": "ref",
+        "localId": "u1",
+    }
+    mock_firebase = MagicMock()
+    mock_firebase.auth.return_value = (mock_auth_client, None)
+    mock_scheduler = MagicMock()
+    mock_settings = MagicMock()
+    mock_settings.app_user_data_dir = tmp_path
+    mock_settings.app_job_hour = 18
+    mock_settings.app_job_minute = 0
 
-    mock_fb = MagicMock()
-    mock_fb.some_attribute = "test_value"
+    from app.schemas.login import LoginRequest
+    from app.services.login_service import login_user
 
-    with patch("app.services.login_service.get_firebase", return_value=mock_fb):
-        # Access attribute through the firebase accessor (line 21 is called here)
-        result = ls.firebase.some_attribute
-
-    assert result == "test_value"
+    data = LoginRequest(email="user@example.com", password="pw")
+    with patch("app.services.login_service._get_settings", return_value=mock_settings):
+        result = login_user(data, mock_scheduler, mock_firebase)
+    assert result.access_token == "tok"
 
 
 # ── credentials – _ensure_key all writes fail (lines 91-93) ──────────────
