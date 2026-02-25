@@ -45,6 +45,8 @@
     <Compile Include="app\core\netbank\getReport.py" />
     <Compile Include="app\core\netbank\utils.py" />
     <Compile Include="app\core\__init__.py" />
+    <Compile Include="app\infrastructure\sched\scheduler.py" />
+    <Compile Include="app\infrastructure\sched\__init__.py" />
     <Compile Include="app\main.py" />
     <Compile Include="app\routers\data_plot.py" />
     <Compile Include="app\routers\login.py" />
@@ -67,6 +69,8 @@
     <Folder Include="app\core\" />
     <Folder Include="app\core\firestore_handler\" />
     <Folder Include="app\core\netbank\" />
+    <Folder Include="app\infrastructure\" />
+    <Folder Include="app\infrastructure\sched\" />
     <Folder Include="app\routers\" />
     <Folder Include="app\routers\__pycache__\" />
     <Folder Include="app\schemas\" />

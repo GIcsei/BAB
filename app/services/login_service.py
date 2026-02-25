@@ -7,8 +7,8 @@ from typing import Optional
 from app.core.config import get_settings
 from app.core.firebase_init import get_project_id, initialize_firebase_admin
 from app.core.firestore_handler.QueryHandler import Firebase, initialize_app
+from app.infrastructure.sched.scheduler import Scheduler
 from app.schemas.login import LoginRequest, LoginResponse
-from app.services.scheduler import scheduler
 
 logger = logging.getLogger(__name__)
 
@@ -39,11 +39,6 @@ def get_firebase() -> Firebase:
 
 
 def _extract_user_id(user_obj: dict) -> Optional[str]:
-    """
-    Try to extract a stable user identifier from the auth response.
-    The Identity Toolkit returns 'localId' for sign-in responses; refresh responses
-    may use different keys. Check common variants.
-    """
     return (
         user_obj.get("userId")
         or user_obj.get("localId")
@@ -52,19 +47,12 @@ def _extract_user_id(user_obj: dict) -> Optional[str]:
     )
 
 
-def login_user(data: LoginRequest) -> LoginResponse:
-    """
-    Sign in user, persist per-user credentials into a secure folder under APP_USER_DATA_DIR,
-    and start a per-user daily job that runs at APP_JOB_HOUR:APP_JOB_MINUTE (defaults to 18:00).
-    """
+def login_user(data: LoginRequest, scheduler: Scheduler) -> LoginResponse:
     logger.info("Login attempt for email=%s", data.email)
 
-    # Base directory for user data inside the container (configurable)
     base_data_dir = settings.app_user_data_dir
     base_data_dir.mkdir(parents=True, exist_ok=True)
 
-    # Obtain auth client using a per-user token path so tokens persist per user
-    # We don't yet know user_id; use a temporary path for auth call, will rewrite after sign-in
     temp_token_path = base_data_dir / "auth_token_tmp.json"
     auth_client, _ = get_firebase().auth(temp_token_path)
 
@@ -85,7 +73,6 @@ def login_user(data: LoginRequest) -> LoginResponse:
             user_id = f"user_{safe_email}"
             logger.debug("Falling back to safe email as user_id: %s", user_id)
 
-        # create per-user folder and make it accessible only to the container process (0700)
         user_dir = base_data_dir / user_id
         user_dir.mkdir(parents=True, exist_ok=True)
         try:
@@ -93,7 +80,6 @@ def login_user(data: LoginRequest) -> LoginResponse:
         except Exception:
             logger.debug("chmod on user_dir may not be supported in this environment")
 
-        # persist credentials for this user only (do not store plaintext password)
         cred_path = user_dir / "credentials.json"
         token_copy = {
             "idToken": user.get("idToken"),
@@ -113,7 +99,6 @@ def login_user(data: LoginRequest) -> LoginResponse:
         get_firebase().register_user_tokens(user_id, token_copy, cred_path)
         logger.info("User %s logged in and token registered", user_id)
 
-        # schedule job using daily target hour/minute from environment (fallback to 18:00)
         target_hour = settings.app_job_hour
         target_minute = settings.app_job_minute
         scheduler.start_job_for_user(user_id, user_dir, target_hour, target_minute)
@@ -130,22 +115,16 @@ def login_user(data: LoginRequest) -> LoginResponse:
         raise ValueError(f"Login failed: {e}")
 
 
-def logout_user(user_id: str) -> bool:
-    """
-    Logout user identified by verified user_id.
-    Stops user job, removes credentials file, and clears in-memory token.
-    """
+def logout_user(user_id: str, scheduler: Scheduler) -> bool:
     base_data_dir = settings.app_user_data_dir
 
     if not user_id:
         logger.warning("Logout attempt for unknown user")
         raise ValueError("User not found")
 
-    # stop scheduled job
     scheduler.stop_job_for_user(user_id)
     logger.info("Stopped scheduled job for user %s", user_id)
 
-    # remove stored credentials file
     cred_path = base_data_dir / user_id / "credentials.json"
     try:
         if cred_path.exists():
@@ -154,7 +133,6 @@ def logout_user(user_id: str) -> bool:
     except Exception:
         logger.exception("Failed to remove credentials file for user %s", user_id)
 
-    # remove from in-memory registry (legacy)
     get_firebase().clear_user(user_id)
     logger.info("Cleared in-memory token registry for user %s", user_id)
 
