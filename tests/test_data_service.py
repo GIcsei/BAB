@@ -1,11 +1,11 @@
-﻿import pickle
+import pickle
 from pathlib import Path
-
+import os
 import numpy as np
 import pandas as pd
 
 from app.services import data_service
-
+os.environ.setdefault("APP_ALLOW_UNSAFE_DESERIALIZE", "true")
 
 def test_list_pickles_for_user_empty(tmp_path: Path):
     base = tmp_path / "data"
