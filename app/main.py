@@ -61,14 +61,12 @@ async def startup_event():
         logger.debug("Daily job scheduled at %02d:%02d", target_hour, target_minute)
 
         # Restore scheduler jobs
-        try:
+        if scheduler is not None:
             scheduler.restore_jobs_from_dir(base_data_dir, target_hour, target_minute)
             health.mark_component_ready("scheduler")
             logger.info("Scheduler jobs restored successfully")
-        except Exception as exc:
-            health.mark_component_ready("scheduler", str(exc))
-            logger.exception("Failed to restore scheduler jobs: %s", exc)
-            raise
+        else:
+            logger.warning("Scheduler lock not acquired; skipping scheduler restore in this process")
 
         # Load persisted tokens
         try:
