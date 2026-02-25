@@ -66,7 +66,9 @@ async def startup_event():
             health.mark_component_ready("scheduler")
             logger.info("Scheduler jobs restored successfully")
         else:
-            logger.warning("Scheduler lock not acquired; skipping scheduler restore in this process")
+            logger.warning(
+                "Scheduler lock not acquired; skipping scheduler restore in this process"
+            )
 
         # Load persisted tokens
         try:
