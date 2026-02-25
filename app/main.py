@@ -11,11 +11,12 @@ from app.core.exceptions import AppException
 from app.core.firebase_init import is_testing_env
 from app.core.health import get_health
 from app.core.logging_config import configure_logging
+from app.infrastructure.sched.scheduler import Scheduler, create_scheduler
 from app.routers import data_plot, login, netbank_credentials
 from app.services.login_service import get_firebase
-from app.services.scheduler import scheduler
 
 app = FastAPI(title="Bank analysis backend")
+app.state.scheduler: Scheduler | None = None
 
 
 @app.middleware("http")
@@ -71,6 +72,9 @@ async def startup_event():
         logger.debug("Base data directory: %s", base_data_dir)
         logger.debug("Daily job scheduled at %02d:%02d", target_hour, target_minute)
 
+        scheduler = create_scheduler()
+        app.state.scheduler = scheduler
+
         # Restore scheduler jobs
         if scheduler is not None:
             scheduler.restore_jobs_from_dir(base_data_dir, target_hour, target_minute)
@@ -80,6 +84,7 @@ async def startup_event():
             logger.warning(
                 "Scheduler lock not acquired; skipping scheduler restore in this process"
             )
+            health.mark_component_ready("scheduler", "lock_not_acquired")
 
         firebase = get_firebase()
         # Load persisted tokens
