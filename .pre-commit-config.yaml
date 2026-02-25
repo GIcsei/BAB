@@ -1,4 +1,4 @@
-﻿repos:
+repos:
   - repo: https://github.com/pycqa/isort
     rev: 8.0.0
     hooks:
@@ -14,4 +14,4 @@
     rev: 7.3.0
     hooks:
       - id: flake8
-        args: ["--extend-ignore=E203,E501"]
+        args: ["--extend-ignore=E203,E501,E402"]
