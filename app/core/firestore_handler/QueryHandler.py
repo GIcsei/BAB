@@ -1,19 +1,21 @@
 import asyncio
 import json
 import logging
-import os
 import threading
 from pathlib import Path
 from typing import Any, Dict, Optional
 
 import requests
+from firebase_admin import auth as fauth
 
+from app.core.firebase_init import get_project_id
 from app.core.firestore_handler.FirestoreService import FirestoreService
-from app.core.firestore_handler.User import Auth
+from app.core.firestore_handler.User import (
+    Auth,  # kept only if refresh via REST is still needed
+)
 
 logger = logging.getLogger(__name__)
 
-# Application-scoped default instance (set by initialize_app)
 _DEFAULT_FIREBASE = None
 
 
@@ -106,48 +108,10 @@ class TokenRegistry:
         return None
 
 
-def _init_firebase_admin_once(config: Dict[str, Any]) -> None:
-    """
-    Try to initialize firebase-admin SDK once. Uses GOOGLE_APPLICATION_CREDENTIALS
-    if present, otherwise attempts a no-credential init (which still allows token verification).
-    Any failure is logged and the code will fall back to the existing Identity Toolkit methods.
-    """
-    try:
-        import firebase_admin
-        from firebase_admin import credentials as _cred
-    except Exception:
-        # firebase-admin not installed or import error; callers will fallback
-        logger.debug("firebase-admin not available; will use Identity Toolkit fallback")
-        return
-
-    if firebase_admin._apps:
-        return
-
-    cred_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
-    try:
-        if cred_path and Path(cred_path).exists():
-            cred = _cred.Certificate(cred_path)
-            firebase_admin.initialize_app(cred, {"projectId": config.get("projectId")})
-            logger.info(
-                "Initialized firebase-admin with service account from %s", cred_path
-            )
-        else:
-            # Initialize without explicit credentials; token verification still works (uses public keys).
-            firebase_admin.initialize_app(
-                options={"projectId": config.get("projectId")}
-            )
-            logger.info("Initialized firebase-admin without explicit service account")
-    except Exception:
-        logger.exception(
-            "Failed to initialize firebase-admin; falling back to Identity Toolkit"
-        )
-
-
 class Firebase:
     """
     Application-scoped Firebase manager.
-    - Removed shared 'active' token state; token context must be provided explicitly
-      to Firestore operations (by passing token dict into FirestoreService methods).
+    Uses firebase-admin for token verification; projectId from service account.
     """
 
     def __new__(cls, config: Optional[dict] = None):
@@ -165,27 +129,19 @@ class Firebase:
         if config is None:
             return
 
-        self.api_key = config["apiKey"]
-        self.projectId = config.get("projectId")
+        # projectId from service account JSON
+        self.projectId = config.get("projectId") or get_project_id()
         self.requests = requests.Session()
         self._auth_client: Optional[Auth] = None
         self._persistence = TokenPersistence()
         self._registry = TokenRegistry()
-        self._lock = threading.RLock()  # protects auth client creation
+        self._lock = threading.RLock()
         self.TOKEN_FILE: Optional[Path] = None
         self._database: Optional[FirestoreService] = None
 
-        # resilient requests session
         for scheme in ("http://", "https://"):
             self.requests.mount(scheme, requests.adapters.HTTPAdapter(max_retries=3))
 
-        # attempt firebase-admin init (best-effort)
-        try:
-            _init_firebase_admin_once(config)
-        except Exception:
-            logger.debug("firebase-admin init attempt raised an exception")
-
-        # mark initialized and set module default
         self._initialized = True
         global _DEFAULT_FIREBASE
         _DEFAULT_FIREBASE = self
@@ -381,48 +337,19 @@ class Firebase:
 
     def verify_id_token(self, id_token: str) -> Optional[Dict[str, Any]]:
         """
-        Verify ID token using firebase-admin if available; fallback to Identity Toolkit
-        via Auth.get_account_info for environments without firebase-admin.
+        Verify ID token using firebase-admin (service account JSON).
         Returns normalized payload or None.
         """
         if not id_token:
             return None
-
-        # Try firebase-admin verification first (stateless, recommended)
         try:
-            import firebase_admin
-            from firebase_admin import auth as _fauth
-        except Exception:
-            firebase_admin = None
-            _fauth = None
-
-        if firebase_admin and _fauth:
-            try:
-                # verify_id_token raises on invalid/expired tokens
-                decoded = _fauth.verify_id_token(id_token)
-                # uid is the canonical user id (localId)
-                return {
-                    "user_id": decoded.get("uid") or decoded.get("user_id"),
-                    "email": decoded.get("email"),
-                }
-            except Exception:
-                logger.exception(
-                    "firebase-admin failed to verify id token; will fallback"
-                )
-
-        # Fallback: use Identity Toolkit via Auth client (network call)
-        try:
-            info = self._ensure_auth_client().get_account_info(id_token)
-            users = info.get("users") if isinstance(info, dict) else None
-            if not users:
-                return None
-            user = users[0] or {}
+            decoded = fauth.verify_id_token(id_token)
             return {
-                "user_id": user.get("localId") or user.get("userId") or user.get("uid"),
-                "email": user.get("email"),
+                "user_id": decoded.get("uid") or decoded.get("user_id"),
+                "email": decoded.get("email"),
             }
         except Exception:
-            logger.exception("Fallback verification failed")
+            logger.exception("Failed to verify id token via firebase-admin")
             return None
 
     def get_user_id_by_token(self, access_token: str) -> Optional[str]:
