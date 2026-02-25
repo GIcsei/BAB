@@ -8,7 +8,7 @@ from datetime import datetime
 from datetime import time as dt_time
 from datetime import timedelta
 from pathlib import Path
-from typing import Dict, Optional, Tuple
+from typing import Any, Callable, Dict, Optional, Tuple
 
 from app.core.config import get_settings
 
@@ -29,12 +29,14 @@ class _Job:
         user_dir: Path,
         target_hour: int = 18,
         target_minute: int = 0,
+        firebase_provider: Optional[Callable[[], Any]] = None,
     ):
         self.user_id = user_id
         self.user_dir = Path(user_dir)
         self.target_hour = int(target_hour)
         self.target_minute = int(target_minute)
         self._stopped = False
+        self._firebase_provider = firebase_provider
         self.logger = logging.getLogger(f"{__name__}.job.{user_id}")
         self.logger.debug(
             "Job.__init__ user_dir=%s target=%02d:%02d",
@@ -82,69 +84,63 @@ class _Job:
                 self.logger.debug("chmod not supported for %s", self.user_dir)
         except Exception:
             self.logger.exception("Failed to ensure user dir exists: %s", self.user_dir)
-        else:
+            return
+
+        try:
+            from app.core.netbank.getReport import ErsteNetBroker
+        except Exception:
+            self.logger.exception(
+                "Failed to import ErsteNetBroker for user %s", self.user_id
+            )
+            return
+
+        firebase = self._firebase_provider() if self._firebase_provider else None
+        if firebase:
             try:
-                from app.core.netbank.getReport import ErsteNetBroker
+                firebase.set_active_user(self.user_id)
+                self.logger.debug("Set Firebase active user to %s", self.user_id)
             except Exception:
-                self.logger.exception(
-                    "Failed to import ErsteNetBroker for user %s", self.user_id
-                )
-                return
-
-            try:
-                from app.services.login_service import firebase
-
                 try:
+                    base_dir = self.user_dir.parent
+                    firebase.load_tokens_from_dir(base_dir, refresh=True)
                     firebase.set_active_user(self.user_id)
-                    self.logger.debug("Set Firebase active user to %s", self.user_id)
+                    self.logger.debug(
+                        "Loaded tokens from %s and set active user to %s",
+                        base_dir,
+                        self.user_id,
+                    )
                 except Exception:
-                    try:
-                        base_dir = self.user_dir.parent
-                        firebase.load_tokens_from_dir(base_dir, refresh=True)
-                        firebase.set_active_user(self.user_id)
-                        self.logger.debug(
-                            "Loaded tokens from %s and set active user to %s",
-                            base_dir,
-                            self.user_id,
-                        )
-                    except Exception:
-                        self.logger.exception(
-                            "Failed to set Firebase active user for %s; OTP checks may fail",
-                            self.user_id,
-                        )
-            except Exception:
-                self.logger.exception(
-                    "Failed to prepare Firebase token for user %s", self.user_id
-                )
+                    self.logger.exception(
+                        "Failed to set Firebase active user for %s; OTP checks may fail",
+                        self.user_id,
+                    )
 
-            try:
-                self.logger.debug(
-                    "Instantiating ErsteNetBroker for user %s (saveFolder=%s)",
-                    self.user_id,
-                    str(self.user_dir),
+        try:
+            self.logger.debug(
+                "Instantiating ErsteNetBroker for user %s (saveFolder=%s)",
+                self.user_id,
+                str(self.user_dir),
+            )
+            broker = ErsteNetBroker(user_id=self.user_id, saveFolder=str(self.user_dir))
+            self.logger.info("Calling get_report() for user %s", self.user_id)
+            result_filename = broker.get_report()
+            if result_filename:
+                fullpath = self.user_dir / result_filename
+                try:
+                    size = fullpath.stat().st_size
+                except Exception:
+                    size = None
+                self.logger.info(
+                    "get_report produced file=%s size=%s", result_filename, size
                 )
-                broker = ErsteNetBroker(
-                    user_id=self.user_id, saveFolder=str(self.user_dir)
+            else:
+                self.logger.warning(
+                    "get_report returned no file for user %s", self.user_id
                 )
-                self.logger.info("Calling get_report() for user %s", self.user_id)
-                result_filename = broker.get_report()
-                if result_filename:
-                    fullpath = self.user_dir / result_filename
-                    try:
-                        size = fullpath.stat().st_size
-                    except Exception:
-                        size = None
-                    self.logger.info(
-                        "get_report produced file=%s size=%s", result_filename, size
-                    )
-                else:
-                    self.logger.warning(
-                        "get_report returned no file for user %s", self.user_id
-                    )
-            except Exception:
-                self.logger.exception(
-                    "Exception while running get_report for user %s", self.user_id
-                )
+        except Exception:
+            self.logger.exception(
+                "Exception while running get_report for user %s", self.user_id
+            )
 
 
 class Scheduler:
@@ -153,7 +149,7 @@ class Scheduler:
     Uses a heap for upcoming runs and a Condition to wake the worker only when needed.
     """
 
-    def __init__(self):
+    def __init__(self, firebase_provider: Optional[Callable[[], Any]] = None):
         self._jobs: Dict[str, _Job] = {}
         self._heap: list[Tuple[float, int, str]] = []
         self._counter = 0
@@ -161,6 +157,7 @@ class Scheduler:
         self._worker: Optional[threading.Thread] = None
         self._running = False
         self._lock = threading.Lock()
+        self._firebase_provider = firebase_provider
         logger.debug("Scheduler initialized")
 
     def _start_worker_if_needed(self):
@@ -199,7 +196,6 @@ class Scheduler:
 
                 heapq.heappop(self._heap)
 
-            job = None
             with self._lock:
                 job = self._jobs.get(user_id)
 
@@ -271,7 +267,13 @@ class Scheduler:
                     logger.debug(
                         "Error marking previous job stopped for user=%s", user_id
                     )
-            job = _Job(user_id, user_dir, target_hour, target_minute)
+            job = _Job(
+                user_id,
+                user_dir,
+                target_hour,
+                target_minute,
+                firebase_provider=self._firebase_provider,
+            )
             self._jobs[user_id] = job
             next_dt = job.compute_next_run_dt()
             with self._cond:
@@ -369,7 +371,11 @@ class Scheduler:
         try:
             base_data_dir = get_settings().app_user_data_dir
             user_dir = base_data_dir / user_id
-            temp_job = _Job(user_id=user_id, user_dir=user_dir)
+            temp_job = _Job(
+                user_id=user_id,
+                user_dir=user_dir,
+                firebase_provider=self._firebase_provider,
+            )
             self._spawn_job_thread(temp_job)
             logger.info(
                 "Triggered one-off immediate run for user %s (no existing schedule)",
@@ -393,8 +399,11 @@ def _acquire_scheduler_lock() -> bool:
         return False
 
 
-def create_scheduler(acquire_lock: bool = True) -> Optional[Scheduler]:
+def create_scheduler(
+    firebase_provider: Optional[Callable[[], Any]] = None,
+    acquire_lock: bool = True,
+) -> Optional[Scheduler]:
     if acquire_lock and not _acquire_scheduler_lock():
         logger.warning("Scheduler lock not acquired; skipping scheduler creation")
         return None
-    return Scheduler()
+    return Scheduler(firebase_provider=firebase_provider)

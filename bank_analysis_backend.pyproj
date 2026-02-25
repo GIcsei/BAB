@@ -26,6 +26,7 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="app\api\main.py" />
     <Compile Include="app\application\services\token_service.py" />
     <Compile Include="app\core\config.py" />
     <Compile Include="app\core\error_mapping.py" />
@@ -69,6 +70,7 @@
     <Folder Include=".github\" />
     <Folder Include=".github\workflows\" />
     <Folder Include="app\" />
+    <Folder Include="app\api\" />
     <Folder Include="app\application\" />
     <Folder Include="app\application\services\" />
     <Folder Include="app\core\" />
