@@ -8,7 +8,11 @@ from typing import Any, Dict, Optional
 import requests
 from firebase_admin import auth as fauth
 
-from app.core.firebase_init import get_project_id
+from app.core.firebase_init import (
+    get_project_id,
+    initialize_firebase_admin,
+    is_testing_env,
+)
 from app.core.firestore_handler.FirestoreService import FirestoreService
 from app.core.firestore_handler.User import (
     Auth,  # kept only if refresh via REST is still needed
@@ -129,8 +133,7 @@ class Firebase:
         if config is None:
             return
 
-        # projectId from service account JSON
-        self.projectId = config.get("projectId") or get_project_id()
+        self.projectId = config.get("projectId") or get_project_id(allow_default=True)
         self.requests = requests.Session()
         self._auth_client: Optional[Auth] = None
         self._persistence = TokenPersistence()
@@ -146,42 +149,30 @@ class Firebase:
         global _DEFAULT_FIREBASE
         _DEFAULT_FIREBASE = self
 
-    # ------ Auth client creation (separate concern) ------
     def _ensure_auth_client(self) -> Auth:
         with self._lock:
             if self._auth_client is None:
                 self._auth_client = Auth(self.api_key, self.requests)
             return self._auth_client
 
-    # Backward-compatible API: same signature as previous code
     def auth(self, token_json: Path):
-        """
-        Return (Auth client, token) like before. Token file handling is minimal here:
-        we read the provided token path and attempt a refresh. The persistence layer
-        (per-user credentials.json) is handled by TokenPersistence + TokenRegistry.
-        """
         auth_client = self._ensure_auth_client()
         self.TOKEN_FILE = token_json
         token = None
         old_token = self.load_login_token()
         if old_token:
             try:
-                # keep behavior: attempt refresh; on failure fall back to stored token
                 token = auth_client.refresh(old_token.get("refreshToken"))
             except Exception:
                 logger.exception(
                     "Failed to refresh token from file; will use stored token"
                 )
                 token = old_token
-        # do not automatically register this token into per-user registry here;
-        # login_service should persist/register tokens per-user
         return auth_client, token
 
-    # ----- Backward-compatible persistence helpers (kept small) -----
     def save_login_token(self, token_data: Dict[str, Any]):
         if not self.TOKEN_FILE:
             raise ValueError("TOKEN_FILE is not set for Firebase instance")
-        # synchronous write; callers that are async should call the async persistence helper
         self._persistence.write_json(self.TOKEN_FILE, token_data)
 
     def load_login_token(self) -> Optional[Dict[str, Any]]:
@@ -196,17 +187,12 @@ class Firebase:
             except Exception:
                 logger.exception("Failed to clear TOKEN_FILE %s", self.TOKEN_FILE)
 
-    # ----- Per-user registry operations (deterministic lifecycle) -----
     def register_user_tokens(
         self,
         user_id: str,
         token: Dict[str, Any],
         credentials_path: Optional[Path] = None,
     ) -> None:
-        """
-        Register token in-memory and optionally persist to credentials_path.
-        Deterministic: register -> optional persist -> set active (explicit).
-        """
         self._registry.register(user_id, token)
         if credentials_path:
             try:
@@ -215,11 +201,6 @@ class Firebase:
                 logger.exception("Failed to persist credentials for user %s", user_id)
 
     def load_tokens_from_dir(self, base_dir: Path, refresh: bool = True) -> None:
-        """
-        Load per-user credentials found under base_dir/<user_id>/credentials.json.
-        Refresh tokens if requested and update the registry and persisted files.
-        This method performs I/O and network calls synchronously; call from startup.
-        """
         base_dir = Path(base_dir)
         if not base_dir.exists():
             logger.info("Base directory for user tokens does not exist: %s", base_dir)
@@ -243,7 +224,6 @@ class Firebase:
             if refresh and stored.get("refreshToken"):
                 try:
                     refreshed = auth_client.refresh(stored["refreshToken"])
-                    # normalize response
                     normalized = {
                         "userId": refreshed.get("userId")
                         or refreshed.get("user_id")
@@ -255,23 +235,16 @@ class Firebase:
                         "email": stored.get("email"),
                     }
                     stored = normalized
-                    # persist refreshed token
                     try:
                         self._persistence.write_json(cred_path, stored)
                     except Exception:
                         logger.debug("Failed to write refreshed token for %s", user_id)
                 except Exception:
                     logger.exception("Failed to refresh token for user %s", user_id)
-                    # keep the stored token if refresh fails
 
             self._registry.register(user_id, stored)
 
     def refresh_token(self, user_id: str) -> Dict[str, Any]:
-        """
-        Refresh a registered user's tokens deterministically:
-        - Require that a token exists for that user
-        - Use Auth to refresh and update in-memory + persisted file (if present)
-        """
         token = self._registry.get(user_id)
         if not token:
             raise ValueError(f"No token found for user {user_id} to refresh")
@@ -288,12 +261,9 @@ class Firebase:
             "email": token.get("email"),
         }
 
-        # update registry
         self._registry.register(user_id, normalized)
 
-        # attempt to persist to conventional path (if APP_USER_DATA_DIR is used)
         try:
-            # best-effort: persist if we can infer user dir
             from os import getenv
 
             base = Path(getenv("APP_USER_DATA_DIR", "/var/app/user_data"))
@@ -306,25 +276,15 @@ class Firebase:
         return normalized
 
     def get_user_token(self, user_id: str) -> Optional[Dict[str, Any]]:
-        """
-        Return the registered token for a given user_id. Explicit token context must be
-        passed to Firestore calls. This avoids any global 'active' token.
-        """
         return self._registry.get(user_id)
 
     def set_active_user(self, user_id: str) -> Optional[Dict[str, Any]]:
-        """
-        Deprecated: kept for backward compatibility but no longer mutates global state.
-        Returns the token for the requested user or raises if not present.
-        """
         token = self._registry.get(user_id)
         if not token:
             raise ValueError(f"No token registered for user {user_id}")
         return token
 
     def clear_user(self, user_id: str) -> None:
-        """Remove user from in-memory registry. Does not delete files on disk."""
-        # if the current active token belongs to this user, unset it
         try:
             current = self.token
         except Exception:
@@ -336,12 +296,14 @@ class Firebase:
             self.token = None
 
     def verify_id_token(self, id_token: str) -> Optional[Dict[str, Any]]:
-        """
-        Verify ID token using firebase-admin (service account JSON).
-        Returns normalized payload or None.
-        """
         if not id_token:
             return None
+
+        app = initialize_firebase_admin()
+        if app is None and is_testing_env():
+            logger.info("Skipping firebase-admin token verification in test mode")
+            return None
+
         try:
             decoded = fauth.verify_id_token(id_token)
             return {
@@ -353,26 +315,13 @@ class Firebase:
             return None
 
     def get_user_id_by_token(self, access_token: str) -> Optional[str]:
-        """
-        Legacy helper: searches the in-memory registry for an idToken match.
-        Kept for backward compatibility but not used for primary request auth.
-        """
         return self._registry.find_user_by_id_token(access_token)
 
     def database(self) -> FirestoreService:
-        """
-        Provide FirestoreService instance. Restores compatibility with callers
-        that call Firebase().database() (kept minimal and deterministic).
-        """
         if self._database is None:
             self._database = FirestoreService(self)
         return self._database
 
 
 def initialize_app(config: dict) -> Firebase:
-    """
-    Initialize and return the application-scoped Firebase manager.
-    Call this during FastAPI startup (e.g. in app.main) and avoid calling
-    Firebase() without config directly thereafter.
-    """
     return Firebase(config)
