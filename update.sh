@@ -5,9 +5,10 @@ set -euo pipefail
 # Configuration
 # -------------------------
 PROJECT_NAME="bank_analysis_backend"
-BASE_COMPOSE="docker-compose.yml"
-DEV_COMPOSE="docker-compose.dev.yml"
-PROD_COMPOSE="docker-compose.prod.yml"
+BASE_COMPOSE="docker/docker-compose.yml"
+DEV_COMPOSE="docker/docker-compose.dev.yml"
+PROD_COMPOSE="docker/docker-compose.prod.yml"
+DOCKERFILE_PATH="docker/Dockerfile"
 
 LOG_DIR="./logs"
 TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
@@ -53,7 +54,7 @@ IMAGE_TAG="${VERSION}-${DATE_TAG}"
 echo -e "${GREEN}Detected version:${NC} $VERSION"
 echo -e "${GREEN}Image tag:${NC} $IMAGE_TAG"
 echo -e "${BLUE}Exporting tag to ENV variable...${NC}"
-export IMAGE_TAG=$IMAGE_TAG
+export IMAGE_TAG="${IMAGE_TAG}"
 echo -e "${GREEN}IMAGE_TAG set to ${IMAGE_TAG}${NC}"
 echo ""
 
@@ -88,11 +89,14 @@ docker compose $COMPOSE_FILES down -v
 # -------------------------
 echo -e "${YELLOW}Building image...${NC}"
 docker build \
-  -t ${PROJECT_NAME}:${IMAGE_TAG}_${ENV} \
-  -t ${PROJECT_NAME}:latest \
+  -f "$DOCKERFILE_PATH" \
+  --pull \
+  -t "${PROJECT_NAME}:${IMAGE_TAG}_${ENV}" \
+  -t "${PROJECT_NAME}:latest" \
   .
 
 echo -e "${GREEN}Build completed.${NC}"
+
 # -------------------------
 # Start stack
 # -------------------------

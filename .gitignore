@@ -10,3 +10,8 @@ __pycache__/
 *Zone.Identifier
 *.rar
 .vs/
+htmlcov/
+coverage.xml
+.reports/
+reports/
+.ruff_cache/
