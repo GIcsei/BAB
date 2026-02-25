@@ -1,9 +1,9 @@
+import fcntl
 import heapq
 import logging
 import os
 import threading
 import time
-import fcntl
 from datetime import datetime
 from datetime import time as dt_time
 from datetime import timedelta
@@ -417,7 +417,9 @@ _SCHED_LOCK_FD = None
 def _acquire_scheduler_lock() -> bool:
     global _SCHED_LOCK_FD
     try:
-        _SCHED_LOCK_FD = os.open("/tmp/bab_scheduler.lock", os.O_RDWR | os.O_CREAT, 0o600)
+        _SCHED_LOCK_FD = os.open(
+            "/tmp/bab_scheduler.lock", os.O_RDWR | os.O_CREAT, 0o600
+        )
         fcntl.lockf(_SCHED_LOCK_FD, fcntl.LOCK_EX | fcntl.LOCK_NB)
         return True
     except OSError:
