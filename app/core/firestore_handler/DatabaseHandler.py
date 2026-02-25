@@ -1,20 +1,18 @@
+import json
 import logging
-from typing import Collection, List
-
-from app.core.firestore_handler.DataDescriptor import Document
-from app.core.firestore_handler.Query import FirestoreQueryBuilder
-from app.core.firestore_handler.QueryHandler import Firebase
-from app.core.firestore_handler.Utils import Stream, raise_detailed_error
+import math
+import time
+from random import uniform
 
 try:
     from urllib.parse import quote
 except ImportError:
     from urllib import quote
 
-import json
-import math
-import time
-from random import uniform
+from app.core.firestore_handler.DataDescriptor import Collection, Document
+from app.core.firestore_handler.Query import FirestoreQueryBuilder
+from app.core.firestore_handler.QueryHandler import Firebase
+from app.core.firestore_handler.Utils import Stream, raise_detailed_error
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +23,10 @@ class Database:
     def __init__(self):
         fb = Firebase()
         self.fb = fb
-        self.database_url = f"https://firestore.googleapis.com/v1/projects/{fb.projectId}/databases/(default)/documents"
+        self.database_url = (
+            "https://firestore.googleapis.com/v1/projects/"
+            f"{fb.projectId}/databases/(default)/documents"
+        )
         self.requests = fb.requests
         self.key = fb.api_key
         self.path = ""
@@ -154,7 +155,7 @@ class Database:
         request_dict = self._request(token)
 
         response_dict = None
-        if len(request_dict) == 1 and isinstance(request_dict, List):
+        if len(request_dict) == 1 and isinstance(request_dict, list):
             request_dict["documents"] = request_dict
         if len(request_dict) == 1 and request_dict.get("documents"):
             response_dict = Collection.from_list(query_key, request_dict["documents"])
@@ -164,7 +165,8 @@ class Database:
 
         if response_dict is None:
             raise ValueError(
-                f"No answer had been received, document cannot be created on: {request_dict}!"
+                "No answer had been received, document cannot be created on: "
+                f"{request_dict}!"
             )
 
         if build_query:

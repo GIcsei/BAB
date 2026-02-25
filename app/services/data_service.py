@@ -18,11 +18,18 @@ from app.core.exceptions import (
 
 logger = logging.getLogger(__name__)
 
-# Thread pool for blocking I/O operations
-_executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="data_service")
+_executor: ThreadPoolExecutor | None = None
 
-settings = get_settings()
-_ALLOW_UNSAFE_DESERIALIZE = settings.allow_unsafe_deserialize
+
+def _get_executor() -> ThreadPoolExecutor:
+    global _executor
+    if _executor is None:
+        _executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="data_service")
+    return _executor
+
+
+def _allow_unsafe_deserialize() -> bool:
+    return get_settings().allow_unsafe_deserialize
 
 
 def _safe_basename(filename: str) -> str:
@@ -71,9 +78,10 @@ def _try_load(path: Path) -> Any:
     Unsafe deserialization (pickle/joblib/pandas read_pickle) is disabled by default
     unless APP_ALLOW_UNSAFE_DESERIALIZE=true is set in the environment.
     """
-    if not _ALLOW_UNSAFE_DESERIALIZE:
+    if not _allow_unsafe_deserialize():
         raise DeserializationDisabledError(
-            "Unsafe deserialization is disabled. Set APP_ALLOW_UNSAFE_DESERIALIZE=true to enable (not recommended)."
+            "Unsafe deserialization is disabled. Set APP_ALLOW_UNSAFE_DESERIALIZE=true "
+            "to enable (not recommended)."
         )
 
     # Try joblib if installed (useful for sklearn objects / numpy-heavy dumps)
@@ -198,7 +206,7 @@ async def preview_pickle_file_async(
     """Async wrapper to prevent blocking the event loop."""
     loop = asyncio.get_running_loop()
     return await loop.run_in_executor(
-        _executor,
+        _get_executor(),
         preview_pickle_file,
         base_data_dir,
         user_id,
@@ -217,8 +225,8 @@ def extract_series(
 ) -> Dict[str, Any]:
     """
     Return {x: [...], y: [...], meta: {...}} suitable for plotting.
-    If x_column is None and input is Series or DataFrame with datetime index, index -> x is used.
-    If y_column is missing, attempt to pick a numeric column.
+    If x_column is None and input is Series or DataFrame with datetime index, index -> x
+    is used. If y_column is missing, attempt to pick a numeric column.
     """
     safe_name = _safe_basename(filename)
     path = base_data_dir / user_id / safe_name
@@ -323,7 +331,7 @@ async def extract_series_async(
     """Async wrapper to prevent blocking the event loop."""
     loop = asyncio.get_running_loop()
     return await loop.run_in_executor(
-        _executor,
+        _get_executor(),
         extract_series,
         base_data_dir,
         user_id,

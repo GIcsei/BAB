@@ -1,5 +1,4 @@
-"""
-Readiness and liveness health checks.
+"""Readiness and liveness health checks.
 Tracks startup completion and dependency health.
 """
 

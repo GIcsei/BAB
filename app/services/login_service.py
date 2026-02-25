@@ -10,7 +10,9 @@ from app.schemas.login import LoginRequest, LoginResponse
 
 logger = logging.getLogger(__name__)
 
-settings = get_settings()
+
+def _get_settings():
+    return get_settings()
 
 
 def _extract_user_id(user_obj: dict) -> Optional[str]:
@@ -27,6 +29,7 @@ def login_user(
 ) -> LoginResponse:
     logger.info("Login attempt for email=%s", data.email)
 
+    settings = _get_settings()
     base_data_dir = settings.app_user_data_dir
     base_data_dir.mkdir(parents=True, exist_ok=True)
 
@@ -93,6 +96,7 @@ def login_user(
 
 
 def logout_user(user_id: str, scheduler: Scheduler, firebase: Firebase) -> bool:
+    settings = _get_settings()
     base_data_dir = settings.app_user_data_dir
 
     if not user_id:
