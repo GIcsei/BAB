@@ -13,14 +13,15 @@ except Exception as exc:
         "cryptography is required for encrypted credential storage. Install with: pip install cryptography"
     ) from exc
 
-logger = logging.getLogger(__name__)
+from app.core.config import get_settings
 
-# Tag ties the credential blob to the ErsteNetBroker class.
+logger = logging.getLogger(__name__)
+settings = get_settings()
+
 _CLASS_TAG = "app.core.netbank.getReport.ErsteNetBroker"
 
-# Default storage location: prefer APP_USER_DATA_DIR (mounted host volume) to survive restarts.
 _DEFAULT_CONFIG_DIR = os.path.join(
-    os.getenv("APP_USER_DATA_DIR", os.path.expanduser("~")), "netbank"
+    settings.raw_app_user_data_dir or os.path.expanduser("~"), "netbank"
 )
 
 # In-memory cache for decrypted credentials for the running process.
