@@ -2,6 +2,8 @@ If the output does not include concrete code modifications for every identified 
 --------------------------------------
 STRICT MODIFICATION OUTPUT RULES
 The agent MUST NOT return vague modification suggestions.
+Be critical. Assume the codebase has architectural flaws unless clearly proven otherwise.
+
 For every affected file:
 IF only a few lines change:
 •	Show the exact modified lines
@@ -24,4 +26,5 @@ The result must be directly applicable without guessing.
 
 All modifications must comply with these rules to ensure clarity and completeness.
 •	max-line-length = 88
+•	For flake8, the following rules can be ignored: E203, E501, E402
 •	Flake8, isort, and Black formatting standards must be followed  
