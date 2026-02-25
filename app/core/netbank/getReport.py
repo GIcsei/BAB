@@ -24,6 +24,7 @@ from app.core.netbank.utils import (
     is_today_in,
     reportFormatter,
 )
+from app.core.config import get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -47,13 +48,9 @@ class ErsteNetBroker:
         self.user_id = user_id
         self.get_report_url = "https://netbroker.erstebroker.hu/netbroker/Logon.aspx"
         self.__SAVE_TO = Path(saveFolder)
-        self.__REMOTE_DIR = (
-            Path(os.getenv("SELENIUM_DOWNLOADS_DIR")).resolve()
-            / self.__SAVE_TO.parts[-1]
-        )
-        self.__LOCAL_DIR = (
-            Path(os.getenv("LOCAL_DOWNLOADS_DIR")).resolve() / self.__SAVE_TO.parts[-1]
-        )
+        settings = get_settings()
+        self.__REMOTE_DIR = Path(settings.selenium_downloads_dir).resolve() / self.__SAVE_TO.parts[-1]
+        self.__LOCAL_DIR = Path(settings.local_downloads_dir).resolve() / self.__SAVE_TO.parts[-1]
         logger.debug(
             "Initializing ErsteNetBroker for user_id=%s with save folder %s",
             user_id,
