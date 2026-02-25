@@ -62,9 +62,13 @@
     <Compile Include="app\services\login_service.py" />
     <Compile Include="app\services\scheduler.py" />
     <Compile Include="app\services\__init__.py" />
+    <Compile Include="tests\api\test_data_plot.py" />
+    <Compile Include="tests\conftest.py" />
     <Compile Include="tests\test_data_descriptor.py" />
     <Compile Include="tests\test_data_plot.py" />
     <Compile Include="tests\test_data_service.py" />
+    <Compile Include="tests\unit\test_data_descriptor.py" />
+    <Compile Include="tests\unit\test_data_service.py" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include=".github\" />
@@ -87,6 +91,8 @@
     <Folder Include="app\services\__pycache__\" />
     <Folder Include="app\__pycache__\" />
     <Folder Include="tests\" />
+    <Folder Include="tests\api\" />
+    <Folder Include="tests\unit\" />
   </ItemGroup>
   <ItemGroup>
     <Content Include=".env" />
