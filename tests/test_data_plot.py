@@ -1,6 +1,5 @@
-﻿import os
+import os
 from pathlib import Path
-
 import pandas as pd
 import pytest
 from fastapi.testclient import TestClient
@@ -8,6 +7,10 @@ from fastapi.testclient import TestClient
 import app.main as main_mod
 from app.core.auth import get_current_user_id
 from app.main import app
+
+os.environ.setdefault("APP_ALLOW_UNSAFE_DESERIALIZE", "true")
+
+
 
 
 @pytest.fixture(autouse=True)
