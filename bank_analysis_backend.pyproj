@@ -63,9 +63,16 @@
     <Compile Include="app\services\scheduler.py" />
     <Compile Include="app\services\__init__.py" />
     <Compile Include="tests\api\test_data_plot.py" />
+    <Compile Include="tests\api\test_main.py" />
     <Compile Include="tests\conftest.py" />
+    <Compile Include="tests\unit\test_database_handler.py" />
     <Compile Include="tests\unit\test_data_descriptor.py" />
     <Compile Include="tests\unit\test_data_service.py" />
+    <Compile Include="tests\unit\test_firestore_service.py" />
+    <Compile Include="tests\unit\test_health.py" />
+    <Compile Include="tests\unit\test_logging_config.py" />
+    <Compile Include="tests\unit\test_scheduler_extended.py" />
+    <Compile Include="tests\unit\test_utils.py" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include=".github\" />
