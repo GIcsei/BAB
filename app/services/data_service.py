@@ -1,6 +1,7 @@
-﻿import asyncio
+import asyncio
 import logging
 import pickle
+import os
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -12,6 +13,13 @@ logger = logging.getLogger(__name__)
 
 # Thread pool for blocking I/O operations
 _executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="data_service")
+
+# Feature flag to allow unsafe deserialization (default: disabled in prod)
+_ALLOW_UNSAFE_DESERIALIZE = os.getenv("APP_ALLOW_UNSAFE_DESERIALIZE", "false").lower() in (
+    "1",
+    "true",
+    "yes",
+)
 
 
 def _safe_basename(filename: str) -> str:
@@ -51,12 +59,15 @@ def list_pickles_for_user(base_data_dir: Path, user_id: str) -> List[Dict[str, A
 
 def _try_load(path: Path) -> Any:
     """
-    Try to load common serialized formats in a safe fallback order:
-    - joblib.load (if joblib available)
-    - pandas.read_pickle
-    - pickle.load (fallback)
-    May raise exception on corrupt/untrusted data. Callers should catch and log.
+    Try to load common serialized formats in a safe fallback order.
+    Unsafe deserialization (pickle/joblib/pandas read_pickle) is disabled by default
+    unless APP_ALLOW_UNSAFE_DESERIALIZE=true is set in the environment.
     """
+    if not _ALLOW_UNSAFE_DESERIALIZE:
+        raise RuntimeError(
+            "Unsafe deserialization is disabled. Set APP_ALLOW_UNSAFE_DESERIALIZE=true to enable (not recommended)."
+        )
+
     # Try joblib if installed (useful for sklearn objects / numpy-heavy dumps)
     try:
         import joblib  # type: ignore
