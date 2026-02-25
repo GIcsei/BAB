@@ -169,7 +169,3 @@ async def health_check():
 app.include_router(login.router)
 app.include_router(netbank_credentials.router)
 app.include_router(data_plot.router)
-
-from app.api.main import app as api_app
-
-__all__ = ["api_app"]
