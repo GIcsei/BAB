@@ -21,3 +21,7 @@ Do NOT:
 •	Omit context
 •	Return partial edits without clarity
 The result must be directly applicable without guessing.
+
+All modifications must comply with these rules to ensure clarity and completeness.
+•	max-line-length = 88
+•	Flake8, isort, and Black formatting standards must be followed  
