@@ -1,118 +1,136 @@
 # FastAPI (backend)
 
-# To run the code in dev mode:
-# source .venv/bin/activate
-# fastapi dev login.py
 import logging
 import os
-import sys
-from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 
+from app.core.error_mapping import exception_to_http, get_error_response
+from app.core.exceptions import AppException
+from app.core.health import get_health
+from app.core.logging_config import configure_logging
 from app.routers import data_plot, login, netbank_credentials
-from app.services.login_service import (  # reuse the already-initialized firebase singleton
-    firebase,
-)
+from app.services.login_service import firebase
 from app.services.scheduler import scheduler
 
 app = FastAPI(title="Bank analysis backend")
 
 
-def configure_logging():
-    """
-    Configure application logging for the project package only.
-    - LOG_LEVEL: default DEBUG
-    - LOG_FILE: optional path to file (will use RotatingFileHandler)
-    - If LOG_FILE is not set logs are streamed to stdout (recommended for Docker)
-    """
-    log_level = os.getenv("LOG_LEVEL", "DEBUG").upper()
-    log_file = os.getenv("LOG_FILE", "")
-
-    # Use a package-level logger so the setting applies across `app.*` modules only
-    project_logger = logging.getLogger("app")
-
-    # Avoid duplicate handlers when this function is called multiple times
-    if project_logger.handlers:
-        for h in list(project_logger.handlers):
-            project_logger.removeHandler(h)
-
-    level = getattr(logging, log_level, logging.DEBUG)
-    project_logger.setLevel(level)
-
-    formatter = logging.Formatter("%(asctime)s %(levelname)s [%(name)s] %(message)s")
-
-    if log_file:
-        try:
-            Path(log_file).parent.mkdir(parents=True, exist_ok=True)
-        except Exception:
-            pass
-        fh = RotatingFileHandler(log_file, maxBytes=10 * 1024 * 1024, backupCount=5)
-        fh.setLevel(level)
-        fh.setFormatter(formatter)
-        project_logger.addHandler(fh)
-
-    sh = logging.StreamHandler(sys.stdout)
-    sh.setLevel(level)
-    sh.setFormatter(formatter)
-    project_logger.addHandler(sh)
-
-    # Prevent messages from being propagated to the root logger (and other handlers)
-    project_logger.propagate = False
-
-    project_logger.debug(
-        "Logging configured for package 'app' with level %s, output to %s",
-        log_level,
-        log_file or "stdout",
-    )
+@app.middleware("http")
+async def error_handling_middleware(request: Request, call_next):
+    """Catch unhandled exceptions and return structured error responses."""
+    try:
+        return await call_next(request)
+    except AppException as exc:
+        logger = logging.getLogger(__name__)
+        logger.exception("Handled application exception")
+        http_exc = exception_to_http(exc)
+        return JSONResponse(status_code=http_exc.status_code, content=http_exc.detail)
+    except Exception as exc:
+        logger = logging.getLogger(__name__)
+        logger.exception("Unhandled exception in request")
+        return JSONResponse(
+            status_code=500,
+            content=get_error_response(exc),
+        )
 
 
 @app.on_event("startup")
 async def startup_event():
     """
-    On container start, restore per-user jobs from the configured data directory,
-    and load persisted per-user tokens into the Firebase singleton so DB calls can use them.
-    Jobs are scheduled daily at APP_JOB_HOUR:APP_JOB_MINUTE (defaults to 18:00).
+    Readiness-aware startup: configure logging, restore jobs, load tokens.
+    Marks application ready only after all components are initialized.
+    Fails fast on configuration errors.
     """
     configure_logging()
     logger = logging.getLogger(__name__)
-    logger.info("Starting application - restoring jobs and loading tokens")
+    health = get_health()
 
-    base_data_dir = Path(os.getenv("APP_USER_DATA_DIR", "/var/app/user_data"))
-    # Use explicit daily target hour/minute instead of an interval in seconds
-    target_hour = int(os.getenv("APP_JOB_HOUR", "18"))
-    target_minute = int(os.getenv("APP_JOB_MINUTE", "0"))
+    logger.info("=" * 60)
+    logger.info("Starting application startup sequence")
+    logger.info("=" * 60)
 
-    logger.debug("Using base data directory: %s", base_data_dir)
-    logger.debug(
-        "Scheduling jobs daily at %02d:%02d (local container time)",
-        target_hour,
-        target_minute,
-    )
-
-    # restore jobs (creates per-user folders if needed) using daily schedule
-    scheduler.restore_jobs_from_dir(base_data_dir, target_hour, target_minute)
-    logger.info("Restored scheduled jobs from %s", base_data_dir)
-
-    # populate firebase.user_tokens from disk and attempt token refresh
     try:
-        firebase.load_tokens_from_dir(base_data_dir, refresh=True)
-        logger.info("Loaded user tokens from %s", base_data_dir)
+        base_data_dir = Path(os.getenv("APP_USER_DATA_DIR", "/var/app/user_data"))
+        target_hour = int(os.getenv("APP_JOB_HOUR", "18"))
+        target_minute = int(os.getenv("APP_JOB_MINUTE", "0"))
+
+        logger.debug("Base data directory: %s", base_data_dir)
+        logger.debug("Daily job scheduled at %02d:%02d", target_hour, target_minute)
+
+        # Restore scheduler jobs
+        try:
+            scheduler.restore_jobs_from_dir(base_data_dir, target_hour, target_minute)
+            health.mark_component_ready("scheduler")
+            logger.info("Scheduler jobs restored successfully")
+        except Exception as exc:
+            health.mark_component_ready("scheduler", str(exc))
+            logger.exception("Failed to restore scheduler jobs: %s", exc)
+            raise
+
+        # Load persisted tokens
+        try:
+            firebase.load_tokens_from_dir(base_data_dir, refresh=True)
+            health.mark_component_ready("tokens")
+            logger.info("User tokens loaded successfully")
+        except Exception as exc:
+            health.mark_component_ready("tokens", str(exc))
+            logger.exception("Failed to load user tokens: %s", exc)
+            raise
+
+        # Mark Firebase as ready (was initialized at import time)
+        health.mark_component_ready("firebase")
+
+        # All components ready
+        health.mark_startup_complete()
+
+        logger.info("=" * 60)
+        logger.info("Application startup complete")
+        logger.info("=" * 60)
+
     except Exception as exc:
-        logger.exception("Failed to load tokens from dir: %s", exc)
+        logger.critical("Startup failed; application will not accept requests: %s", exc)
+        raise
 
 
 @app.get("/")
 async def root():
     logger = logging.getLogger(__name__)
-    logger.info("health check - root endpoint invoked")
-    return {"message": "Hello World"}
+    logger.debug("Root endpoint invoked")
+    return {"message": "Bank Analysis Backend"}
 
 
 @app.get("/health")
-async def health():
-    return {"status": "ok"}
+async def health_check():
+    """
+    Liveness and readiness probe.
+    Returns 200 only if application is ready; components are healthy.
+    Clients should not route traffic until this returns ready=true.
+    """
+    health = get_health()
+    status = health.get_status()
+
+    if not health.is_ready:
+        return JSONResponse(
+            status_code=503,
+            content={
+                "status": "not_ready",
+                "ready": False,
+                "components": status["components"],
+            },
+        )
+
+    return JSONResponse(
+        status_code=200,
+        content={
+            "status": "healthy",
+            "ready": True,
+            "startup_complete_time": status["startup_complete_time"],
+            "components": status["components"],
+        },
+    )
 
 
 app.include_router(login.router)
