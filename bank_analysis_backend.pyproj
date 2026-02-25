@@ -26,6 +26,8 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="app\core\error_mapping.py" />
+    <Compile Include="app\core\exceptions.py" />
     <Compile Include="app\core\firestore_handler\Config.py" />
     <Compile Include="app\core\firestore_handler\DatabaseHandler.py" />
     <Compile Include="app\core\firestore_handler\DataDescriptor.py" />
@@ -35,6 +37,8 @@
     <Compile Include="app\core\firestore_handler\User.py" />
     <Compile Include="app\core\firestore_handler\Utils.py" />
     <Compile Include="app\core\firestore_handler\__init__.py" />
+    <Compile Include="app\core\health.py" />
+    <Compile Include="app\core\logging_config.py" />
     <Compile Include="app\core\netbank\credentials.py" />
     <Compile Include="app\core\netbank\getReport.py" />
     <Compile Include="app\core\netbank\utils.py" />
