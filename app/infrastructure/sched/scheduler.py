@@ -48,7 +48,9 @@ class _Job:
         today_target = datetime.combine(
             now.date(), dt_time(hour=self.target_hour, minute=self.target_minute)
         )
-        next_target = today_target + timedelta(days=1) if now >= today_target else today_target
+        next_target = (
+            today_target + timedelta(days=1) if now >= today_target else today_target
+        )
         delta = next_target - now
         secs = max(delta.total_seconds(), 0.0)
         self.logger.debug("Seconds until next run for user %s: %s", self.user_id, secs)
@@ -121,7 +123,9 @@ class _Job:
                     self.user_id,
                     str(self.user_dir),
                 )
-                broker = ErsteNetBroker(user_id=self.user_id, saveFolder=str(self.user_dir))
+                broker = ErsteNetBroker(
+                    user_id=self.user_id, saveFolder=str(self.user_dir)
+                )
                 self.logger.info("Calling get_report() for user %s", self.user_id)
                 result_filename = broker.get_report()
                 if result_filename:
@@ -272,7 +276,9 @@ class Scheduler:
             next_dt = job.compute_next_run_dt()
             with self._cond:
                 self._counter += 1
-                heapq.heappush(self._heap, (next_dt.timestamp(), self._counter, user_id))
+                heapq.heappush(
+                    self._heap, (next_dt.timestamp(), self._counter, user_id)
+                )
                 self._start_worker_if_needed()
         logger.info("Job scheduled for user=%s", user_id)
         return job
@@ -378,7 +384,9 @@ class Scheduler:
 def _acquire_scheduler_lock() -> bool:
     global _SCHED_LOCK_FD
     try:
-        _SCHED_LOCK_FD = os.open("/tmp/bab_scheduler.lock", os.O_RDWR | os.O_CREAT, 0o600)
+        _SCHED_LOCK_FD = os.open(
+            "/tmp/bab_scheduler.lock", os.O_RDWR | os.O_CREAT, 0o600
+        )
         fcntl.lockf(_SCHED_LOCK_FD, fcntl.LOCK_EX | fcntl.LOCK_NB)
         return True
     except OSError:
