@@ -4,39 +4,20 @@ import os
 from pathlib import Path
 from typing import Optional
 
+from app.core.firebase_init import initialize_firebase_admin, get_project_id
 from app.core.firestore_handler.QueryHandler import initialize_app
 from app.schemas.login import LoginRequest, LoginResponse
 from app.services.scheduler import scheduler
 
 logger = logging.getLogger(__name__)
 
-# Load Firebase config from environment (fail-fast if required keys missing)
-FIREBASE_API_KEY = os.getenv("FIREBASE_API_KEY")
-FIREBASE_PROJECT_ID = os.getenv("FIREBASE_PROJECT_ID")
-FIREBASE_AUTH_DOMAIN = os.getenv("FIREBASE_AUTH_DOMAIN", "")
-FIREBASE_DATABASE_URL = os.getenv("FIREBASE_DATABASE_URL", "")
-FIREBASE_STORAGE_BUCKET = os.getenv("FIREBASE_STORAGE_BUCKET", "")
-
-missing = []
-if not FIREBASE_API_KEY:
-    missing.append("FIREBASE_API_KEY")
-if not FIREBASE_PROJECT_ID:
-    missing.append("FIREBASE_PROJECT_ID")
-
-if missing:
-    raise RuntimeError(
-        f"Missing required Firebase configuration environment variables: {', '.join(missing)}"
-    )
+# Initialize firebase-admin once; derive project_id from service account JSON
+initialize_firebase_admin()
 
 config = {
-    "apiKey": FIREBASE_API_KEY,
-    "authDomain": FIREBASE_AUTH_DOMAIN,
-    "databaseURL": FIREBASE_DATABASE_URL,
-    "storageBucket": FIREBASE_STORAGE_BUCKET,
-    "projectId": FIREBASE_PROJECT_ID,
+    "projectId": get_project_id(),
 }
 
-# Initialize Firebase manager at import time so failures are fast in startup
 firebase = initialize_app(config)
 
 
