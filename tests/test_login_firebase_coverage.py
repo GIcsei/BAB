@@ -1,11 +1,10 @@
 """Tests for remaining login_service and firebase_init coverage."""
-import json
+
 import os
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 
 # ── login_service – chmod exception on user_dir (lines 91-92) ────────────
 
@@ -14,8 +13,8 @@ def test_login_user_chmod_user_dir_fails(tmp_path, monkeypatch):
     """login_user handles chmod failure on user_dir."""
     monkeypatch.setenv("APP_USER_DATA_DIR", str(tmp_path))
 
-    from app.services.login_service import login_user
     from app.schemas.login import LoginRequest
+    from app.services.login_service import login_user
 
     mock_firebase = MagicMock()
     mock_firebase.auth.return_value = (MagicMock(), None)
@@ -34,7 +33,10 @@ def test_login_user_chmod_user_dir_fails(tmp_path, monkeypatch):
 
     with (
         patch("app.services.login_service.get_firebase", return_value=mock_firebase),
-        patch("app.services.login_service.os.chmod", side_effect=OSError("chmod unsupported")),
+        patch(
+            "app.services.login_service.os.chmod",
+            side_effect=OSError("chmod unsupported"),
+        ),
         patch("app.services.login_service.scheduler", mock_scheduler),
     ):
         data = LoginRequest(email="user@example.com", password="pw")
@@ -50,8 +52,8 @@ def test_login_user_chmod_cred_file_fails(tmp_path, monkeypatch):
     """login_user handles chmod failure on credentials file."""
     monkeypatch.setenv("APP_USER_DATA_DIR", str(tmp_path))
 
-    from app.services.login_service import login_user
     from app.schemas.login import LoginRequest
+    from app.services.login_service import login_user
 
     mock_user = {
         "idToken": "tok",
@@ -105,7 +107,7 @@ def test_logout_user_unlink_exception(tmp_path, monkeypatch):
     mock_firebase = MagicMock()
     mock_scheduler = MagicMock()
 
-    original_unlink = Path.unlink
+    Path.unlink
 
     def failing_unlink(self, missing_ok=False):
         raise OSError("cannot remove")
@@ -148,7 +150,9 @@ def test_initialize_firebase_admin_invalid_credentials_file(tmp_path, monkeypatc
 
     original_app = fi_mod._firebase_app
     fi_mod._firebase_app = None
-    monkeypatch.setenv("GOOGLE_APPLICATION_CREDENTIALS", str(tmp_path / "nonexistent.json"))
+    monkeypatch.setenv(
+        "GOOGLE_APPLICATION_CREDENTIALS", str(tmp_path / "nonexistent.json")
+    )
 
     with patch("app.core.firebase_init.is_testing_env", return_value=False):
         with pytest.raises(RuntimeError, match="GOOGLE_APPLICATION_CREDENTIALS"):
@@ -173,8 +177,9 @@ def test_initialize_firebase_admin_reuses_existing_app(monkeypatch):
 
 def test_initialize_firebase_admin_reuses_firebase_admin_app(monkeypatch):
     """initialize_firebase_admin reuses existing firebase_admin app."""
-    import app.core.firebase_init as fi_mod
     import firebase_admin
+
+    import app.core.firebase_init as fi_mod
 
     original_app = fi_mod._firebase_app
     fi_mod._firebase_app = None
@@ -185,8 +190,12 @@ def test_initialize_firebase_admin_reuses_firebase_admin_app(monkeypatch):
 
     with (
         patch("app.core.firebase_init.is_testing_env", return_value=False),
-        patch.dict("app.core.firebase_init.firebase_admin._apps", {"[DEFAULT]": existing_app}),
-        patch("app.core.firebase_init.firebase_admin.get_app", return_value=existing_app),
+        patch.dict(
+            "app.core.firebase_init.firebase_admin._apps", {"[DEFAULT]": existing_app}
+        ),
+        patch(
+            "app.core.firebase_init.firebase_admin.get_app", return_value=existing_app
+        ),
     ):
         result = fi_mod.initialize_firebase_admin(force=True)
 

@@ -1,12 +1,11 @@
 """Extended DatabaseHandler tests – HTTP methods with mocked requests."""
-import json
+
 from unittest.mock import MagicMock
 
 import pytest
 
 import app.core.firestore_handler.QueryHandler as qh_mod
-from app.core.firestore_handler.QueryHandler import Firebase, initialize_app
-from app.core.firestore_handler.DataDescriptor import Collection, Document
+from app.core.firestore_handler.QueryHandler import initialize_app
 
 
 @pytest.fixture(autouse=True)
@@ -22,6 +21,7 @@ def setup_firebase_singleton():
 
 def _make_db():
     from app.core.firestore_handler.DatabaseHandler import Database
+
     return Database()
 
 
@@ -114,4 +114,3 @@ def test_request_post_string_query(setup_firebase_singleton):
     db.addStringQuery("status == 'sent'")
     result = db._request(token={"idToken": "tok"})
     assert result == docs
-

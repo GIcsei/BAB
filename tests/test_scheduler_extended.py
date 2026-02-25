@@ -1,13 +1,11 @@
 """Extended scheduler tests – _Job._perform_task and worker coverage."""
-import os
-import sys
-from pathlib import Path
+
 from types import ModuleType
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from app.services.scheduler import _Job, Scheduler
+from app.services.scheduler import Scheduler, _Job
 
 
 def _mock_erste_module(broker_mock):
@@ -147,12 +145,9 @@ def test_stop_all_stops_running_jobs(tmp_path):
     sched._start_worker_if_needed = MagicMock()
 
     for uid in ["a", "b"]:
-        from app.services.scheduler import _Job
-
         j = _Job(uid, tmp_path / uid)
         sched._jobs[uid] = j
 
     sched.stop_all()
     assert sched._jobs == {}
     assert sched._running is False
-

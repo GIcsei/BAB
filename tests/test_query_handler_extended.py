@@ -1,13 +1,12 @@
 """Additional QueryHandler tests – refresh_token, auth, and more Firebase methods."""
+
 import json
-import os
-from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
 import app.core.firestore_handler.QueryHandler as qh_mod
-from app.core.firestore_handler.QueryHandler import Firebase, initialize_app
+from app.core.firestore_handler.QueryHandler import initialize_app
 
 
 @pytest.fixture(autouse=True)
@@ -47,7 +46,10 @@ def test_auth_with_existing_token_refreshes(tmp_path):
     token_path.write_text('{"idToken": "old", "refreshToken": "ref"}')
 
     mock_auth_client = MagicMock()
-    mock_auth_client.refresh.return_value = {"idToken": "new", "refreshToken": "new_ref"}
+    mock_auth_client.refresh.return_value = {
+        "idToken": "new",
+        "refreshToken": "new_ref",
+    }
     fb._auth_client = mock_auth_client
 
     auth_client, token = fb.auth(token_path)
@@ -81,7 +83,9 @@ def test_refresh_token_no_user_raises():
 def test_refresh_token_success(tmp_path, monkeypatch):
     monkeypatch.setenv("APP_USER_DATA_DIR", str(tmp_path))
     fb = _make_fb_with_api_key()
-    fb._registry.register("u1", {"idToken": "old", "refreshToken": "ref", "email": "u@e.com"})
+    fb._registry.register(
+        "u1", {"idToken": "old", "refreshToken": "ref", "email": "u@e.com"}
+    )
 
     mock_auth_client = MagicMock()
     mock_auth_client.refresh.return_value = {

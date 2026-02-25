@@ -1,6 +1,6 @@
 """Tests for app.core.health – HealthStatus."""
-from app.core.health import HealthStatus, get_health
 
+from app.core.health import HealthStatus, get_health
 
 # ── HealthStatus ───────────────────────────────────────────────────────────
 

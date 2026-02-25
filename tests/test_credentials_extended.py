@@ -1,19 +1,19 @@
 """Extended credentials tests – error paths and edge cases."""
+
 import base64
-import hashlib
 import json
 import os
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 import pytest
 
 import app.core.netbank.credentials as creds_mod
 from app.core.netbank.credentials import (
-    _ensure_key,
     _cred_path_for_dir,
-    save_user_credentials,
-    load_user_credentials,
+    _ensure_key,
     delete_user_credentials,
+    load_user_credentials,
+    save_user_credentials,
 )
 
 

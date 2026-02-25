@@ -1,13 +1,13 @@
 """Tests for app.main – startup event in test mode and non-test mode."""
+
 import os
 
 os.environ.setdefault("APP_ALLOW_UNSAFE_DESERIALIZE", "true")
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
-import app.core.health as health_mod
 from app.core.health import HealthStatus
 from app.main import startup_event
 

@@ -1,7 +1,7 @@
 """Extended tests for app.services.data_service – more branches and types."""
+
 import os
 import pickle
-from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -13,15 +13,13 @@ from app.core.exceptions import (
     DeserializationDisabledError,
     FileSizeExceededError,
 )
-from app.core.exceptions import FileNotFoundError as AppFileNotFoundError
 from app.services import data_service
 from app.services.data_service import (
     _to_json_serializable,
     _validate_file_size,
-    preview_pickle_file,
     extract_series,
+    preview_pickle_file,
 )
-
 
 # ── _validate_file_size ────────────────────────────────────────────────────
 
@@ -304,7 +302,9 @@ def test_extract_series_max_points_trim(tmp_path):
     user.mkdir(parents=True)
     df = pd.DataFrame({"val": range(100)})
     (user / "df.pkl").write_bytes(pickle.dumps(df))
-    res = extract_series(base, "u1", "df.pkl", x_column=None, y_column="val", max_points=10)
+    res = extract_series(
+        base, "u1", "df.pkl", x_column=None, y_column="val", max_points=10
+    )
     assert len(res["y"]) == 10
 
 

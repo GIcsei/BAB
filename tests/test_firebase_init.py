@@ -1,10 +1,6 @@
 """Tests for app.core.firebase_init."""
-import os
-
-import pytest
 
 import app.core.firebase_init as firebase_init
-
 
 # ── is_testing_env ─────────────────────────────────────────────────────────
 

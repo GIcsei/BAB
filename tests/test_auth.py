@@ -1,4 +1,5 @@
 """Tests for app.core.auth – get_current_user_id."""
+
 import os
 
 os.environ.setdefault("APP_ALLOW_UNSAFE_DESERIALIZE", "true")

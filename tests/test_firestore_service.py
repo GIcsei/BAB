@@ -1,11 +1,12 @@
 """Tests for app.core.firestore_handler.FirestoreService with mocked requests."""
-import json
+
 from unittest.mock import MagicMock
 
-import pytest
-
-from app.core.firestore_handler.FirestoreService import FirestoreService, deserialize_response
-from app.core.firestore_handler.DataDescriptor import Collection, Document
+from app.core.firestore_handler.DataDescriptor import Collection
+from app.core.firestore_handler.FirestoreService import (
+    FirestoreService,
+    deserialize_response,
+)
 
 
 def _make_firebase(project_id="test-project"):

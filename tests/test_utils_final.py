@@ -1,17 +1,16 @@
 """Tests for remaining data_service and Utils coverage."""
+
 import os
 import pickle
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
-import pandas as pd
 
 os.environ.setdefault("APP_ALLOW_UNSAFE_DESERIALIZE", "true")
 
-from app.services.data_service import preview_pickle_file, extract_series
 from app.core.exceptions import FileNotFoundError as AppFileNotFoundError
-
+from app.services.data_service import extract_series, preview_pickle_file
 
 # ── preview_pickle_file – file doesn't exist (line 196) ──────────────────
 
@@ -82,8 +81,8 @@ def test_list_pickles_stat_error_for_pkl_files(tmp_path):
 
 def test_closable_sse_client_connect(monkeypatch):
     """ClosableSSEClient._connect returns a response with SSEClient."""
+
     from app.core.firestore_handler.Utils import ClosableSSEClient, KeepAuthSession
-    import requests
 
     mock_response = MagicMock()
     mock_response.headers = {"content-type": "text/event-stream"}
@@ -99,7 +98,7 @@ def test_closable_sse_client_connect(monkeypatch):
 
     # _connect creates a response; just test the client is set up
     try:
-        resp = client._connect()
+        client._connect()
     except Exception:
         pass  # may fail without real network, but code is exercised
 
@@ -113,7 +112,9 @@ def test_closable_sse_client_init_and_close(monkeypatch):
     mock_response.headers = {"content-type": "text/event-stream"}
     mock_session.request.return_value = mock_response
 
-    with patch("app.core.firestore_handler.Utils.KeepAuthSession", return_value=mock_session):
+    with patch(
+        "app.core.firestore_handler.Utils.KeepAuthSession", return_value=mock_session
+    ):
         try:
             client = ClosableSSEClient("http://example.com/stream")
         except Exception:
@@ -130,7 +131,7 @@ def test_closable_sse_client_init_and_close(monkeypatch):
 
 def test_stream_make_session():
     """Stream.make_session returns a KeepAuthSession."""
-    from app.core.firestore_handler.Utils import Stream, KeepAuthSession
+    from app.core.firestore_handler.Utils import KeepAuthSession, Stream
 
     s = Stream.__new__(Stream)
     session = s.make_session()
@@ -154,7 +155,7 @@ def test_stream_close_without_running():
 
 def test_stream_start_stream_connects(monkeypatch):
     """Stream.start_stream creates an SSEClient and reads events."""
-    from app.core.firestore_handler.Utils import Stream, ClosableSSEClient
+    from app.core.firestore_handler.Utils import Stream
 
     s = Stream.__new__(Stream)
     s.url = "http://example.com/stream"
@@ -165,7 +166,9 @@ def test_stream_start_stream_connects(monkeypatch):
     mock_sse = MagicMock()
     mock_sse.__iter__ = MagicMock(return_value=iter([]))  # no events
 
-    with patch("app.core.firestore_handler.Utils.ClosableSSEClient", return_value=mock_sse):
+    with patch(
+        "app.core.firestore_handler.Utils.ClosableSSEClient", return_value=mock_sse
+    ):
         try:
             s.start_stream(callback=lambda x: None)
         except Exception:
@@ -174,8 +177,9 @@ def test_stream_start_stream_connects(monkeypatch):
 
 def test_document_key_generator_duplicate_time_branch():
     """DocumentKeyGenerator generates unique keys even with same timestamp."""
-    from app.core.firestore_handler.Utils import DocumentKeyGenerator
     import time as time_mod
+
+    from app.core.firestore_handler.Utils import DocumentKeyGenerator
 
     gen = DocumentKeyGenerator()
     now_ms = int(time_mod.time() * 1000)
