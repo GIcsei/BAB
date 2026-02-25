@@ -1,4 +1,5 @@
 .git
+.github
 .gitignore
 .venv
 __pycache__
@@ -7,9 +8,13 @@ __pycache__
 *.pyd
 .pytest_cache
 .mypy_cache
+.ruff_cache
 .vscode
 .idea
 logs
+reports
+htmlcov
+coverage.xml
 *.log
 .env*
 app/*.json

@@ -2,127 +2,118 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 jobs:
-  lint-test-build:
+  lint:
     runs-on: ubuntu-latest
-
+    strategy:
+      fail-fast: true
+      matrix:
+        python-version: ["3.12"]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: 3.12
+          python-version: ${{ matrix.python-version }}
 
-      - name: Cache pip
+      - name: Cache uv
         uses: actions/cache@v4
         with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-3.12-${{ hashFiles('**/pyproject.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-3.12-
+          path: ~/.cache/uv
+          key: ${{ runner.os }}-uv-${{ hashFiles('uv.lock') }}
 
       - name: Install dependencies
+        env:
+          UV_PROJECT_ENVIRONMENT: .venv
         run: |
-          python -m pip install --upgrade pip
-          pip install -e .
-          pip install pytest pytest-cov pytest-html black flake8 mypy
+          python -m pip install --upgrade pip uv
+          uv sync --frozen --group dev
 
-      ############################################################
-      # BLACK + FLAKE8 WITH SUMMARY
-      ############################################################
+      - name: Ruff
+        run: uv run ruff check app tests
 
-      - name: Run Black & Flake8
-        id: lint
+      - name: Black
+        run: uv run black --check app tests
+
+  typecheck:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        python-version: ["3.12"]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Cache uv
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/uv
+          key: ${{ runner.os }}-uv-${{ hashFiles('uv.lock') }}
+
+      - name: Install dependencies
+        env:
+          UV_PROJECT_ENVIRONMENT: .venv
         run: |
-          mkdir -p reports
+          python -m pip install --upgrade pip uv
+          uv sync --frozen --group dev
 
-          echo "# 🔍 Lint & Formatting Report" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
+      - name: Mypy
+        run: uv run mypy app
 
-          echo "## Black" >> $GITHUB_STEP_SUMMARY
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        python-version: ["3.12"]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-          if black --check --diff app tests > reports/black.txt 2>&1; then
-            echo "✅ Black passed" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "❌ Black failed" >> $GITHUB_STEP_SUMMARY
-            echo "<details><summary>Black diff</summary>" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo '```diff' >> $GITHUB_STEP_SUMMARY
-            cat reports/black.txt >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            echo "</details>" >> $GITHUB_STEP_SUMMARY
-            exit 1
-          fi
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
 
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "## Flake8" >> $GITHUB_STEP_SUMMARY
+      - name: Cache uv
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/uv
+          key: ${{ runner.os }}-uv-${{ hashFiles('uv.lock') }}
 
-          if flake8 --extend-ignore="E203, E501, E402" app tests --count --show-source --statistics > reports/flake8.txt 2>&1; then
-            echo "✅ Flake8 passed" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "❌ Flake8 failed" >> $GITHUB_STEP_SUMMARY
-            echo "<details><summary>Flake8 output</summary>" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            cat reports/flake8.txt >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            echo "</details>" >> $GITHUB_STEP_SUMMARY
-            exit 1
-          fi
-
-      ############################################################
-      # TESTS + COVERAGE
-      ############################################################
+      - name: Install dependencies
+        env:
+          UV_PROJECT_ENVIRONMENT: .venv
+        run: |
+          python -m pip install --upgrade pip uv
+          uv sync --frozen --group dev
 
       - name: Run tests with coverage
         run: |
-          pytest -v --maxfail=1 \
+          mkdir -p reports
+          uv run pytest -v --maxfail=1 \
             --cov=app \
             --cov-report=xml:coverage.xml \
             --cov-report=term-missing \
             --cov-report=html:htmlcov \
             --html=reports/pytest-report.html \
             --self-contained-html
-
-      - name: Coverage Summary
-        if: always()
-        run: |
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "# 📊 Test & Coverage Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          python << 'PY'
-          import os
-          import xml.etree.ElementTree as ET
-
-          cov_file = "coverage.xml"
-          summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
-
-          cov_pct = "n/a"
-          if os.path.exists(cov_file):
-              root = ET.parse(cov_file).getroot()
-              line_rate = root.attrib.get("line-rate")
-              if line_rate:
-                  cov_pct = f"{float(line_rate) * 100:.2f}%"
-
-          with open(summary_path, "a") as f:
-              f.write(f"- Line coverage: **{cov_pct}**\n")
-          PY
-
-      ############################################################
-      # UPLOAD ARTIFACTS
-      ############################################################
 
       - name: Upload reports
         if: always()
@@ -134,20 +125,54 @@ jobs:
             coverage.xml
             htmlcov/
 
-      ############################################################
-      # DEPLOY COVERAGE REPORT TO GITHUB PAGES
-      ############################################################
+  security:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        python-version: ["3.12"]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Prepare Pages content
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: |
-          mkdir -p public
-          cp -r htmlcov/* public/
-          cp reports/pytest-report.html public/
-
-      - name: Deploy to GitHub Pages
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: peaceiris/actions-gh-pages@v3
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./public
+          python-version: ${{ matrix.python-version }}
+
+      - name: Cache uv
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/uv
+          key: ${{ runner.os }}-uv-${{ hashFiles('uv.lock') }}
+
+      - name: Install dependencies
+        env:
+          UV_PROJECT_ENVIRONMENT: .venv
+        run: |
+          python -m pip install --upgrade pip uv
+          uv sync --frozen --group dev
+
+      - name: Pip audit
+        run: uv run pip-audit
+
+  build:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    needs: [lint, typecheck, test, security]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: docker/Dockerfile
+          tags: bab:ci
+          load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

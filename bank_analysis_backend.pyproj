@@ -93,6 +93,7 @@
     <Folder Include="app\services\" />
     <Folder Include="app\services\__pycache__\" />
     <Folder Include="app\__pycache__\" />
+    <Folder Include="scripts\" />
     <Folder Include="tests\" />
     <Folder Include="tests\api\" />
     <Folder Include="tests\unit\" />
@@ -101,6 +102,8 @@
     <Content Include=".env" />
     <Content Include=".github\copilot-instructions.md" />
     <Content Include=".github\workflows\ci.yml" />
+    <Content Include=".github\workflows\docker.yml" />
+    <Content Include=".github\workflows\release.yml" />
     <Content Include="app\.python-version" />
     <Content Include="app\routers\__pycache__\login.cpython-312.pyc" />
     <Content Include="app\schemas\__pycache__\login.cpython-312.pyc" />
@@ -108,7 +111,14 @@
     <Content Include="app\__pycache__\login.cpython-312.pyc" />
     <Content Include="app\__pycache__\main.cpython-312.pyc" />
     <Content Include=".editorconfig" />
+    <Content Include="docker\docker-compose.dev.yml" />
+    <Content Include="docker\docker-compose.prod.yml" />
+    <Content Include="docker\docker-compose.yml" />
+    <Content Include="docker\Dockerfile" />
     <Content Include="README.md" />
+    <Content Include="scripts\dev.sh" />
+    <Content Include="scripts\format.sh" />
+    <Content Include="scripts\lint.sh" />
   </ItemGroup>
   <ItemGroup>
     <InterpreterReference Include="Global|PythonCore|3.13" />

@@ -1,96 +1,51 @@
 # Bank Analysis Backend
 
-This README provides an overview, developer quickstart, API usage examples, and security/performance notes for the `bank_analysis_backend` FastAPI project. It documents updated runtime, configuration, and CI expectations introduced in recent changes:
+![CI](https://github.com/GIcsei/BAB/actions/workflows/ci.yml/badge.svg)
 
-- Python >= 3.12 (see `pyproject.toml`).
-- Endpoints under `app/routers/data_plot.py` now require authentication and use `Authorization: Bearer <idToken>` header.
-- The data service deserializes files via a controlled fallback and exposes async wrappers (`preview_pickle_file_async`, `extract_series_async`) to avoid blocking the FastAPI event loop.
-- Pickle deserialization is potentially unsafe — see the Security section.
+Backend service for authenticated data ingestion and plotting on TrueNAS and
+standard Docker environments.
 
----
+## Architecture Summary
 
-## Table of Contents
+- **FastAPI entrypoint**: `app/main.py`
+- **Auth & Firebase**: `app/core/auth.py`, `app/core/firebase_init.py`
+- **Firestore persistence**: `app/core/firestore_handler/*`
+- **Data service**: `app/services/data_service.py`
+- **Scheduler**: `app/services/scheduler.py`
+- **API routes**: `app/routers/*`
 
-- [Quickstart (development)](#quickstart-development)
-- [Configuration](#configuration)
-- [Running locally (docker)](#running-locally-docker)
-- [Running on TrueNAS SCALE](#running-on-truenas-scale)
-- [API Endpoints](#api-endpoints)
-- [AI Model Overview](#ai-model-overview)
-- [Developer notes and code structure](#developer-notes-and-code-structure)
-- [Testing and CI](#testing-and-ci)
-- [Security considerations](#security-considerations)
-- [Contributing and coding standards](#contributing-and-coding-standards)
+## Requirements
 
----
-
-## Quickstart (development)
-
-1. Clone the repo and change to project dir:
-
-
-   git clone https://github.com/GIcsei/BAB.git
-   cd BAB
-
-
-2. Create a virtual environment and install dependencies (project uses `pyproject.toml`):
-
-
-   python -m venv .venv
-   source .venv/bin/activate   # on Windows use `.venv\Scripts\activate`
-   python -m pip install --upgrade pip
-   python -m pip install -e .
-
-
-3. Set required environment variables for local dev (example):
-
-
-   export APP_USER_DATA_DIR=$(pwd)/user_data
-   export APP_JOB_HOUR=18
-   export APP_JOB_MINUTE=0
-   export LOG_LEVEL=DEBUG
-
-
-4. Run the app with uvicorn for development:
-
-
-   uvicorn app.main:app --reload --port 8000
-
-
-5. Open interactive docs:
-
-- Open `http://localhost:8000/docs` (Swagger UI) or
-- `http://localhost:8000/redoc`
+- Python 3.12
+- Docker (optional for containerized runs)
 
 ## Configuration
 
-Key environment variables (defaults shown):
+Create `.env` from the template `.env.example` and customize:
 
-- `APP_USER_DATA_DIR` (default: `/var/app/user_data`) — per-user data directory where credentials and pickles are stored.
-- `APP_JOB_HOUR` (default: `18`) — hour for daily scheduled jobs.
-- `APP_JOB_MINUTE` (default: `0`) — minute for daily scheduled jobs.
-- `LOG_LEVEL` (default: `DEBUG`) — logging level.
-- `LOG_FILE` (default: unset) — if set, logs rotate to this file; otherwise, logs stream to stdout.
+```
+APP_USER_DATA_DIR=/var/app/user_data
+APP_JOB_HOUR=18
+APP_JOB_MINUTE=0
+LOG_LEVEL=DEBUG
+```
 
-These variables are read by `app/main.py` during startup. Job restore and token loading also occur on startup (these behaviors are safeguarded by tests/mocks).
+- `APP_USER_DATA_DIR`: per-user data directory (where credentials, JWTs, and pickles are stored).
+- `APP_JOB_HOUR`/`APP_JOB_MINUTE`: schedule daily jobs (e.g. token refresh).
+- `LOG_LEVEL`: set to `DEBUG` for development; change to `INFO`/`WARNING` in production.
 
-## Running locally (docker)
+## Running locally (Docker)
 
-The repo contains `update.sh` to build images and launch development/production compose stacks. It uses the `pyproject.toml` version to tag images.
+With Docker installed, use `./update.sh` to build images and launch the app:
 
-Development (interactive):
-
-
+```sh
 ./update.sh
-# follow prompt, enter 'dev' or 'prod'
+# follow the prompt
+```
 
-
-Production mode uses `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d` and expects environment variables to be supplied via your deployment pipeline.
-
+Access the app at [http://localhost:8000](http://localhost:8000).
 
 ## Running on TrueNAS SCALE
-
-To run this project reliably on TrueNAS SCALE, use the dedicated compose file and env template added for NAS deployment:
 
 1. Copy `truenas.env.example` to `truenas.env` and set dataset paths (`APP_USER_DATA_HOST_PATH`, `APP_DOWNLOADS_HOST_PATH`) and `NETBANK_MASTER_KEY`.
 2. Use `docker-compose.truenas.yml` in TrueNAS Custom App / Docker Compose stack configuration.
@@ -222,3 +177,64 @@ Recommendation: run `pytest --cov=app --cov-report=term-missing` locally and ens
 - All new code should include type annotations and be covered by tests where possible.
 
 ---
+Key variables:
+
+- `APP_USER_DATA_HOST_PATH`: host dataset for user data
+- `APP_DOWNLOADS_HOST_PATH`: host dataset for downloads
+- `FIRESTORE_MASTER_KEY`: host path to Firebase service account JSON
+- `APP_PORT`: API port (default `8000`)
+- `PUID` / `PGID`: runtime UID/GID for NAS volumes
+
+## Local Development (Python)
+~~~
+python -m venv .venv source .venv/bin/activate python -m pip install --upgrade pip uv uv sync --group dev uv run uvicorn app.main:app --reload --port 8000
+~~~
+
+## Docker (Development)
+
+~~~
+docker compose -f docker/docker-compose.yml 
+-f docker/docker-compose.prod.yml up -d
+~~~
+
+## Docker (Production)
+
+~~~
+docker compose -f docker/docker-compose.yml 
+-f docker/docker-compose.prod.yml up -d
+~~~
+
+## TrueNAS Notes
+
+- Use `PUID=568` and `PGID=568` (default TrueNAS apps user).
+- Keep Firebase credentials and datasets on TrueNAS storage and mount read-only.
+- The container drops privileges via `gosu` after UID/GID remap.
+
+## Testing
+
+~~~
+uv run pytest -v --maxfail=1
+~~~
+
+## Linting / Formatting / Typing
+
+~~~
+./scripts/lint.sh ./scripts/format.sh uv run mypy app
+~~~
+
+
+## CI Overview
+
+The GitHub Actions workflow runs:
+
+- **Lint**: Ruff + Black
+- **Typecheck**: Mypy (strict)
+- **Tests**: Pytest + coverage + HTML report
+- **Security**: `pip-audit`
+- **Docker build** (main only)
+
+## Security Considerations
+
+- Do not commit Firebase credentials or master keys.
+- Pickle/joblib deserialization is unsafe for untrusted inputs.
+- Store secrets outside the repo and mount them at runtime.

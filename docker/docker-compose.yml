@@ -2,10 +2,13 @@ services:
   app:
     image: bank_analysis_backend:latest
     build:
-      context: .
+      context: ..
+      dockerfile: docker/Dockerfile
     restart: unless-stopped
     ports:
       - "${APP_PORT:-8000}:8000"
+    env_file:
+      - ../.env
     environment:
       APP_USER_DATA_DIR: ${APP_USER_DATA_DIR:-/var/app/user_data}
       LOCAL_DOWNLOADS_DIR: ${LOCAL_DOWNLOADS_DIR:-/var/app/downloads}
@@ -23,10 +26,15 @@ services:
     volumes:
       - ${APP_USER_DATA_HOST_PATH}:${APP_USER_DATA_DIR:-/var/app/user_data}
       - ${APP_DOWNLOADS_HOST_PATH}:${LOCAL_DOWNLOADS_DIR:-/var/app/downloads}
-      - ${FIRESTORE_MASTER_KEY}:${APP_GOOGLE_APPLICATION_CREDENTIALS:-/var/app/credentials.json}
+      - ${FIRESTORE_MASTER_KEY}:${APP_GOOGLE_APPLICATION_CREDENTIALS:-/var/app/credentials.json}:ro
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8000/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
   selenium:
-    image: selenium/standalone-edge:144.0-20260202 # pin to a stable release you tested
+    image: selenium/standalone-edge:144.0-20260202
     restart: unless-stopped
     shm_size: "2g"
     ports:
