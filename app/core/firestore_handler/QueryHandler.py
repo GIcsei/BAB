@@ -17,6 +17,7 @@ from app.core.firestore_handler.FirestoreService import FirestoreService
 from app.core.firestore_handler.User import (
     Auth,  # kept only if refresh via REST is still needed
 )
+from app.core.config import get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -245,6 +246,11 @@ class Firebase:
             self._registry.register(user_id, stored)
 
     def refresh_token(self, user_id: str) -> Dict[str, Any]:
+        """
+        Refresh a registered user's tokens deterministically:
+        - Require that a token exists for that user
+        - Use Auth to refresh and update in-memory + persisted file (if present)
+        """
         token = self._registry.get(user_id)
         if not token:
             raise ValueError(f"No token found for user {user_id} to refresh")
@@ -264,9 +270,7 @@ class Firebase:
         self._registry.register(user_id, normalized)
 
         try:
-            from os import getenv
-
-            base = Path(getenv("APP_USER_DATA_DIR", "/var/app/user_data"))
+            base = get_settings().app_user_data_dir
             cred_path = base / user_id / "credentials.json"
             if cred_path.parent.exists():
                 self._persistence.write_json(cred_path, normalized)
