@@ -5,9 +5,8 @@ import json
 import os
 from unittest.mock import patch
 
-import pytest
-
 import app.core.netbank.credentials as creds_mod
+import pytest
 from app.core.netbank.credentials import (
     _cred_path_for_dir,
     _ensure_key,

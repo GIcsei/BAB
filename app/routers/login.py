@@ -1,13 +1,12 @@
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, Request
-
 from app.core.auth import get_current_user_id, get_firebase_dep
 from app.core.error_mapping import exception_to_http
 from app.core.exceptions import JobNotFoundError, JobStartError, LoginFailedError
 from app.infrastructure.sched.scheduler import Scheduler
 from app.schemas.login import LoginRequest, LoginResponse
 from app.services.login_service import login_user, logout_user
+from fastapi import APIRouter, Depends, HTTPException, Request
 
 router = APIRouter(prefix="/user", tags=["Authentication"])
 logger = logging.getLogger(__name__)

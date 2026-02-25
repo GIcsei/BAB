@@ -3,13 +3,12 @@
 from unittest.mock import MagicMock
 
 import pytest
-from requests.exceptions import HTTPError
-
 from app.core.firestore_handler.Utils import (
     DocumentKeyGenerator,
     KeepAuthSession,
     raise_detailed_error,
 )
+from requests.exceptions import HTTPError
 
 # ── raise_detailed_error ───────────────────────────────────────────────────
 

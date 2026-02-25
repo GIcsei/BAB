@@ -5,7 +5,6 @@ import threading
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 from app.core.firestore_handler.Utils import ClosableSSEClient, Stream
 
 # ── ClosableSSEClient._connect with should_connect=False (line 61) ────────

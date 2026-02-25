@@ -2,7 +2,6 @@ from types import ModuleType
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 from app.infrastructure.sched.scheduler import Scheduler, _Job
 
 

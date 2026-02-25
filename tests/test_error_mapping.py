@@ -1,17 +1,14 @@
 """Tests for app.core.error_mapping."""
 
-from fastapi import HTTPException
-
 from app.core.error_mapping import exception_to_http, get_error_response
 from app.core.exceptions import (
     AppException,
-)
-from app.core.exceptions import FileNotFoundError as AppFileNotFoundError
-from app.core.exceptions import (
     FirebaseError,
     InvalidTokenError,
     LoginFailedError,
 )
+from app.core.exceptions import FileNotFoundError as AppFileNotFoundError
+from fastapi import HTTPException
 
 # ── exception_to_http ──────────────────────────────────────────────────────
 

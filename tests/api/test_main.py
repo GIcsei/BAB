@@ -1,10 +1,9 @@
 """Tests for app.api.main – root, health endpoints, and middleware."""
 
-import pytest
-from fastapi.testclient import TestClient
-
 import app.core.health as health_mod
+import pytest
 from app.main import app
+from fastapi.testclient import TestClient
 
 
 @pytest.fixture(autouse=True)

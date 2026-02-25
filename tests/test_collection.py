@@ -1,7 +1,6 @@
 """Tests for app.core.firestore_handler.DataDescriptor – Collection class."""
 
 import pytest
-
 from app.core.firestore_handler.DataDescriptor import Collection, Document
 
 # ── Helpers ────────────────────────────────────────────────────────────────

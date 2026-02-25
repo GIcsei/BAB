@@ -133,5 +133,5 @@ def test_run_query_returns_collection():
     docs = [_document_response("q1")]
     fb.requests.post.return_value = _ok_response(docs)
     svc = FirestoreService(fb)
-    result = svc.run_query("col", "select *")
+    result = svc.run_query("col", "status == 'active'")
     assert isinstance(result, Collection)

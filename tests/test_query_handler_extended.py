@@ -3,9 +3,8 @@
 import json
 from unittest.mock import MagicMock
 
-import pytest
-
 import app.core.firestore_handler.QueryHandler as qh_mod
+import pytest
 from app.core.firestore_handler.QueryHandler import initialize_app
 
 
@@ -31,7 +30,7 @@ def test_auth_with_no_existing_token(tmp_path):
     token_path = tmp_path / "tok.json"
 
     mock_auth_client = MagicMock()
-    fb._auth_client = mock_auth_client
+    fb.token_service._auth_client = mock_auth_client
     mock_auth_client.refresh.side_effect = Exception("no token")
 
     auth_client, token = fb.auth(token_path)
@@ -50,7 +49,7 @@ def test_auth_with_existing_token_refreshes(tmp_path):
         "idToken": "new",
         "refreshToken": "new_ref",
     }
-    fb._auth_client = mock_auth_client
+    fb.token_service._auth_client = mock_auth_client
 
     auth_client, token = fb.auth(token_path)
     assert token["idToken"] == "new"
@@ -65,7 +64,7 @@ def test_auth_refresh_failure_returns_old_token(tmp_path):
 
     mock_auth_client = MagicMock()
     mock_auth_client.refresh.side_effect = Exception("refresh failed")
-    fb._auth_client = mock_auth_client
+    fb.token_service._auth_client = mock_auth_client
 
     _, token = fb.auth(token_path)
     assert token["idToken"] == "old_tok"
@@ -83,7 +82,7 @@ def test_refresh_token_no_user_raises():
 def test_refresh_token_success(tmp_path, monkeypatch):
     monkeypatch.setenv("APP_USER_DATA_DIR", str(tmp_path))
     fb = _make_fb_with_api_key()
-    fb._registry.register(
+    fb.token_service._registry.register(
         "u1", {"idToken": "old", "refreshToken": "ref", "email": "u@e.com"}
     )
 
@@ -93,23 +92,26 @@ def test_refresh_token_success(tmp_path, monkeypatch):
         "refreshToken": "new_ref",
         "userId": "u1",
     }
-    fb._auth_client = mock_auth_client
+    fb.token_service._auth_client = mock_auth_client
 
     result = fb.refresh_token("u1")
     assert result["idToken"] == "new_tok"
     assert result["email"] == "u@e.com"
-    assert fb._registry.get("u1")["idToken"] == "new_tok"
+    assert fb.token_service._registry.get("u1")["idToken"] == "new_tok"
 
 
 def test_refresh_token_persists_to_dir(tmp_path, monkeypatch):
     """refresh_token should persist new token to credentials.json if dir exists."""
+    import app.core.config as cfg
+
     monkeypatch.setenv("APP_USER_DATA_DIR", str(tmp_path))
+    cfg._SETTINGS = None  # force re-read of settings with new env var
 
     user_dir = tmp_path / "u2"
     user_dir.mkdir()
 
     fb = _make_fb_with_api_key()
-    fb._registry.register("u2", {"idToken": "old", "refreshToken": "ref"})
+    fb.token_service._registry.register("u2", {"idToken": "old", "refreshToken": "ref"})
 
     mock_auth_client = MagicMock()
     mock_auth_client.refresh.return_value = {
@@ -117,13 +119,16 @@ def test_refresh_token_persists_to_dir(tmp_path, monkeypatch):
         "refreshToken": "p_ref",
         "userId": "u2",
     }
-    fb._auth_client = mock_auth_client
+    fb.token_service._auth_client = mock_auth_client
 
-    fb.refresh_token("u2")
-    cred_path = user_dir / "credentials.json"
-    assert cred_path.exists()
-    data = json.loads(cred_path.read_text())
-    assert data["idToken"] == "persisted_tok"
+    try:
+        fb.refresh_token("u2")
+        cred_path = user_dir / "credentials.json"
+        assert cred_path.exists()
+        data = json.loads(cred_path.read_text())
+        assert data["idToken"] == "persisted_tok"
+    finally:
+        cfg._SETTINGS = None  # reset so monkeypatch restore works properly
 
 
 # ── Firebase.load_tokens_from_dir with refresh ────────────────────────────
@@ -147,7 +152,7 @@ def test_load_tokens_refresh_success(tmp_path):
         "idToken": "new_tok",
         "refreshToken": "new_ref",
     }
-    fb._auth_client = mock_auth_client
+    fb.token_service._auth_client = mock_auth_client
 
     fb.load_tokens_from_dir(tmp_path, refresh=True)
     token = fb.get_user_token("u3")
@@ -164,7 +169,7 @@ def test_load_tokens_refresh_failure_uses_stored(tmp_path):
 
     mock_auth_client = MagicMock()
     mock_auth_client.refresh.side_effect = Exception("token expired")
-    fb._auth_client = mock_auth_client
+    fb.token_service._auth_client = mock_auth_client
 
     fb.load_tokens_from_dir(tmp_path, refresh=True)
     token = fb.get_user_token("u4")

@@ -1,3 +1,3 @@
-from app.infrastructure.sched.scheduler import Scheduler, create_scheduler
+from app.infrastructure.sched.scheduler import Scheduler, _Job, create_scheduler
 
-__all__ = ["Scheduler", "create_scheduler"]
+__all__ = ["Scheduler", "_Job", "create_scheduler"]
