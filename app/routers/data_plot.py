@@ -8,10 +8,10 @@ from fastapi import APIRouter, Depends, Query
 from app.core.auth import get_current_user_id
 from app.core.error_mapping import exception_to_http
 from app.core.exceptions import (
+    DeserializationDisabledError,
+    DeserializationError,
     FileNotFoundError,
     FileSizeExceededError,
-    DeserializationError,
-    DeserializationDisabledError,
 )
 from app.services import data_service
 
@@ -78,7 +78,9 @@ async def preview_file(
         logger.warning("Deserialization disabled for %s/%s", user_id, filename)
         raise exception_to_http(exc)
     except DeserializationError as exc:
-        logger.warning("Deserialization error for %s/%s: %s", user_id, filename, exc.message)
+        logger.warning(
+            "Deserialization error for %s/%s: %s", user_id, filename, exc.message
+        )
         raise exception_to_http(exc)
     except Exception as exc:
         logger.exception("Unexpected error previewing file %s/%s", user_id, filename)
@@ -117,11 +119,15 @@ async def get_series(
         logger.warning("Deserialization disabled for %s/%s", user_id, filename)
         raise exception_to_http(exc)
     except DeserializationError as exc:
-        logger.warning("Deserialization error for %s/%s: %s", user_id, filename, exc.message)
+        logger.warning(
+            "Deserialization error for %s/%s: %s", user_id, filename, exc.message
+        )
         raise exception_to_http(exc)
     except ValueError as exc:
         logger.warning("Invalid parameters for series extraction: %s", exc)
         raise exception_to_http(DeserializationError(filename, str(exc)))
     except Exception as exc:
-        logger.exception("Unexpected error extracting series from %s/%s", user_id, filename)
+        logger.exception(
+            "Unexpected error extracting series from %s/%s", user_id, filename
+        )
         raise exception_to_http(exc)
