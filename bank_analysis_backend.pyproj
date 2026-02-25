@@ -77,6 +77,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include=".env" />
+    <Content Include=".github\copilot-instructions.md" />
     <Content Include=".github\workflows\ci.yml" />
     <Content Include="app\.python-version" />
     <Content Include="app\routers\__pycache__\login.cpython-312.pyc" />
