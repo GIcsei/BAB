@@ -1,11 +1,18 @@
-﻿import logging
+import logging
 import os
 import re
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
 
 from app.core.auth import get_current_user_id
+from app.core.error_mapping import exception_to_http
+from app.core.exceptions import (
+    FileNotFoundError,
+    FileSizeExceededError,
+    DeserializationError,
+    DeserializationDisabledError,
+)
 from app.services import data_service
 
 router = APIRouter(prefix="/data", tags=["Data"])
@@ -19,6 +26,8 @@ def _base_dir() -> Path:
 def _validate_user_id(user_id: str) -> str:
     """Validate user_id format to prevent path traversal."""
     if not re.match(r"^[a-zA-Z0-9_\-\.]+$", user_id):
+        from fastapi import HTTPException
+
         raise HTTPException(status_code=400, detail="Invalid user_id format")
     return user_id
 
@@ -26,6 +35,8 @@ def _validate_user_id(user_id: str) -> str:
 def _validate_filename(filename: str) -> str:
     """Validate filename to ensure only .pkl/.pickle files are accessed."""
     if not re.match(r"^[a-zA-Z0-9_\-\.]+\.(pkl|pickle)$", filename, re.IGNORECASE):
+        from fastapi import HTTPException
+
         raise HTTPException(
             status_code=400,
             detail="Invalid filename format; only .pkl and .pickle files are allowed",
@@ -39,9 +50,9 @@ async def list_files(current_user_id: str = Depends(get_current_user_id)):
     try:
         files = data_service.list_pickles_for_user(_base_dir(), user_id)
         return {"files": files}
-    except Exception:
+    except Exception as exc:
         logger.exception("Error listing pickles for user %s", user_id)
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise exception_to_http(exc)
 
 
 @router.get("/files/{filename}/preview", summary="Preview contents of a pickle file")
@@ -57,13 +68,21 @@ async def preview_file(
             _base_dir(), user_id, filename, max_rows=rows
         )
         return {"preview": preview}
-    except FileNotFoundError:
-        raise HTTPException(status_code=404, detail="File not found")
-    except ValueError as ve:
-        raise HTTPException(status_code=400, detail=str(ve))
-    except Exception:
-        logger.exception("Error previewing file %s/%s", user_id, filename)
-        raise HTTPException(status_code=500, detail="Internal server error")
+    except FileNotFoundError as exc:
+        logger.warning("File not found: %s/%s", user_id, filename)
+        raise exception_to_http(exc)
+    except FileSizeExceededError as exc:
+        logger.warning("File size exceeded for %s/%s", user_id, filename)
+        raise exception_to_http(exc)
+    except DeserializationDisabledError as exc:
+        logger.warning("Deserialization disabled for %s/%s", user_id, filename)
+        raise exception_to_http(exc)
+    except DeserializationError as exc:
+        logger.warning("Deserialization error for %s/%s: %s", user_id, filename, exc.message)
+        raise exception_to_http(exc)
+    except Exception as exc:
+        logger.exception("Unexpected error previewing file %s/%s", user_id, filename)
+        raise exception_to_http(exc)
 
 
 @router.get("/files/{filename}/series", summary="Extract x/y series for plotting")
@@ -88,10 +107,21 @@ async def get_series(
             max_points=max_points,
         )
         return series
-    except FileNotFoundError:
-        raise HTTPException(status_code=404, detail="File not found")
-    except ValueError as ve:
-        raise HTTPException(status_code=400, detail=str(ve))
-    except Exception:
-        logger.exception("Error extracting series from %s/%s", user_id, filename)
-        raise HTTPException(status_code=500, detail="Internal server error")
+    except FileNotFoundError as exc:
+        logger.warning("File not found: %s/%s", user_id, filename)
+        raise exception_to_http(exc)
+    except FileSizeExceededError as exc:
+        logger.warning("File size exceeded for %s/%s", user_id, filename)
+        raise exception_to_http(exc)
+    except DeserializationDisabledError as exc:
+        logger.warning("Deserialization disabled for %s/%s", user_id, filename)
+        raise exception_to_http(exc)
+    except DeserializationError as exc:
+        logger.warning("Deserialization error for %s/%s: %s", user_id, filename, exc.message)
+        raise exception_to_http(exc)
+    except ValueError as exc:
+        logger.warning("Invalid parameters for series extraction: %s", exc)
+        raise exception_to_http(DeserializationError(filename, str(exc)))
+    except Exception as exc:
+        logger.exception("Unexpected error extracting series from %s/%s", user_id, filename)
+        raise exception_to_http(exc)
