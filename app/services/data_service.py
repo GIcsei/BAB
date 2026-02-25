@@ -9,6 +9,13 @@ from typing import Any, Dict, List, Optional
 import numpy as np
 import pandas as pd
 
+from app.core.exceptions import (
+    DeserializationDisabledError,
+    DeserializationError,
+    FileNotFoundError,
+    FileSizeExceededError,
+)
+
 logger = logging.getLogger(__name__)
 
 # Thread pool for blocking I/O operations
@@ -25,7 +32,6 @@ _ALLOW_UNSAFE_DESERIALIZE = os.getenv(
 
 
 def _safe_basename(filename: str) -> str:
-    # prevent path traversal - only allow simple filenames
     return Path(filename).name
 
 
@@ -34,8 +40,11 @@ def _validate_file_size(path: Path, max_size_mb: int = 500) -> None:
     try:
         size_bytes = path.stat().st_size
         if size_bytes > max_size_mb * 1024 * 1024:
-            raise ValueError(f"File exceeds maximum allowed size of {max_size_mb}MB")
-    except FileNotFoundError:
+            size_mb = size_bytes // (1024 * 1024)
+            raise FileSizeExceededError(size_mb, max_size_mb)
+    except FileNotFoundError as exc:
+        logger.debug("File not found during size validation: %s", path)
+        logger.exception(exc)
         raise FileNotFoundError(str(path))
 
 
@@ -44,18 +53,21 @@ def list_pickles_for_user(base_data_dir: Path, user_id: str) -> List[Dict[str, A
     out: List[Dict[str, Any]] = []
     if not user_dir.exists() or not user_dir.is_dir():
         return out
-    for p in sorted(user_dir.iterdir(), key=lambda x: x.name):
-        if p.is_file() and p.suffix.lower() in {".pkl", ".pickle"}:
-            try:
-                out.append(
-                    {
-                        "filename": p.name,
-                        "size_bytes": p.stat().st_size,
-                        "modified_ms": int(p.stat().st_mtime * 1000),
-                    }
-                )
-            except Exception:
-                logger.exception("Error reading file metadata: %s", p)
+    try:
+        for p in sorted(user_dir.iterdir(), key=lambda x: x.name):
+            if p.is_file() and p.suffix.lower() in {".pkl", ".pickle"}:
+                try:
+                    out.append(
+                        {
+                            "filename": p.name,
+                            "size_bytes": p.stat().st_size,
+                            "modified_ms": int(p.stat().st_mtime * 1000),
+                        }
+                    )
+                except Exception:
+                    logger.exception("Error reading file metadata: %s", p)
+    except Exception:
+        logger.exception("Error listing pickles in directory: %s", user_dir)
     return out
 
 
@@ -66,7 +78,7 @@ def _try_load(path: Path) -> Any:
     unless APP_ALLOW_UNSAFE_DESERIALIZE=true is set in the environment.
     """
     if not _ALLOW_UNSAFE_DESERIALIZE:
-        raise RuntimeError(
+        raise DeserializationDisabledError(
             "Unsafe deserialization is disabled. Set APP_ALLOW_UNSAFE_DESERIALIZE=true to enable (not recommended)."
         )
 
@@ -96,8 +108,7 @@ def _try_load(path: Path) -> Any:
             return pickle.load(f)
     except Exception as exc:
         logger.exception("All deserialization attempts failed for %s", path)
-        # re-raise the last caught exception to preserve context
-        raise last_exc or exc
+        raise DeserializationError(str(path), str(last_exc or exc))
 
 
 def _to_json_serializable(obj: Any, max_rows: int = 200) -> Any:
