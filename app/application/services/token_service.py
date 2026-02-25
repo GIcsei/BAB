@@ -113,7 +113,9 @@ class TokenService:
             try:
                 token = auth_client.refresh(existing.get("refreshToken"))
             except Exception:
-                logger.exception("Failed to refresh token from file; using stored token")
+                logger.exception(
+                    "Failed to refresh token from file; using stored token"
+                )
                 token = existing
         return auth_client, token
 
@@ -161,7 +163,9 @@ class TokenService:
             cred_path = child / "credentials.json"
             token_data = self._persistence.read_json(cred_path)
             if not token_data:
-                logger.warning("No credentials.json found for user directory: %s", child)
+                logger.warning(
+                    "No credentials.json found for user directory: %s", child
+                )
                 continue
 
             user_id = child.name

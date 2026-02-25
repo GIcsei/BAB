@@ -14,9 +14,7 @@ class FirestoreAdapter:
         self.api_key = api_key
         self.requests = requests.Session()
         for scheme in ("http://", "https://"):
-            self.requests.mount(
-                scheme, requests.adapters.HTTPAdapter(max_retries=3)
-            )
+            self.requests.mount(scheme, requests.adapters.HTTPAdapter(max_retries=3))
         self._database: Optional[FirestoreService] = None
 
     def database(self) -> FirestoreService:
