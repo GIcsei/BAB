@@ -2,15 +2,17 @@ import json
 import logging
 import os
 import threading
-from pathlib import Path
 from typing import Optional
 
+from app.core.config import get_settings
 from app.core.firebase_init import get_project_id, initialize_firebase_admin
 from app.core.firestore_handler.QueryHandler import Firebase, initialize_app
 from app.schemas.login import LoginRequest, LoginResponse
 from app.services.scheduler import scheduler
 
 logger = logging.getLogger(__name__)
+
+settings = get_settings()
 
 _firebase_lock = threading.Lock()
 _firebase_instance: Optional[Firebase] = None
@@ -58,7 +60,7 @@ def login_user(data: LoginRequest) -> LoginResponse:
     logger.info("Login attempt for email=%s", data.email)
 
     # Base directory for user data inside the container (configurable)
-    base_data_dir = Path(os.getenv("APP_USER_DATA_DIR", "/var/app/user_data"))
+    base_data_dir = settings.app_user_data_dir
     base_data_dir.mkdir(parents=True, exist_ok=True)
 
     # Obtain auth client using a per-user token path so tokens persist per user
@@ -112,8 +114,8 @@ def login_user(data: LoginRequest) -> LoginResponse:
         logger.info("User %s logged in and token registered", user_id)
 
         # schedule job using daily target hour/minute from environment (fallback to 18:00)
-        target_hour = int(os.getenv("APP_JOB_HOUR", "18"))
-        target_minute = int(os.getenv("APP_JOB_MINUTE", "0"))
+        target_hour = settings.app_job_hour
+        target_minute = settings.app_job_minute
         scheduler.start_job_for_user(user_id, user_dir, target_hour, target_minute)
         logger.info(
             "Scheduled daily job for user %s at %02d:%02d",
@@ -133,7 +135,7 @@ def logout_user(user_id: str) -> bool:
     Logout user identified by verified user_id.
     Stops user job, removes credentials file, and clears in-memory token.
     """
-    base_data_dir = Path(os.getenv("APP_USER_DATA_DIR", "/var/app/user_data"))
+    base_data_dir = settings.app_user_data_dir
 
     if not user_id:
         logger.warning("Logout attempt for unknown user")
