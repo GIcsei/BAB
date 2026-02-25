@@ -1,7 +1,7 @@
-﻿import datetime
 import json
+from datetime import datetime, timedelta
 
-import python_jwt as jwt
+import jwt
 import requests
 from Crypto.PublicKey import RSA
 
@@ -37,11 +37,11 @@ class Auth:
             "sub": service_account_email,
             "aud": "https://identitytoolkit.googleapis.com/google.identity.identitytoolkit.v1.IdentityToolkit",
             "uid": uid,
+            "exp": datetime.utcnow() + timedelta(minutes=60),
         }
         if additional_claims:
             payload["claims"] = additional_claims
-        exp = datetime.timedelta(minutes=60)
-        return jwt.generate_jwt(payload, private_key, "RS256", exp)
+        return jwt.encode(payload, private_key.export_key(), algorithm="RS256")
 
     def sign_in_with_custom_token(self, token):
         request_ref = "https://www.googleapis.com/identitytoolkit/v3/relyingparty/verifyCustomToken?key={0}".format(
@@ -62,7 +62,6 @@ class Auth:
         request_object = requests.post(request_ref, headers=headers, data=data)
         raise_detailed_error(request_object)
         request_object_json = request_object.json()
-        # handle weirdly formatted response
         user = {
             "userId": request_object_json["user_id"],
             "idToken": request_object_json["id_token"],
