@@ -398,7 +398,9 @@ class ErsteNetBroker:
         while retry_times > 0:
             try:
                 changed_doc = db.run_query(
-                    "messages", f'uid == {token["userId"]} AND timestamp >= {timeStamp}', token=token
+                    "messages",
+                    f'uid == {token["userId"]} AND timestamp >= {timeStamp}',
+                    token=token,
                 )
                 if hasattr(changed_doc, "documents") and changed_doc.documents:
                     doc = changed_doc.documents[0]
