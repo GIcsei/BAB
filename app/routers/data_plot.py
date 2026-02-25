@@ -1,11 +1,11 @@
 import logging
-import os
 import re
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, Query
 
 from app.core.auth import get_current_user_id
+from app.core.config import get_settings
 from app.core.error_mapping import exception_to_http
 from app.core.exceptions import (
     DeserializationDisabledError,
@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 def _base_dir() -> Path:
-    return Path(os.getenv("APP_USER_DATA_DIR", "/var/app/user_data"))
+    return get_settings().app_user_data_dir
 
 
 def _validate_user_id(user_id: str) -> str:
