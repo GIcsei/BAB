@@ -80,7 +80,9 @@ def logout(
         raise exception_to_http(exc)
 
 
-@router.post("/next_run", summary="Get seconds until next scheduled run for the current user")
+@router.post(
+    "/next_run", summary="Get seconds until next scheduled run for the current user"
+)
 def next_run(
     current_user_id: str = Depends(get_current_user_id),
     scheduler: Scheduler = Depends(get_scheduler_dep),
