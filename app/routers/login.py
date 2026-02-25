@@ -2,7 +2,7 @@ import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 
-from app.core.auth import get_current_user_id
+from app.core.auth import get_current_user_id, get_firebase_dep
 from app.core.error_mapping import exception_to_http
 from app.core.exceptions import JobNotFoundError, JobStartError, LoginFailedError
 from app.infrastructure.sched.scheduler import Scheduler
@@ -28,9 +28,10 @@ def get_scheduler_dep(request: Request) -> Scheduler:
 def login(
     data: LoginRequest,
     scheduler: Scheduler = Depends(get_scheduler_dep),
+    firebase=Depends(get_firebase_dep),
 ):
     try:
-        return login_user(data, scheduler)
+        return login_user(data, scheduler, firebase)
     except LoginFailedError as exc:
         logger.warning("Login failed for email: %s", data.email)
         raise exception_to_http(exc)
@@ -72,9 +73,10 @@ def trigger_run(
 def logout(
     current_user_id: str = Depends(get_current_user_id),
     scheduler: Scheduler = Depends(get_scheduler_dep),
+    firebase=Depends(get_firebase_dep),
 ):
     try:
-        return logout_user(current_user_id, scheduler)
+        return logout_user(current_user_id, scheduler, firebase)
     except Exception as exc:
         logger.exception("Logout failed for user: %s", current_user_id)
         raise exception_to_http(exc)
