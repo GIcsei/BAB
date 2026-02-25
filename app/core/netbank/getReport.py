@@ -16,6 +16,7 @@ from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
+from app.core.config import get_settings
 from app.core.firestore_handler.QueryHandler import Firebase
 from app.core.netbank.credentials import load_user_credentials
 from app.core.netbank.utils import (
@@ -24,7 +25,6 @@ from app.core.netbank.utils import (
     is_today_in,
     reportFormatter,
 )
-from app.core.config import get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -49,8 +49,12 @@ class ErsteNetBroker:
         self.get_report_url = "https://netbroker.erstebroker.hu/netbroker/Logon.aspx"
         self.__SAVE_TO = Path(saveFolder)
         settings = get_settings()
-        self.__REMOTE_DIR = Path(settings.selenium_downloads_dir).resolve() / self.__SAVE_TO.parts[-1]
-        self.__LOCAL_DIR = Path(settings.local_downloads_dir).resolve() / self.__SAVE_TO.parts[-1]
+        self.__REMOTE_DIR = (
+            Path(settings.selenium_downloads_dir).resolve() / self.__SAVE_TO.parts[-1]
+        )
+        self.__LOCAL_DIR = (
+            Path(settings.local_downloads_dir).resolve() / self.__SAVE_TO.parts[-1]
+        )
         logger.debug(
             "Initializing ErsteNetBroker for user_id=%s with save folder %s",
             user_id,
