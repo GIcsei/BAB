@@ -77,10 +77,13 @@ def get_settings() -> Settings:
     netbank_master_key = os.getenv("NETBANK_MASTER_KEY")
 
     is_testing = any(
-        os.getenv(flag) for flag in ("PYTEST_CURRENT_TEST", "PYTEST_RUNNING", "UNIT_TEST")
+        os.getenv(flag)
+        for flag in ("PYTEST_CURRENT_TEST", "PYTEST_RUNNING", "UNIT_TEST")
     )
 
-    netbank_base_dir = Path(raw_app_user_data_dir) if raw_app_user_data_dir else Path.home()
+    netbank_base_dir = (
+        Path(raw_app_user_data_dir) if raw_app_user_data_dir else Path.home()
+    )
 
     _SETTINGS = Settings(
         raw_app_user_data_dir=raw_app_user_data_dir,
