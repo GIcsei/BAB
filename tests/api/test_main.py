@@ -4,7 +4,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 import app.core.health as health_mod
-from app.api.main import app
+from app.main import app
 
 
 @pytest.fixture(autouse=True)
