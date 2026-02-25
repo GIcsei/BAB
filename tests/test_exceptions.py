@@ -1,5 +1,4 @@
 """Tests for app.core.exceptions – all exception subclasses."""
-import pytest
 
 from app.core.exceptions import (
     AppException,
@@ -8,6 +7,9 @@ from app.core.exceptions import (
     DeserializationDisabledError,
     DeserializationError,
     ExternalServiceException,
+)
+from app.core.exceptions import FileNotFoundError as AppFileNotFoundError
+from app.core.exceptions import (
     FileSizeExceededError,
     FirebaseError,
     IdentityToolkitError,
@@ -22,8 +24,6 @@ from app.core.exceptions import (
     StorageException,
     TokenExpiredError,
 )
-from app.core.exceptions import FileNotFoundError as AppFileNotFoundError
-
 
 # ── AppException base ──────────────────────────────────────────────────────
 
@@ -237,12 +237,21 @@ def test_startup_timeout_error_no_component():
 
 
 def test_auth_exceptions_are_app_exceptions():
-    for cls in [InvalidTokenError, TokenExpiredError, MissingTokenError, LoginFailedError]:
+    for cls in [
+        InvalidTokenError,
+        TokenExpiredError,
+        MissingTokenError,
+        LoginFailedError,
+    ]:
         assert isinstance(cls(), AppException)
 
 
 def test_storage_exceptions_are_app_exceptions():
-    for cls in [AppFileNotFoundError, FileSizeExceededError, DeserializationDisabledError]:
+    for cls in [
+        AppFileNotFoundError,
+        FileSizeExceededError,
+        DeserializationDisabledError,
+    ]:
         assert isinstance(cls(), AppException)
 
 

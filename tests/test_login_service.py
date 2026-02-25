@@ -1,12 +1,10 @@
 """Tests for app.services.login_service – _extract_user_id and logout_user."""
-import os
-from pathlib import Path
+
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from app.services.login_service import _extract_user_id, logout_user
-
 
 # ── _extract_user_id ───────────────────────────────────────────────────────
 
@@ -39,7 +37,9 @@ def test_extract_user_id_none_when_empty():
 
 
 def test_extract_user_id_none_when_all_none():
-    result = _extract_user_id({"userId": None, "localId": None, "user_id": None, "uid": None})
+    result = _extract_user_id(
+        {"userId": None, "localId": None, "user_id": None, "uid": None}
+    )
     assert result is None
 
 

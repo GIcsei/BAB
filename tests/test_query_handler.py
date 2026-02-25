@@ -1,12 +1,14 @@
 """Tests for app.core.firestore_handler.QueryHandler – Firebase class methods."""
+
 import json
-from pathlib import Path
-from unittest.mock import MagicMock, patch
 
 import pytest
 
 import app.core.firestore_handler.QueryHandler as qh_mod
-from app.core.firestore_handler.QueryHandler import Firebase, TokenPersistence, initialize_app
+from app.core.firestore_handler.QueryHandler import (
+    Firebase,
+    initialize_app,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -202,6 +204,7 @@ def test_database_returns_firestore_service():
     fb = _make_firebase()
     qh_mod._DEFAULT_FIREBASE = fb
     from app.core.firestore_handler.FirestoreService import FirestoreService
+
     db = fb.database()
     assert isinstance(db, FirestoreService)
 

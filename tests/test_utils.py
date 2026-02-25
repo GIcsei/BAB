@@ -1,10 +1,8 @@
 """Tests for app.core.firestore_handler.Utils and DocumentKeyGenerator."""
+
 import time
 
-import pytest
-
 from app.core.firestore_handler.Utils import DocumentKeyGenerator, parse_to_firestore
-
 
 # ── parse_to_firestore ─────────────────────────────────────────────────────
 
@@ -87,7 +85,9 @@ def test_generate_key_unique():
 
 def test_generate_key_only_valid_chars():
     gen = DocumentKeyGenerator()
-    valid_chars = set("-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz")
+    valid_chars = set(
+        "-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz"
+    )
     for _ in range(5):
         key = gen.generate_key()
         for c in key:

@@ -1,4 +1,5 @@
 """Tests for app.routers.netbank_credentials – store and delete credentials."""
+
 import os
 
 os.environ.setdefault("APP_ALLOW_UNSAFE_DESERIALIZE", "true")

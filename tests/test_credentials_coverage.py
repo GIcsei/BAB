@@ -1,23 +1,22 @@
 """Additional tests for credentials.py covering remaining error paths."""
+
 import base64
 import json
 import os
-from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 from cryptography.fernet import Fernet
 
 import app.core.netbank.credentials as creds_mod
 from app.core.netbank.credentials import (
-    _ensure_key,
-    _cred_path_for_dir,
-    _key_path_for_dir,
-    save_user_credentials,
-    load_user_credentials,
-    delete_user_credentials,
     _CLASS_TAG,
-    _ensure_config_dir,
+    _cred_path_for_dir,
+    _ensure_key,
+    _key_path_for_dir,
+    delete_user_credentials,
+    load_user_credentials,
+    save_user_credentials,
 )
 
 
@@ -112,9 +111,18 @@ def test_load_ensure_key_failure_returns_none(tmp_path):
 
     # Write a valid-looking cred file with valid class/user_id/token
     from cryptography.fernet import Fernet
+
     real_key = Fernet.generate_key()
     f = Fernet(real_key)
-    payload = json.dumps({"class": _CLASS_TAG, "user_id": uid, "username": "x", "account_number": "a", "password": "p"})
+    payload = json.dumps(
+        {
+            "class": _CLASS_TAG,
+            "user_id": uid,
+            "username": "x",
+            "account_number": "a",
+            "password": "p",
+        }
+    )
     token = f.encrypt(payload.encode())
     token_b64 = base64.urlsafe_b64encode(token).decode()
     blob = {"class": _CLASS_TAG, "user_id": uid, "token": token_b64}
@@ -122,7 +130,9 @@ def test_load_ensure_key_failure_returns_none(tmp_path):
     with open(cred_path, "w") as fh:
         json.dump(blob, fh)
 
-    with patch("app.core.netbank.credentials._ensure_key", side_effect=RuntimeError("key fail")):
+    with patch(
+        "app.core.netbank.credentials._ensure_key", side_effect=RuntimeError("key fail")
+    ):
         result = load_user_credentials(uid, config_dir=str(tmp_path))
 
     assert result is None
@@ -149,7 +159,9 @@ def test_load_generic_decrypt_exception_returns_none(tmp_path):
     # Patch Fernet.decrypt to raise a generic exception (not InvalidToken)
     with (
         patch("app.core.netbank.credentials._ensure_key", return_value=key),
-        patch("app.core.netbank.credentials.Fernet.decrypt", side_effect=ValueError("bad")),
+        patch(
+            "app.core.netbank.credentials.Fernet.decrypt", side_effect=ValueError("bad")
+        ),
     ):
         result = load_user_credentials(uid, config_dir=str(tmp_path))
 
@@ -167,13 +179,15 @@ def test_load_decrypted_payload_tag_mismatch(tmp_path):
     key = Fernet.generate_key()
     f = Fernet(key)
     # Encrypt payload with wrong class tag inside
-    payload = json.dumps({
-        "class": "WrongClass",
-        "user_id": uid,
-        "username": "u",
-        "account_number": "a",
-        "password": "p",
-    }).encode()
+    payload = json.dumps(
+        {
+            "class": "WrongClass",
+            "user_id": uid,
+            "username": "u",
+            "account_number": "a",
+            "password": "p",
+        }
+    ).encode()
     token = f.encrypt(payload)
     token_b64 = base64.urlsafe_b64encode(token).decode()
 

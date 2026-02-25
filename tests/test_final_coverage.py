@@ -1,19 +1,17 @@
 """Final coverage tests for data_service, firebase_init, credentials, login_service."""
+
 import json
 import os
 import pickle
-import sys
-from pathlib import Path
 from types import ModuleType
 from unittest.mock import MagicMock, PropertyMock, patch
 
-import pytest
 import pandas as pd
+import pytest
 
 os.environ.setdefault("APP_ALLOW_UNSAFE_DESERIALIZE", "true")
 
 from app.services import data_service
-
 
 # ── data_service – joblib fallback (lines 93-97) ──────────────────────────
 
@@ -55,8 +53,14 @@ def test_initialize_firebase_admin_get_project_id_from_cred_raises(monkeypatch):
 
     with (
         patch("app.core.firebase_init.is_testing_env", return_value=False),
-        patch.dict("app.core.firebase_init.firebase_admin._apps", {"[DEFAULT]": mock_existing_app}),
-        patch("app.core.firebase_init.firebase_admin.get_app", return_value=mock_existing_app),
+        patch.dict(
+            "app.core.firebase_init.firebase_admin._apps",
+            {"[DEFAULT]": mock_existing_app},
+        ),
+        patch(
+            "app.core.firebase_init.firebase_admin.get_app",
+            return_value=mock_existing_app,
+        ),
     ):
         result = fi_mod.initialize_firebase_admin(force=True)
 
@@ -102,7 +106,10 @@ def test_initialize_firebase_admin_with_service_account(tmp_path, monkeypatch):
         patch("app.core.firebase_init.is_testing_env", return_value=False),
         patch.dict("app.core.firebase_init.firebase_admin._apps", {}),
         patch("app.core.firebase_init.credentials.Certificate", return_value=mock_cred),
-        patch("app.core.firebase_init.firebase_admin.initialize_app", return_value=mock_new_app),
+        patch(
+            "app.core.firebase_init.firebase_admin.initialize_app",
+            return_value=mock_new_app,
+        ),
     ):
         result = fi_mod.initialize_firebase_admin(force=True)
 
@@ -138,11 +145,14 @@ def test_ensure_key_all_writes_fail(tmp_path, monkeypatch):
     monkeypatch.delenv("NETBANK_MASTER_KEY", raising=False)
 
     with (
-        patch("app.core.netbank.credentials.os.fdopen", side_effect=OSError("fdopen fail")),
+        patch(
+            "app.core.netbank.credentials.os.fdopen", side_effect=OSError("fdopen fail")
+        ),
         patch("builtins.open", side_effect=OSError("open fail")),
     ):
         with pytest.raises(OSError):
             from app.core.netbank.credentials import _ensure_key
+
             _ensure_key(str(tmp_path))
 
 
@@ -163,8 +173,11 @@ def test_save_user_credentials_all_writes_fail(tmp_path, monkeypatch):
 
     with (
         patch("app.core.netbank.credentials.os.fdopen", side_effect=failing_fdopen),
-        patch("app.core.netbank.credentials.open", side_effect=OSError("open write fail")),
+        patch(
+            "app.core.netbank.credentials.open", side_effect=OSError("open write fail")
+        ),
     ):
         with pytest.raises(OSError):
             from app.core.netbank.credentials import save_user_credentials
+
             save_user_credentials("u1", "user", "ACC", "pw", config_dir=str(tmp_path))

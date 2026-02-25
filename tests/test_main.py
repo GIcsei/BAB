@@ -1,4 +1,5 @@
 """Tests for app.main – root, health endpoints, and middleware."""
+
 import os
 
 os.environ.setdefault("APP_ALLOW_UNSAFE_DESERIALIZE", "true")
@@ -7,7 +8,6 @@ import pytest
 from fastapi.testclient import TestClient
 
 import app.core.health as health_mod
-from app.core.health import HealthStatus
 from app.main import app
 
 
@@ -76,7 +76,7 @@ def test_health_components_present():
 
 def test_middleware_catches_app_exception():
     """Middleware should return structured JSON for AppException."""
-    from fastapi import Request
+
     from app.core.exceptions import FirebaseError
 
     @app.get("/test_app_exc")
@@ -90,6 +90,7 @@ def test_middleware_catches_app_exception():
 
 def test_middleware_catches_generic_exception():
     """Middleware should catch unhandled exceptions and return 500."""
+
     @app.get("/test_generic_exc")
     async def raise_generic():
         raise RuntimeError("totally unexpected")

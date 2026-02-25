@@ -1,25 +1,21 @@
 """Additional data_service and router tests for coverage gaps."""
+
 import os
 import pickle
 from pathlib import Path
-from unittest.mock import MagicMock, patch, AsyncMock
+from unittest.mock import patch
 
 os.environ.setdefault("APP_ALLOW_UNSAFE_DESERIALIZE", "true")
 
 import pandas as pd
-import numpy as np
 import pytest
 
 from app.services import data_service
 from app.services.data_service import (
-    _validate_file_size,
     _to_json_serializable,
+    _validate_file_size,
     list_pickles_for_user,
-    preview_pickle_file,
-    extract_series,
 )
-from app.core.exceptions import FileNotFoundError as AppFileNotFoundError
-
 
 # ── _validate_file_size – app FileNotFoundError catch (lines 46-48) ──────
 
@@ -117,7 +113,9 @@ def test_to_json_serializable_exception_returns_error():
             raise RuntimeError()
 
     # Patch isinstance to raise during conversion
-    with patch("app.services.data_service.isinstance", side_effect=RuntimeError("boom")):
+    with patch(
+        "app.services.data_service.isinstance", side_effect=RuntimeError("boom")
+    ):
         result = _to_json_serializable([1, 2, 3])
 
     assert result["type"] == "error"
@@ -129,6 +127,7 @@ def test_to_json_serializable_exception_returns_error():
 def test_preview_pickle_file_async(tmp_path):
     """preview_pickle_file_async wraps preview_pickle_file in a thread."""
     import asyncio
+
     base = tmp_path / "data"
     user = base / "u1"
     user.mkdir(parents=True)
@@ -147,6 +146,7 @@ def test_preview_pickle_file_async(tmp_path):
 def test_extract_series_async(tmp_path):
     """extract_series_async wraps extract_series in a thread."""
     import asyncio
+
     base = tmp_path / "data"
     user = base / "u1"
     user.mkdir(parents=True)
@@ -154,7 +154,9 @@ def test_extract_series_async(tmp_path):
     (user / "df.pkl").write_bytes(pickle.dumps(df))
 
     result = asyncio.get_event_loop().run_until_complete(
-        data_service.extract_series_async(base, "u1", "df.pkl", x_column=None, y_column="val")
+        data_service.extract_series_async(
+            base, "u1", "df.pkl", x_column=None, y_column="val"
+        )
     )
     assert "y" in result
 
@@ -165,13 +167,17 @@ def test_extract_series_async(tmp_path):
 def test_list_files_exception_returns_500():
     """list_files should return 500 for unexpected errors."""
     from fastapi.testclient import TestClient
-    from app.main import app
+
     from app.core.auth import get_current_user_id
+    from app.main import app
 
     app.dependency_overrides[get_current_user_id] = lambda: "u1"
     client = TestClient(app, raise_server_exceptions=False)
 
-    with patch("app.routers.data_plot.data_service.list_pickles_for_user", side_effect=OSError("disk error")):
+    with patch(
+        "app.routers.data_plot.data_service.list_pickles_for_user",
+        side_effect=OSError("disk error"),
+    ):
         r = client.get("/data/list")
     assert r.status_code == 500
 
@@ -184,6 +190,7 @@ def test_list_files_exception_returns_500():
 def test_login_validation_error_returns_422():
     """Login with invalid email format returns 422."""
     from fastapi.testclient import TestClient
+
     from app.main import app
 
     client = TestClient(app, raise_server_exceptions=False)
@@ -197,8 +204,9 @@ def test_login_validation_error_returns_422():
 def test_logout_exception_returns_500():
     """logout route returns 500 when logout_user raises an unexpected error."""
     from fastapi.testclient import TestClient
-    from app.main import app
+
     from app.core.auth import get_current_user_id
+    from app.main import app
 
     app.dependency_overrides[get_current_user_id] = lambda: "u1"
     client = TestClient(app, raise_server_exceptions=False)
@@ -216,4 +224,5 @@ def test_logout_exception_returns_500():
 def test_login_service_firebase_module_level():
     """The module-level firebase variable in login_service is set."""
     import app.services.login_service as ls
+
     assert ls.firebase is not None

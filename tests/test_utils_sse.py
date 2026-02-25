@@ -1,4 +1,5 @@
 """Deep Utils coverage tests for SSE/Stream classes."""
+
 import socket
 import threading
 from unittest.mock import MagicMock, patch
@@ -6,7 +7,6 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from app.core.firestore_handler.Utils import ClosableSSEClient, Stream
-
 
 # ── ClosableSSEClient._connect with should_connect=False (line 61) ────────
 
@@ -59,7 +59,9 @@ def test_stream_init_and_start(monkeypatch):
     mock_sse = MagicMock()
     mock_sse.__iter__ = MagicMock(return_value=iter([]))  # no events
 
-    with patch("app.core.firestore_handler.Utils.ClosableSSEClient", return_value=mock_sse):
+    with patch(
+        "app.core.firestore_handler.Utils.ClosableSSEClient", return_value=mock_sse
+    ):
         s = Stream(
             url="http://example.com/stream",
             stream_handler=lambda data: None,
@@ -95,7 +97,9 @@ def test_stream_start_stream_processes_messages():
     mock_sse = MagicMock()
     mock_sse.__iter__ = MagicMock(return_value=iter([null_msg, mock_msg]))
 
-    with patch("app.core.firestore_handler.Utils.ClosableSSEClient", return_value=mock_sse):
+    with patch(
+        "app.core.firestore_handler.Utils.ClosableSSEClient", return_value=mock_sse
+    ):
         s = Stream(
             url="http://example.com/stream",
             stream_handler=handler,
@@ -122,7 +126,9 @@ def test_stream_start_stream_with_stream_id():
     mock_sse = MagicMock()
     mock_sse.__iter__ = MagicMock(return_value=iter([mock_msg]))
 
-    with patch("app.core.firestore_handler.Utils.ClosableSSEClient", return_value=mock_sse):
+    with patch(
+        "app.core.firestore_handler.Utils.ClosableSSEClient", return_value=mock_sse
+    ):
         s = Stream(
             url="http://example.com/stream",
             stream_handler=lambda d: received.append(d),
@@ -143,7 +149,9 @@ def test_stream_close():
     mock_sse.__iter__ = MagicMock(return_value=iter([]))
     mock_sse.resp = MagicMock()  # has resp attribute
 
-    with patch("app.core.firestore_handler.Utils.ClosableSSEClient", return_value=mock_sse):
+    with patch(
+        "app.core.firestore_handler.Utils.ClosableSSEClient", return_value=mock_sse
+    ):
         s = Stream(
             url="http://example.com/stream",
             stream_handler=lambda d: None,
@@ -177,6 +185,7 @@ def test_stream_close_waits_for_sse_init():
 
     def set_sse_after_delay():
         import time
+
         time.sleep(0.01)  # short delay
         s.sse = mock_sse
 

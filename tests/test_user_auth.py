@@ -1,8 +1,6 @@
 """Tests for app.core.firestore_handler.User – Auth class with mocked requests."""
-import json
-from unittest.mock import MagicMock, patch
 
-import pytest
+from unittest.mock import MagicMock, patch
 
 from app.core.firestore_handler.User import Auth
 
@@ -132,4 +130,3 @@ def test_create_user_with_email_and_password():
         auth = Auth("key", mock_req)
         result = auth.create_user_with_email_and_password("new@example.com", "pw123")
     assert result["localId"] == "new_u"
-

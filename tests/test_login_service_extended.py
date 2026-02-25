@@ -1,7 +1,6 @@
 """Additional tests for app.services.login_service – get_firebase, login_user."""
-import json
+
 import os
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -10,8 +9,7 @@ import pytest
 os.environ.setdefault("PYTEST_RUNNING", "1")
 os.environ.setdefault("APP_ALLOW_UNSAFE_DESERIALIZE", "true")
 
-from app.services.login_service import _extract_user_id, get_firebase
-
+from app.services.login_service import get_firebase
 
 # ── get_firebase – singleton ───────────────────────────────────────────────
 

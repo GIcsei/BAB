@@ -1,7 +1,6 @@
 """Tests for app.routers.data_plot – validation and error handling."""
+
 import os
-import pickle
-from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
 os.environ.setdefault("APP_ALLOW_UNSAFE_DESERIALIZE", "true")
@@ -14,9 +13,11 @@ from app.core.auth import get_current_user_id
 from app.core.exceptions import (
     DeserializationDisabledError,
     DeserializationError,
-    FileSizeExceededError,
 )
 from app.core.exceptions import FileNotFoundError as AppFileNotFoundError
+from app.core.exceptions import (
+    FileSizeExceededError,
+)
 from app.main import app
 
 

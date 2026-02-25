@@ -1,10 +1,8 @@
 """Tests for remaining small coverage gaps."""
+
 import os
 from types import ModuleType
 from unittest.mock import MagicMock, patch
-
-import pytest
-
 
 # ── credentials – _ensure_config_dir chmod failure (lines 35-36) ─────────
 
@@ -15,7 +13,9 @@ def test_ensure_config_dir_chmod_failure(tmp_path):
 
     config_dir = str(tmp_path / "netbank")
 
-    with patch("app.core.netbank.credentials.os.chmod", side_effect=OSError("not supported")):
+    with patch(
+        "app.core.netbank.credentials.os.chmod", side_effect=OSError("not supported")
+    ):
         # Should not raise
         _ensure_config_dir(config_dir)
 
@@ -66,4 +66,3 @@ def test_perform_task_inner_firebase_exception(tmp_path):
         job._perform_task()  # should not raise despite inner exception
 
     mock_broker.get_report.assert_called_once()
-

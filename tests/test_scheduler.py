@@ -1,14 +1,12 @@
 """Tests for app.services.scheduler – _Job and Scheduler."""
-import os
+
 import time
 from datetime import datetime
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from app.services.scheduler import Scheduler, _Job
-
 
 # ── _Job ───────────────────────────────────────────────────────────────────
 

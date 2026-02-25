@@ -1,13 +1,12 @@
 """Tests to cover remaining scheduler branches and worker loop."""
+
 import heapq
 import time
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from app.services.scheduler import Scheduler, _Job
-
 
 # ── _start_worker_if_needed (lines 171-179) ────────────────────────────────
 
@@ -54,7 +53,9 @@ def test_worker_loop_fires_job_immediately(tmp_path):
         # Push with past timestamp so it fires immediately
         heapq.heappush(sched._heap, (time.time() - 10, sched._counter, "u1"))
 
-    with patch.object(sched, "_spawn_job_thread", wraps=sched._spawn_job_thread) as mock_spawn:
+    with patch.object(
+        sched, "_spawn_job_thread", wraps=sched._spawn_job_thread
+    ) as mock_spawn:
         sched._start_worker_if_needed()
         # Give worker time to fire the job
         time.sleep(0.3)
@@ -98,7 +99,9 @@ def test_start_job_mkdir_failure(tmp_path):
     sched = Scheduler()
     sched._start_worker_if_needed = MagicMock()
 
-    with patch("app.services.scheduler.Path.mkdir", side_effect=PermissionError("denied")):
+    with patch(
+        "app.services.scheduler.Path.mkdir", side_effect=PermissionError("denied")
+    ):
         with pytest.raises(PermissionError):
             sched.start_job_for_user("u1", tmp_path / "u1", 18, 0)
 
@@ -137,7 +140,9 @@ def test_get_next_run_exception_returns_none(tmp_path):
     sched.start_job_for_user("u1", user_dir, 18, 0)
     job = sched._jobs["u1"]
 
-    with patch.object(job, "_seconds_until_next_target", side_effect=RuntimeError("oops")):
+    with patch.object(
+        job, "_seconds_until_next_target", side_effect=RuntimeError("oops")
+    ):
         result = sched.get_next_run_for_user("u1")
 
     assert result is None

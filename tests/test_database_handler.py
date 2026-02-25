@@ -1,10 +1,11 @@
 """Tests for app.core.firestore_handler.DatabaseHandler – Database class."""
-from unittest.mock import MagicMock, patch
+
+from unittest.mock import MagicMock
 
 import pytest
 
 import app.core.firestore_handler.QueryHandler as qh_mod
-from app.core.firestore_handler.QueryHandler import Firebase, initialize_app
+from app.core.firestore_handler.QueryHandler import initialize_app
 
 
 @pytest.fixture(autouse=True)
@@ -192,10 +193,7 @@ def test_generate_key_duplicate_time():
 def test_filtering_limit_to_first():
     from app.core.firestore_handler.DataDescriptor import Collection, Document
 
-    docs = [
-        Document(f"d{i}", "c", "u", {"val": i})
-        for i in range(5)
-    ]
+    docs = [Document(f"d{i}", "c", "u", {"val": i}) for i in range(5)]
     col = Collection("col", docs)
     db = _make_db()
     result = db.filtering(col, {"limitToFirst": 2})

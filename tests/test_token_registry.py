@@ -1,11 +1,8 @@
 """Tests for TokenRegistry and TokenPersistence in QueryHandler."""
-import json
-from pathlib import Path
 
 import pytest
 
 from app.core.firestore_handler.QueryHandler import TokenPersistence, TokenRegistry
-
 
 # ── TokenRegistry ──────────────────────────────────────────────────────────
 

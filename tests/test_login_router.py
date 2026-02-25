@@ -1,4 +1,5 @@
 """Tests for app.routers.login – login/logout/trigger/next_run routes."""
+
 import os
 
 os.environ.setdefault("APP_ALLOW_UNSAFE_DESERIALIZE", "true")

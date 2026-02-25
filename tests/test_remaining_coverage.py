@@ -1,13 +1,13 @@
 """Tests to cover specific remaining lines in QueryHandler and scheduler."""
+
 import json
-import os
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 import app.core.firestore_handler.QueryHandler as qh_mod
-from app.core.firestore_handler.QueryHandler import Firebase, initialize_app
+from app.core.firestore_handler.QueryHandler import initialize_app
 
 
 @pytest.fixture(autouse=True)

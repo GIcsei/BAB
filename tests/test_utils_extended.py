@@ -1,14 +1,15 @@
 """Extended tests for app.core.firestore_handler.Utils – raise_detailed_error and more."""
-import pytest
+
 from unittest.mock import MagicMock
+
+import pytest
 from requests.exceptions import HTTPError
 
 from app.core.firestore_handler.Utils import (
+    DocumentKeyGenerator,
     KeepAuthSession,
     raise_detailed_error,
-    DocumentKeyGenerator,
 )
-
 
 # ── raise_detailed_error ───────────────────────────────────────────────────
 
@@ -53,7 +54,9 @@ def test_keep_auth_session_is_requests_session():
 def test_document_key_generator_sequential_keys_are_valid():
     gen = DocumentKeyGenerator()
     keys = [gen.generate_key() for _ in range(20)]
-    valid_chars = set("-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz")
+    valid_chars = set(
+        "-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz"
+    )
     for key in keys:
         assert len(key) == 20
         assert all(c in valid_chars for c in key)

@@ -1,11 +1,12 @@
 """Extended DatabaseHandler tests – token from firebase, get method, stream."""
+
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 import app.core.firestore_handler.QueryHandler as qh_mod
-from app.core.firestore_handler.QueryHandler import Firebase, initialize_app
 from app.core.firestore_handler.DataDescriptor import Collection, Document
+from app.core.firestore_handler.QueryHandler import initialize_app
 
 
 @pytest.fixture(autouse=True)
@@ -22,6 +23,7 @@ def setup_firebase_singleton():
 
 def _make_db():
     from app.core.firestore_handler.DatabaseHandler import Database
+
     return Database()
 
 
@@ -78,10 +80,7 @@ def test_build_request_url_numeric_param():
 
 def test_filtering_limit_to_last():
     """filtering handles limitToLast correctly."""
-    docs = [
-        Document(f"d{i}", "c", "u", {"val": i})
-        for i in range(5)
-    ]
+    docs = [Document(f"d{i}", "c", "u", {"val": i}) for i in range(5)]
     col = Collection("col", docs)
     db = _make_db()
     result = db.filtering(col, {"limitToLast": 2})

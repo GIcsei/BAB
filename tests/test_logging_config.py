@@ -1,15 +1,13 @@
 """Tests for app.core.logging_config."""
+
 import logging
 import os
-
-import pytest
 
 from app.core.logging_config import (
     StructuredFormatter,
     TokenRedactingFilter,
     configure_logging,
 )
-
 
 # ── TokenRedactingFilter ───────────────────────────────────────────────────
 

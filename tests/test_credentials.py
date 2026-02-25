@@ -1,6 +1,6 @@
 """Tests for app.core.netbank.credentials – save/load/delete."""
+
 import os
-from pathlib import Path
 
 import pytest
 
@@ -10,7 +10,6 @@ from app.core.netbank.credentials import (
     load_user_credentials,
     save_user_credentials,
 )
-
 
 # ── Helpers ────────────────────────────────────────────────────────────────
 

@@ -1,8 +1,8 @@
 """Tests for app.core.firestore_handler.Query – FirestoreQueryBuilder."""
+
 import pytest
 
 from app.core.firestore_handler.Query import FirestoreQueryBuilder
-
 
 # ── build_query – simple conditions ───────────────────────────────────────
 

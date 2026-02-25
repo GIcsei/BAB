@@ -1,16 +1,14 @@
 """Tests for remaining QueryHandler and TokenPersistence coverage."""
+
 import asyncio
 import json
-from pathlib import Path
-from unittest.mock import MagicMock, patch, AsyncMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 import app.core.firestore_handler.QueryHandler as qh_mod
 from app.core.firestore_handler.QueryHandler import (
-    Firebase,
     TokenPersistence,
-    TokenRegistry,
     initialize_app,
 )
 
@@ -75,6 +73,7 @@ def test_ensure_auth_client_creates_new(tmp_path):
     auth_client = fb._ensure_auth_client()
     assert auth_client is not None
     from app.core.firestore_handler.User import Auth
+
     assert isinstance(auth_client, Auth)
 
 
@@ -175,9 +174,17 @@ def test_verify_id_token_uses_firebase_admin_in_non_test_mode():
     mock_decoded = {"uid": "real_uid", "email": "user@example.com"}
 
     with (
-        patch("app.core.firestore_handler.QueryHandler.is_testing_env", return_value=False),
-        patch("app.core.firestore_handler.QueryHandler.initialize_firebase_admin", return_value=MagicMock()),
-        patch("app.core.firestore_handler.QueryHandler.fauth.verify_id_token", return_value=mock_decoded),
+        patch(
+            "app.core.firestore_handler.QueryHandler.is_testing_env", return_value=False
+        ),
+        patch(
+            "app.core.firestore_handler.QueryHandler.initialize_firebase_admin",
+            return_value=MagicMock(),
+        ),
+        patch(
+            "app.core.firestore_handler.QueryHandler.fauth.verify_id_token",
+            return_value=mock_decoded,
+        ),
     ):
         result = fb.verify_id_token("real_token")
 
@@ -190,8 +197,13 @@ def test_verify_id_token_firebase_admin_exception():
     fb = _make_fb_with_api_key()
 
     with (
-        patch("app.core.firestore_handler.QueryHandler.is_testing_env", return_value=False),
-        patch("app.core.firestore_handler.QueryHandler.initialize_firebase_admin", return_value=MagicMock()),
+        patch(
+            "app.core.firestore_handler.QueryHandler.is_testing_env", return_value=False
+        ),
+        patch(
+            "app.core.firestore_handler.QueryHandler.initialize_firebase_admin",
+            return_value=MagicMock(),
+        ),
         patch(
             "app.core.firestore_handler.QueryHandler.fauth.verify_id_token",
             side_effect=Exception("auth error"),

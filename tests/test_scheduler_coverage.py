@@ -1,11 +1,9 @@
 """Tests for scheduler worker loop edge cases."""
+
 import heapq
 import time
-from pathlib import Path
 from types import ModuleType
 from unittest.mock import MagicMock, patch
-
-import pytest
 
 from app.services.scheduler import Scheduler, _Job
 
@@ -91,6 +89,7 @@ def test_worker_reschedules_job_after_run(tmp_path):
         spawned_count[0] += 1
         # Run in a thread so it's fast
         import threading
+
         t = threading.Thread(target=j._perform_task, daemon=True)
         t.start()
 
@@ -109,7 +108,9 @@ def test_perform_task_mkdir_failure(tmp_path):
     """_perform_task should return gracefully if mkdir fails."""
     job = _Job("u1", tmp_path / "newdir")
 
-    with patch("app.services.scheduler.Path.mkdir", side_effect=OSError("permission denied")):
+    with patch(
+        "app.services.scheduler.Path.mkdir", side_effect=OSError("permission denied")
+    ):
         # should not raise
         job._perform_task()
 
