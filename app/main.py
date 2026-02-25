@@ -55,7 +55,9 @@ async def startup_event():
 
     try:
         if is_testing_env():
-            logger.info("Test environment detected; skipping Firebase/token initialization")
+            logger.info(
+                "Test environment detected; skipping Firebase/token initialization"
+            )
             health.mark_component_ready("scheduler", "skipped_in_tests")
             health.mark_component_ready("tokens", "skipped_in_tests")
             health.mark_component_ready("firebase", "skipped_in_tests")
