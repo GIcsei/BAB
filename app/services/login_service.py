@@ -1,24 +1,39 @@
 import json
 import logging
 import os
+import threading
 from pathlib import Path
 from typing import Optional
 
 from app.core.firebase_init import get_project_id, initialize_firebase_admin
-from app.core.firestore_handler.QueryHandler import initialize_app
+from app.core.firestore_handler.QueryHandler import Firebase, initialize_app
 from app.schemas.login import LoginRequest, LoginResponse
 from app.services.scheduler import scheduler
 
 logger = logging.getLogger(__name__)
 
-# Initialize firebase-admin once; derive project_id from service account JSON
-initialize_firebase_admin()
+_firebase_lock = threading.Lock()
+_firebase_instance: Optional[Firebase] = None
 
-config = {
-    "projectId": get_project_id(),
-}
 
-firebase = initialize_app(config)
+class _FirebaseAccessor:
+    def __getattr__(self, name):
+        return getattr(get_firebase(), name)
+
+
+firebase = _FirebaseAccessor()
+
+
+def get_firebase() -> Firebase:
+    global _firebase_instance
+    with _firebase_lock:
+        if _firebase_instance is None:
+            initialize_firebase_admin()
+            config = {
+                "projectId": get_project_id(allow_default=True),
+            }
+            _firebase_instance = initialize_app(config)
+    return _firebase_instance
 
 
 def _extract_user_id(user_obj: dict) -> Optional[str]:
@@ -49,7 +64,7 @@ def login_user(data: LoginRequest) -> LoginResponse:
     # Obtain auth client using a per-user token path so tokens persist per user
     # We don't yet know user_id; use a temporary path for auth call, will rewrite after sign-in
     temp_token_path = base_data_dir / "auth_token_tmp.json"
-    auth_client, _ = firebase.auth(temp_token_path)
+    auth_client, _ = get_firebase().auth(temp_token_path)
 
     try:
         user = auth_client.sign_in_with_email_and_password(data.email, data.password)
@@ -93,8 +108,7 @@ def login_user(data: LoginRequest) -> LoginResponse:
                 "chmod on credentials file may not be supported in this environment"
             )
 
-        # Register token in Firebase singleton via API (no global 'active' token set)
-        firebase.register_user_tokens(user_id, token_copy, cred_path)
+        get_firebase().register_user_tokens(user_id, token_copy, cred_path)
         logger.info("User %s logged in and token registered", user_id)
 
         # schedule job using daily target hour/minute from environment (fallback to 18:00)
@@ -139,7 +153,7 @@ def logout_user(user_id: str) -> bool:
         logger.exception("Failed to remove credentials file for user %s", user_id)
 
     # remove from in-memory registry (legacy)
-    firebase.clear_user(user_id)
+    get_firebase().clear_user(user_id)
     logger.info("Cleared in-memory token registry for user %s", user_id)
 
     return True
