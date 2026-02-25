@@ -28,6 +28,7 @@
   <ItemGroup>
     <Compile Include="app\core\error_mapping.py" />
     <Compile Include="app\core\exceptions.py" />
+    <Compile Include="app\core\firebase_init.py" />
     <Compile Include="app\core\firestore_handler\Config.py" />
     <Compile Include="app\core\firestore_handler\DatabaseHandler.py" />
     <Compile Include="app\core\firestore_handler\DataDescriptor.py" />
