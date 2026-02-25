@@ -1,7 +1,7 @@
 import asyncio
 import logging
-import pickle
 import os
+import pickle
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -15,7 +15,9 @@ logger = logging.getLogger(__name__)
 _executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="data_service")
 
 # Feature flag to allow unsafe deserialization (default: disabled in prod)
-_ALLOW_UNSAFE_DESERIALIZE = os.getenv("APP_ALLOW_UNSAFE_DESERIALIZE", "false").lower() in (
+_ALLOW_UNSAFE_DESERIALIZE = os.getenv(
+    "APP_ALLOW_UNSAFE_DESERIALIZE", "false"
+).lower() in (
     "1",
     "true",
     "yes",
