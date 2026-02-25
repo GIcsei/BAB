@@ -146,13 +146,11 @@ def _init_firebase_admin_once(config: Dict[str, Any]) -> None:
 class Firebase:
     """
     Application-scoped Firebase manager.
-    - Composes Auth client (API wrapper), TokenPersistence, and TokenRegistry.
-    - Does NOT mix persistence and auth responsibilities.
-    - Backward-compatible initialize_app(config) sets the module default.
+    - Removed shared 'active' token state; token context must be provided explicitly
+      to Firestore operations (by passing token dict into FirestoreService methods).
     """
 
     def __new__(cls, config: Optional[dict] = None):
-        # If called without config, return the app-scoped default instance
         if config is None:
             if _DEFAULT_FIREBASE is None:
                 raise ValueError(
@@ -162,11 +160,9 @@ class Firebase:
         return super().__new__(cls)
 
     def __init__(self, config: Optional[dict] = None):
-        # Guard re-initialization if default instance already exists
         if getattr(self, "_initialized", False):
             return
         if config is None:
-            # should have been returned from __new__ above
             return
 
         self.api_key = config["apiKey"]
@@ -176,9 +172,7 @@ class Firebase:
         self._persistence = TokenPersistence()
         self._registry = TokenRegistry()
         self._lock = threading.RLock()  # protects auth client creation
-        self.TOKEN_FILE: Optional[Path] = None  # kept for backward compatibility
-        # Initialize a token attribute so FirestoreService can safely read it
-        self.token: Optional[Dict[str, Any]] = None
+        self.TOKEN_FILE: Optional[Path] = None
         self._database: Optional[FirestoreService] = None
 
         # resilient requests session
@@ -355,18 +349,22 @@ class Firebase:
 
         return normalized
 
-    def set_active_user(self, user_id: str) -> None:
+    def get_user_token(self, user_id: str) -> Optional[Dict[str, Any]]:
         """
-        Make a user's token the active session token for downstream Firestore calls.
-        Deterministic: only succeeds if user is registered.
+        Return the registered token for a given user_id. Explicit token context must be
+        passed to Firestore calls. This avoids any global 'active' token.
         """
-        # set active in registry and keep a copy on the Firebase object for legacy consumers
+        return self._registry.get(user_id)
+
+    def set_active_user(self, user_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Deprecated: kept for backward compatibility but no longer mutates global state.
+        Returns the token for the requested user or raises if not present.
+        """
         token = self._registry.get(user_id)
         if not token:
             raise ValueError(f"No token registered for user {user_id}")
-        self._registry.set_active(user_id)
-        # keep token attribute in sync for FirestoreService and legacy code
-        self.token = token
+        return token
 
     def clear_user(self, user_id: str) -> None:
         """Remove user from in-memory registry. Does not delete files on disk."""
@@ -434,7 +432,7 @@ class Firebase:
         """
         return self._registry.find_user_by_id_token(access_token)
 
-    def database(self):
+    def database(self) -> FirestoreService:
         """
         Provide FirestoreService instance. Restores compatibility with callers
         that call Firebase().database() (kept minimal and deterministic).
