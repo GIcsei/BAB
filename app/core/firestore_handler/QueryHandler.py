@@ -8,6 +8,7 @@ from typing import Any, Dict, Optional
 import requests
 from firebase_admin import auth as fauth
 
+from app.core.config import get_settings
 from app.core.firebase_init import (
     get_project_id,
     initialize_firebase_admin,
@@ -17,7 +18,6 @@ from app.core.firestore_handler.FirestoreService import FirestoreService
 from app.core.firestore_handler.User import (
     Auth,  # kept only if refresh via REST is still needed
 )
-from app.core.config import get_settings
 
 logger = logging.getLogger(__name__)
 
