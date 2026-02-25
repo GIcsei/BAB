@@ -1,12 +1,11 @@
 # FastAPI (backend)
 
 import logging
-import os
-from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
+from app.core.config import get_settings
 from app.core.error_mapping import exception_to_http, get_error_response
 from app.core.exceptions import AppException
 from app.core.firebase_init import is_testing_env
@@ -48,6 +47,7 @@ async def startup_event():
     configure_logging()
     logger = logging.getLogger(__name__)
     health = get_health()
+    settings = get_settings()
 
     logger.info("=" * 60)
     logger.info("Starting application startup sequence")
@@ -64,9 +64,9 @@ async def startup_event():
             health.mark_startup_complete()
             return
 
-        base_data_dir = Path(os.getenv("APP_USER_DATA_DIR", "/var/app/user_data"))
-        target_hour = int(os.getenv("APP_JOB_HOUR", "18"))
-        target_minute = int(os.getenv("APP_JOB_MINUTE", "0"))
+        base_data_dir = settings.app_user_data_dir
+        target_hour = settings.app_job_hour
+        target_minute = settings.app_job_minute
 
         logger.debug("Base data directory: %s", base_data_dir)
         logger.debug("Daily job scheduled at %02d:%02d", target_hour, target_minute)
