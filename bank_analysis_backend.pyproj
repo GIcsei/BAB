@@ -64,9 +64,6 @@
     <Compile Include="app\services\__init__.py" />
     <Compile Include="tests\api\test_data_plot.py" />
     <Compile Include="tests\conftest.py" />
-    <Compile Include="tests\test_data_descriptor.py" />
-    <Compile Include="tests\test_data_plot.py" />
-    <Compile Include="tests\test_data_service.py" />
     <Compile Include="tests\unit\test_data_descriptor.py" />
     <Compile Include="tests\unit\test_data_service.py" />
   </ItemGroup>
