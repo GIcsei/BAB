@@ -384,9 +384,8 @@ class ErsteNetBroker:
         try:
             fb = Firebase()  # singleton instance (must have been initialized elsewhere)
             db = fb.database()
-            # set active user for Firestore calls; this populates fb.token
-            fb.set_active_user(self.user_id)
-            token = fb.token
+            # explicit per-job token context (do not mutate global state)
+            token = fb.get_user_token(self.user_id)
         except Exception:
             logger.exception("Failed to obtain Firebase singleton or database")
             return None
@@ -399,7 +398,7 @@ class ErsteNetBroker:
         while retry_times > 0:
             try:
                 changed_doc = db.run_query(
-                    "messages", f'uid == {token["userId"]} AND timestamp >= {timeStamp}'
+                    "messages", f'uid == {token["userId"]} AND timestamp >= {timeStamp}', token=token
                 )
                 if hasattr(changed_doc, "documents") and changed_doc.documents:
                     doc = changed_doc.documents[0]
@@ -408,7 +407,7 @@ class ErsteNetBroker:
                         code = doc.data_fields.get("code")
                         # Clean-up: delete the message doc if possible
                         try:
-                            db.delete_document(f"messages/{doc.name}")
+                            db.delete_document(f"messages/{doc.name}", token=token)
                         except Exception:
                             logger.debug("Failed to delete OTP document %s", doc.name)
                         logger.info("OTP code found for user %s", token.get("userId"))
