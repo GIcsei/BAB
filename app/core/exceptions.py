@@ -1,4 +1,5 @@
 """Enables narrow exception handling and consistent error mapping to HTTP responses."""
+
 from typing import Optional
 
 

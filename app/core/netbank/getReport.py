@@ -7,15 +7,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-from app.core.config import get_settings
-from app.core.firestore_handler.QueryHandler import Firebase
-from app.core.netbank.credentials import load_user_credentials
-from app.core.netbank.utils import (
-    extract_date_from_filename,
-    get_all_files_from_folder,
-    is_today_in,
-    reportFormatter,
-)
 from selenium import webdriver
 from selenium.common.exceptions import TimeoutException, WebDriverException
 from selenium.webdriver import ActionChains
@@ -25,6 +16,16 @@ from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
+
+from app.core.config import get_settings
+from app.core.firestore_handler.QueryHandler import Firebase
+from app.core.netbank.credentials import load_user_credentials
+from app.core.netbank.utils import (
+    extract_date_from_filename,
+    get_all_files_from_folder,
+    is_today_in,
+    reportFormatter,
+)
 
 logger = logging.getLogger(__name__)
 

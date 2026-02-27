@@ -1,6 +1,5 @@
 from typing import Any, Iterator
 
-
 class SSEClient:
     def __init__(self, url: str, session: Any = ..., **kwargs: Any) -> None: ...
     def __iter__(self) -> Iterator[Any]: ...

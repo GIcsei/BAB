@@ -1,8 +1,9 @@
 import logging
 from typing import Dict, Optional
 
-from app.core.firebase_init import initialize_firebase_admin, is_testing_env
 from firebase_admin import auth as fauth
+
+from app.core.firebase_init import initialize_firebase_admin, is_testing_env
 
 logger = logging.getLogger(__name__)
 
