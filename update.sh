@@ -15,6 +15,7 @@ TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
 LOG_FILE="$LOG_DIR/run_$TIMESTAMP.log"
 DATE_TAG=$(date +"%Y%m%d")
 
+ENV_FILE="./.env"
 # -------------------------
 # Colors
 # -------------------------
@@ -88,7 +89,7 @@ docker compose $COMPOSE_FILES down -v
 # Build
 # -------------------------
 echo -e "${YELLOW}Building image...${NC}"
-docker build \
+docker build --env-file ${ENV_FILE}\
   -f "$DOCKERFILE_PATH" \
   --pull \
   -t "${PROJECT_NAME}:${IMAGE_TAG}_${ENV}" \
