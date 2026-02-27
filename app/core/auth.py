@@ -1,4 +1,5 @@
 import logging
+from typing import Optional, cast
 
 from fastapi import Depends, HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -12,7 +13,7 @@ security = HTTPBearer()
 
 
 def get_firebase_dep(request: Request) -> Firebase:
-    firebase = getattr(request.app.state, "firebase", None)
+    firebase = cast(Optional[Firebase], getattr(request.app.state, "firebase", None))
     if firebase is None:
         raise HTTPException(status_code=503, detail="Firebase unavailable")
     return firebase

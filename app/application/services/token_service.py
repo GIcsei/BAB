@@ -3,10 +3,11 @@ import json
 import logging
 import threading
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple
 
 from app.core.config import get_settings
 from app.core.firestore_handler.User import Auth
+from requests import Session
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +17,8 @@ class TokenPersistence:
     def _read_json(path: Path) -> Optional[Dict[str, Any]]:
         try:
             with open(path, "r", encoding="utf-8") as file:
-                return json.load(file)
+                data = json.load(file)
+                return dict(data)
         except FileNotFoundError:
             return None
         except Exception:
@@ -48,7 +50,7 @@ class TokenPersistence:
 
 
 class TokenRegistry:
-    def __init__(self):
+    def __init__(self) -> None:
         self._tokens: Dict[str, Dict[str, Any]] = {}
         self._active_user: Optional[str] = None
         self._lock = threading.RLock()
@@ -77,7 +79,8 @@ class TokenRegistry:
     def get_active_token(self) -> Optional[Dict[str, Any]]:
         with self._lock:
             if self._active_user:
-                return dict(self._tokens.get(self._active_user))
+                token = self._tokens.get(self._active_user)
+                return dict(token) if token is not None else None
             return None
 
     def find_user_by_id_token(self, id_token: str) -> Optional[str]:
@@ -89,7 +92,7 @@ class TokenRegistry:
 
 
 class TokenService:
-    def __init__(self, api_key: str, requests_session):
+    def __init__(self, api_key: str, requests_session: Session) -> None:
         self._registry = TokenRegistry()
         self._persistence = TokenPersistence()
         self._lock = threading.RLock()
@@ -104,14 +107,18 @@ class TokenService:
                 self._auth_client = Auth(self._api_key, self._requests)
             return self._auth_client
 
-    def auth(self, token_json: Path):
+    def auth(self, token_json: Path) -> Tuple[Auth, Optional[Dict[str, Any]]]:
         auth_client = self._ensure_auth_client()
         self._token_file = token_json
         token = None
         existing = self.load_login_token()
         if existing:
             try:
-                token = auth_client.refresh(existing.get("refreshToken"))
+                refresh_token = existing.get("refreshToken")
+                if isinstance(refresh_token, str):
+                    token = auth_client.refresh(refresh_token)
+                else:
+                    token = existing
             except Exception:
                 logger.exception(
                     "Failed to refresh token from file; using stored token"
@@ -119,7 +126,7 @@ class TokenService:
                 token = existing
         return auth_client, token
 
-    def save_login_token(self, token_data: Dict[str, Any]):
+    def save_login_token(self, token_data: Dict[str, Any]) -> None:
         if not self._token_file:
             raise ValueError("TOKEN_FILE is not set for TokenService instance")
         self._persistence.write_json(self._token_file, token_data)
@@ -129,12 +136,15 @@ class TokenService:
             return None
         return self._persistence.read_json(self._token_file)
 
-    def clear_token(self):
+    def clear_token(self) -> None:
         if self._token_file and self._token_file.exists():
             try:
                 self._token_file.unlink()
             except Exception:
                 logger.exception("Failed to clear TOKEN_FILE %s", self._token_file)
+
+    def get_active_token(self) -> Optional[Dict[str, Any]]:
+        return self._registry.get_active_token()
 
     def register_user_tokens(
         self,

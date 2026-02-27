@@ -1,0 +1,6 @@
+from typing import Optional
+
+class Certificate:
+    def __init__(self, path: str) -> None: ...
+    @property
+    def project_id(self) -> Optional[str]: ...

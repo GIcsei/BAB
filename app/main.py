@@ -2,9 +2,11 @@
 
 import logging
 from contextlib import asynccontextmanager
+from typing import AsyncIterator, Awaitable, Callable, Dict
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
+from starlette.responses import Response
 
 from app.core.config import get_settings
 from app.core.error_mapping import exception_to_http, get_error_response
@@ -14,15 +16,15 @@ from app.core.firebase_init import (
     initialize_firebase_admin,
     is_testing_env,
 )
-from app.core.firestore_handler.QueryHandler import Firebase, initialize_app
+from app.core.firestore_handler.QueryHandler import initialize_app
 from app.core.health import get_health
 from app.core.logging_config import configure_logging
 from app.routers import data_plot, login, netbank_credentials
-from app.services.scheduler import Scheduler, create_scheduler
+from app.services.scheduler import create_scheduler
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     configure_logging()
     logger = logging.getLogger(__name__)
     health = get_health()
@@ -105,12 +107,14 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Bank analysis backend", lifespan=lifespan)
-app.state.scheduler: Scheduler | None = None
-app.state.firebase: Firebase | None = None
+app.state.scheduler = None
+app.state.firebase = None
 
 
 @app.middleware("http")
-async def error_handling_middleware(request: Request, call_next):
+async def error_handling_middleware(
+    request: Request, call_next: Callable[[Request], Awaitable[Response]]
+) -> Response:
     """Catch unhandled exceptions and return structured error responses."""
     try:
         return await call_next(request)
@@ -129,14 +133,14 @@ async def error_handling_middleware(request: Request, call_next):
 
 
 @app.get("/")
-async def root():
+async def root() -> Dict[str, str]:
     logger = logging.getLogger(__name__)
     logger.debug("Root endpoint invoked")
     return {"message": "Bank Analysis Backend"}
 
 
 @app.get("/health")
-async def health_check():
+async def health_check() -> JSONResponse:
     """
     Liveness and readiness probe.
     Returns 200 only if application is ready; components are healthy.

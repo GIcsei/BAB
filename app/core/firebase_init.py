@@ -9,7 +9,6 @@ from firebase_admin import credentials
 
 logger = logging.getLogger(__name__)
 
-# singleton firebase-admin app
 _firebase_app: Optional[firebase_admin.App] = None
 _project_id: Optional[str] = None
 _init_lock = threading.Lock()

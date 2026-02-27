@@ -4,9 +4,9 @@ import socket
 import threading
 import time
 from random import uniform
-from typing import Any, Dict
+from typing import Any, Callable, Dict, Optional
 
-from requests import Session
+from requests import Response, Session
 from requests.exceptions import HTTPError
 from sseclient import SSEClient
 
@@ -31,12 +31,10 @@ def parse_to_firestore(value: str) -> Dict[str, Any]:
     return {"stringValue": value}
 
 
-def raise_detailed_error(request_object):
+def raise_detailed_error(request_object: Response) -> None:
     try:
         request_object.raise_for_status()
     except HTTPError as e:
-        # raise detailed error message
-        # TODO: Check if we get a { "error" : "Permission denied." } and handle automatically
         raise HTTPError(e, request_object.text)
 
 
@@ -45,22 +43,22 @@ class KeepAuthSession(Session):
     A session that doesn't drop Authentication on redirects between domains.
     """
 
-    def rebuild_auth(self, prepared_request, response):
-        pass
+    def rebuild_auth(self, prepared_request: Any, response: Response) -> None:
+        return None
 
 
 class ClosableSSEClient(SSEClient):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         self.should_connect = True
-        super(ClosableSSEClient, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
-    def _connect(self):
+    def _connect(self) -> None:
         if self.should_connect:
-            super(ClosableSSEClient, self)._connect()
+            super()._connect()
         else:
             raise StopIteration()
 
-    def close(self):
+    def close(self) -> None:
         self.should_connect = False
         self.retry = 0
         self.resp.raw._fp.fp.raw._sock.shutdown(socket.SHUT_RDWR)
@@ -68,32 +66,38 @@ class ClosableSSEClient(SSEClient):
 
 
 class Stream:
-    def __init__(self, url, stream_handler, build_headers, stream_id):
+    def __init__(
+        self,
+        url: str,
+        stream_handler: Callable[[Dict[str, Any]], None],
+        build_headers: Callable[..., Dict[str, str]],
+        stream_id: Optional[str],
+    ) -> None:
         self.build_headers = build_headers
         self.url = url
         self.stream_handler = stream_handler
         self.stream_id = stream_id
-        self.sse = None
-        self.thread = None
+        self.sse: Optional[ClosableSSEClient] = None
+        self.thread: Optional[threading.Thread] = None
         self.start()
 
-    def make_session(self):
-        """
-        Return a custom session object to be passed to the ClosableSSEClient.
-        """
+    def make_session(self) -> Session:
         session = KeepAuthSession()
         return session
 
-    def start(self):
+    def start(self) -> "Stream":
         self.thread = threading.Thread(target=self.start_stream)
         self.thread.start()
         return self
 
-    def start_stream(self):
+    def start_stream(self) -> None:
         self.sse = ClosableSSEClient(
             self.url, session=self.make_session(), build_headers=self.build_headers
         )
-        for msg in self.sse:
+        sse = self.sse
+        if sse is None:
+            return
+        for msg in sse:
             if msg:
                 msg_data = json.loads(msg.data)
                 msg_data["event"] = msg.event
@@ -101,28 +105,32 @@ class Stream:
                     msg_data["stream_id"] = self.stream_id
                 self.stream_handler(msg_data)
 
-    def close(self):
-        while not self.sse and not hasattr(self.sse, "resp"):
+    def close(self) -> "Stream":
+        sse = self.sse
+        if sse is None:
+            return self
+        while not hasattr(sse, "resp"):
             time.sleep(0.001)
-        self.sse.running = False
-        self.sse.close()
-        self.thread.join()
+        sse.running = False
+        sse.close()
+        if self.thread:
+            self.thread.join()
         return self
 
 
 class DocumentKeyGenerator:
     PUSH_CHARS = "-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz"
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.last_push_time = 0
-        self.last_rand_chars = [0] * 12
+        self.last_rand_chars: list[int] = [0] * 12
 
-    def generate_key(self):
+    def generate_key(self) -> str:
         now = int(time.time() * 1000)
         duplicate_time = now == self.last_push_time
         self.last_push_time = now
 
-        time_stamp_chars = [0] * 8
+        time_stamp_chars: list[str] = [""] * 8
         for i in reversed(range(8)):
             time_stamp_chars[i] = self.PUSH_CHARS[now % 64]
             now //= 64

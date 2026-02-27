@@ -1,16 +1,18 @@
 import logging
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Any, Dict, Optional, Tuple
 
 from app.application.services.token_service import TokenService
 from app.core.config import get_settings
 from app.core.firebase_init import get_project_id
+from app.core.firestore_handler.FirestoreService import FirestoreService
+from app.core.firestore_handler.User import Auth
 from app.infrastructure.firebase.auth import FirebaseAuthAdapter
 from app.infrastructure.firebase.firestore import FirestoreAdapter
 
 logger = logging.getLogger(__name__)
 
-_DEFAULT_FIREBASE = None
+_DEFAULT_FIREBASE: Optional["Firebase"] = None
 
 
 class Firebase:
@@ -18,7 +20,7 @@ class Firebase:
     Lightweight facade that composes Firestore adapter, token service, and auth verifier.
     """
 
-    def __new__(cls, config: Optional[dict] = None):
+    def __new__(cls, config: Optional[Dict[str, Any]] = None) -> "Firebase":
         if config is None:
             if _DEFAULT_FIREBASE is None:
                 raise ValueError(
@@ -27,7 +29,7 @@ class Firebase:
             return _DEFAULT_FIREBASE
         return super().__new__(cls)
 
-    def __init__(self, config: Optional[dict] = None):
+    def __init__(self, config: Optional[Dict[str, Any]] = None):
         if getattr(self, "_initialized", False):
             return
         if config is None:
@@ -40,6 +42,7 @@ class Firebase:
             raise ValueError("FIREBASE_API_KEY is not configured")
 
         self.firestore_adapter = FirestoreAdapter(self.projectId, self.api_key)
+        self.requests = self.firestore_adapter.requests
         self.token_service = TokenService(self.api_key, self.firestore_adapter.requests)
         self.auth_adapter = FirebaseAuthAdapter()
 
@@ -47,16 +50,20 @@ class Firebase:
         global _DEFAULT_FIREBASE
         _DEFAULT_FIREBASE = self
 
-    def auth(self, token_json: Path):
+    @property
+    def token(self) -> Optional[Dict[str, Any]]:
+        return self.token_service.get_active_token()
+
+    def auth(self, token_json: Path) -> Tuple[Auth, Optional[Dict[str, Any]]]:
         return self.token_service.auth(token_json)
 
-    def save_login_token(self, token_data: Dict[str, str]):
+    def save_login_token(self, token_data: Dict[str, str]) -> None:
         self.token_service.save_login_token(token_data)
 
     def load_login_token(self) -> Optional[Dict[str, str]]:
         return self.token_service.load_login_token()
 
-    def clear_token(self):
+    def clear_token(self) -> None:
         self.token_service.clear_token()
 
     def register_user_tokens(
@@ -88,9 +95,9 @@ class Firebase:
     def get_user_id_by_token(self, access_token: str) -> Optional[str]:
         return self.token_service.get_user_id_by_token(access_token)
 
-    def database(self):
+    def database(self) -> FirestoreService:
         return self.firestore_adapter.database()
 
 
-def initialize_app(config: dict) -> Firebase:
+def initialize_app(config: Dict[str, Any]) -> Firebase:
     return Firebase(config)

@@ -1,6 +1,7 @@
 import logging
 import re
 from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, Query
 
@@ -45,7 +46,9 @@ def _validate_filename(filename: str) -> str:
 
 
 @router.get("/list", summary="List available pickle files for authenticated user")
-async def list_files(current_user_id: str = Depends(get_current_user_id)):
+async def list_files(
+    current_user_id: str = Depends(get_current_user_id),
+) -> Dict[str, List[Dict[str, Any]]]:
     user_id = _validate_user_id(current_user_id)
     try:
         files = data_service.list_pickles_for_user(_base_dir(), user_id)
@@ -60,7 +63,7 @@ async def preview_file(
     filename: str,
     rows: int = Query(200, ge=1, le=5000),
     current_user_id: str = Depends(get_current_user_id),
-):
+) -> Dict[str, Any]:
     user_id = _validate_user_id(current_user_id)
     filename = _validate_filename(filename)
     try:
@@ -91,12 +94,12 @@ async def preview_file(
 async def get_series(
     filename: str,
     y: str = Query(..., description="Column or series name to use as Y"),
-    x: str = Query(
+    x: Optional[str] = Query(
         None, description="Optional X column (or leave empty to use index/datetime)"
     ),
     max_points: int = Query(10000, ge=10, le=100000),
     current_user_id: str = Depends(get_current_user_id),
-):
+) -> Dict[str, Any]:
     user_id = _validate_user_id(current_user_id)
     filename = _validate_filename(filename)
     try:

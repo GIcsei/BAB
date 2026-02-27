@@ -1,10 +1,12 @@
 import logging
+from typing import Any, Dict, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from app.core.auth import get_current_user_id, get_firebase_dep
 from app.core.error_mapping import exception_to_http
 from app.core.exceptions import JobNotFoundError, JobStartError, LoginFailedError
+from app.core.firestore_handler.QueryHandler import Firebase
 from app.infrastructure.sched.scheduler import Scheduler
 from app.schemas.login import LoginRequest, LoginResponse
 from app.services.login_service import login_user, logout_user
@@ -14,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 def get_scheduler_dep(request: Request) -> Scheduler:
-    scheduler = getattr(request.app.state, "scheduler", None)
+    scheduler = cast(Scheduler, getattr(request.app.state, "scheduler", None))
     if scheduler is None:
         raise HTTPException(status_code=503, detail="Scheduler unavailable")
     return scheduler
@@ -28,8 +30,8 @@ def get_scheduler_dep(request: Request) -> Scheduler:
 def login(
     data: LoginRequest,
     scheduler: Scheduler = Depends(get_scheduler_dep),
-    firebase=Depends(get_firebase_dep),
-):
+    firebase: Firebase = Depends(get_firebase_dep),
+) -> LoginResponse:
     try:
         return login_user(data, scheduler, firebase)
     except LoginFailedError as exc:
@@ -48,7 +50,7 @@ def login(
 def trigger_run(
     current_user_id: str = Depends(get_current_user_id),
     scheduler: Scheduler = Depends(get_scheduler_dep),
-):
+) -> bool:
     try:
         ok = scheduler.trigger_run_for_user(current_user_id)
         if not ok:
@@ -73,8 +75,8 @@ def trigger_run(
 def logout(
     current_user_id: str = Depends(get_current_user_id),
     scheduler: Scheduler = Depends(get_scheduler_dep),
-    firebase=Depends(get_firebase_dep),
-):
+    firebase: Firebase = Depends(get_firebase_dep),
+) -> bool:
     try:
         return logout_user(current_user_id, scheduler, firebase)
     except Exception as exc:
@@ -88,7 +90,7 @@ def logout(
 def next_run(
     current_user_id: str = Depends(get_current_user_id),
     scheduler: Scheduler = Depends(get_scheduler_dep),
-):
+) -> Dict[str, Any]:
     try:
         info = scheduler.get_next_run_for_user(current_user_id)
         if not info:

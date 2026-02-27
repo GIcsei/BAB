@@ -21,6 +21,7 @@ from selenium.common.exceptions import TimeoutException, WebDriverException
 from selenium.webdriver import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.edge.options import Options
+from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
@@ -40,14 +41,20 @@ class ErsteNetBroker:
         user_id: str,
         saveFolder: str = "/tmp/Erste",
         config_dir: Optional[str] = None,
-    ):
+    ) -> None:
         if not user_id:
             raise ValueError("user_id is required to load per-user credentials")
-        # persist user_id on the instance for later use
         self.user_id = user_id
         self.get_report_url = "https://netbroker.erstebroker.hu/netbroker/Logon.aspx"
         self.__SAVE_TO = Path(saveFolder)
         settings = get_settings()
+        if (
+            settings.selenium_downloads_dir is None
+            or settings.local_downloads_dir is None
+        ):
+            raise RuntimeError(
+                "SELENIUM_DOWNLOADS_DIR and LOCAL_DOWNLOADS_DIR must be configured"
+            )
         self.__REMOTE_DIR = (
             Path(settings.selenium_downloads_dir).resolve() / self.__SAVE_TO.parts[-1]
         )
@@ -65,10 +72,9 @@ class ErsteNetBroker:
             self.__LOCAL_DIR,
         )
         logger.debug("Config dir for credentials: %s", config_dir)
-        self.driver = None
+        self.driver: Optional[WebDriver] = None
         self.RESULT: Optional[str] = None
 
-        # Load encrypted credentials saved specifically for this user + class
         creds = load_user_credentials(user_id=user_id, config_dir=config_dir)
         if not creds:
             raise RuntimeError(
@@ -76,31 +82,40 @@ class ErsteNetBroker:
                 "Save them via the secured FastAPI endpoint before using this class."
             )
 
-        self.__USERNAME = creds.get("username")
-        self.__ACCOUNT_NUM = creds.get("account_number")
-        self.__PASSWORD = creds.get("password")
+        username = creds.get("username")
+        account_num = creds.get("account_number")
+        password = creds.get("password")
 
-        if not (self.__USERNAME and self.__ACCOUNT_NUM and self.__PASSWORD):
+        if not (username and account_num and password):
             raise RuntimeError(
                 "Incomplete credentials loaded for ErsteNetBroker for this user"
             )
 
+        self.__USERNAME = str(username)
+        self.__ACCOUNT_NUM = str(account_num)
+        self.__PASSWORD = str(password)
+
         self._config_edge()
+
+    def _require_driver(self) -> WebDriver:
+        if self.driver is None:
+            raise RuntimeError("WebDriver not initialized")
+        return self.driver
 
     def __find_and_click(
         self, by: str = By.NAME, name: str = "", to_click: bool = True
     ) -> WebElement:
-        """Find element, optionally wait until clickable and click it."""
+        driver = self._require_driver()
         logger.debug("Finding element by %s with name '%s'", by, name)
         if not name:
             logger.error("Element name is empty for find_and_click with by=%s", by)
             raise ValueError("Element name must not be empty")
-        delay = 20  # seconds
+        delay = 20
         try:
             logger.debug(
                 "Waiting for presence of element by %s with name '%s'", by, name
             )
-            my_elem = WebDriverWait(self.driver, delay).until(
+            my_elem = WebDriverWait(driver, delay).until(
                 EC.presence_of_element_located((by, name))
             )
         except TimeoutException:
@@ -111,43 +126,34 @@ class ErsteNetBroker:
             logger.debug(
                 "Waiting for element to be clickable by %s with name '%s'", by, name
             )
-            ActionChains(self.driver).scroll_to_element(my_elem).move_to_element(
+            ActionChains(driver).scroll_to_element(my_elem).move_to_element(
                 my_elem
             ).perform()
-            my_elem = WebDriverWait(self.driver, delay).until(
+            my_elem = WebDriverWait(driver, delay).until(
                 EC.element_to_be_clickable((by, name))
             )
             my_elem.click()
         logger.debug("Element actions performed: %s", my_elem)
         return my_elem
 
-    def __wait_for_page(self, timeout=20):
-        """
-        Waits until 'default.aspx' is in the current URL.
-
-        Args:
-            driver: Selenium WebDriver instance
-            timeout: maximum wait time in seconds
-
-        Returns:
-            True if 'default.aspx' is in URL within timeout, False otherwise
-        """
+    def __wait_for_page(self, timeout: int = 20) -> bool:
         logger.debug("Waiting for page to load with 'default.aspx' in URL")
+        driver = self._require_driver()
         try:
-            WebDriverWait(self.driver, timeout).until(
+            WebDriverWait(driver, timeout).until(
                 lambda d: "default.aspx" in d.current_url
             )
-            logger.debug("'default.aspx' found in URL: %s", self.driver.current_url)
+            logger.debug("'default.aspx' found in URL: %s", driver.current_url)
             return True
         except TimeoutException:
             logger.warning(
                 "Timeout waiting for 'default.aspx' in URL. Current URL: %s",
-                self.driver.current_url,
+                driver.current_url,
             )
             return False
 
     def _file_exist_today(self) -> bool:
-        files = get_all_files_from_folder(self.__SAVE_TO, "xls")
+        files = get_all_files_from_folder(str(self.__SAVE_TO), "xls")
         for file in files:
             date = extract_date_from_filename(file)
             if date and is_today_in(date):
@@ -157,15 +163,12 @@ class ErsteNetBroker:
         logger.debug("No existing report file found for today in %s", self.__SAVE_TO)
         return False
 
-    def _config_edge(self):
-        """Configure Edge WebDriver options and instantiate the driver."""
+    def _config_edge(self) -> None:
         edge_options = Options()
-        edge_options.use_chromium = True
         edge_options.add_argument("--headless=new")
         edge_options.add_argument("--remote-allow-origins=*")
         edge_options.add_argument("--disable-gpu")
         edge_options.add_argument("--window-size=1920,1080")
-        # Reduce noise and fingerprinting
         edge_options.add_argument("--no-first-run")
         edge_options.add_argument("--log-level=3")
         edge_options.add_argument("--disable-blink-features=AutomationControlled")
@@ -186,8 +189,7 @@ class ErsteNetBroker:
             },
         )
 
-        # Ensure save folder exists
-        def ensure_directory(path: Path):
+        def ensure_directory(path: Path) -> None:
             try:
                 os.makedirs(path, exist_ok=True)
                 try:
@@ -207,36 +209,32 @@ class ErsteNetBroker:
             )
             logger.debug("Edge WebDriver started")
         except WebDriverException:
-            # Surface a useful error to logs for container environments
             logger.exception(
                 "Failed to start Edge WebDriver. Ensure browser and driver are installed and available in the container"
             )
             raise
 
-    def _renameDownloadedFile(self, timeout=180) -> str:
-        """Wait for the default download name and rename it with timestamp."""
+    def _renameDownloadedFile(self, timeout: int = 180) -> str:
         download_folder = str(self.__LOCAL_DIR)
         end_time = time.time() + timeout
         has_timeout = True
+        latest_file: Optional[Path] = None
         while time.time() < end_time:
-            # Check for any .crdownload files (still downloading)
             cr_files = glob.glob(os.path.join(download_folder, "*.crdownload"))
             if cr_files:
                 logger.debug("Download in progress: %s", cr_files)
                 time.sleep(1)
                 continue
 
-            # Check for any final .xls/xls* files
             files = glob.glob(os.path.join(download_folder, "*.xls*"))
             if files:
-                # Pick the newest one
                 latest_file = Path(max(files, key=os.path.getctime))
                 logger.info("Download finished: %s", latest_file)
                 has_timeout = False
                 break
             time.sleep(1)
 
-        if has_timeout:
+        if has_timeout or latest_file is None:
             raise TimeoutError(
                 f"No downloaded file appeared in {download_folder} within {timeout} seconds"
             )
@@ -250,11 +248,11 @@ class ErsteNetBroker:
         return newFileName
 
     def _handle_already_logged_in_Selenium(self) -> bool:
-        """Handle 'already logged in' page by clicking the 'Tovább' button."""
         logger.info("Already logged in on another session. Attempting to resolve...")
+        driver = self._require_driver()
         try:
             self.__find_and_click(By.NAME, "ctl18$Button1")
-            if "alreadyloggedin" in self.driver.current_url.lower():
+            if "alreadyloggedin" in driver.current_url.lower():
                 logger.info("Transaction code page reached; user must supply code")
                 return True
             else:
@@ -264,10 +262,9 @@ class ErsteNetBroker:
                 return False
         except Exception:
             logger.exception("Error while handling already-logged-in page")
-            return False or "checksession" in self.driver.current_url.lower()
+            return False or "checksession" in driver.current_url.lower()
 
     def _handle_otp_Selenium(self, timestamp: int) -> bool:
-        """Handle 2FA by obtaining a code from Firestore and submitting it."""
         logger.info(
             "Two-factor authentication required; checking for OTP messages since ts=%s",
             timestamp,
@@ -284,7 +281,8 @@ class ErsteNetBroker:
             self.__find_and_click(By.NAME, "ctl17$btnGo")
             logger.debug("Submitted OTP code, waiting for landing page")
             logger.debug(
-                "Current URL after submitting OTP: %s", self.driver.current_url
+                "Current URL after submitting OTP: %s",
+                self._require_driver().current_url,
             )
             if self.__wait_for_page(timeout=30):
                 logger.info("get_report flow: OTP accepted and landing page reached")
@@ -307,18 +305,17 @@ class ErsteNetBroker:
         return no_error
 
     def get_report(self) -> Optional[str]:
-        """Main entry: logs in and downloads the report; returns the filename or None."""
         self.RESULT = None
         if self._file_exist_today():
             logger.info("Report for today already exists: %s", self.RESULT)
             return self.RESULT
 
-        timestamp = int((datetime.now().timestamp() - 60) * 1e3)  # milliseconds
+        timestamp = int((datetime.now().timestamp() - 60) * 1e3)
 
         try:
-            self.driver.get(self.get_report_url)
+            driver = self._require_driver()
+            driver.get(self.get_report_url)
 
-            # Fill credentials
             self.__find_and_click(By.NAME, "ctl04$un", to_click=False).send_keys(
                 self.__USERNAME
             )
@@ -329,7 +326,6 @@ class ErsteNetBroker:
                 self.__PASSWORD
             )
 
-            # Click login
             self.__find_and_click(By.NAME, "ctl04$btnLogon")
 
             no_error = self._handle_prev_session(timestamp=timestamp)
@@ -338,13 +334,12 @@ class ErsteNetBroker:
                 logger.warning("Login/get_report aborted for user (no_error==False)")
                 return None
 
-            # proceed to download and rename
             self.download_report()
             result_name = self._renameDownloadedFile()
             logger.info("Report downloaded and renamed to %s", result_name)
             try:
                 formatter = reportFormatter(
-                    fileName=result_name, fileLoc=self.__SAVE_TO
+                    fileName=result_name, fileLoc=str(self.__SAVE_TO)
                 )
                 formatter.save(True)
             except Exception:
@@ -354,7 +349,6 @@ class ErsteNetBroker:
             logger.exception("Exception during get_report execution")
             return None
         finally:
-            # ensure browser is closed
             try:
                 if self.driver:
                     self.driver.quit()
@@ -362,8 +356,7 @@ class ErsteNetBroker:
             except Exception:
                 logger.exception("Exception while quitting WebDriver")
 
-    def download_report(self):
-        """Navigate the UI to export the report to Excel."""
+    def download_report(self) -> None:
         self.__find_and_click(
             By.XPATH,
             "//td[@class='menuitem']/a/div[@class='menuitemtext' and text()='Riportok']",
@@ -377,14 +370,9 @@ class ErsteNetBroker:
         )
 
     def _checkForCode(self, timeStamp: int) -> Optional[str]:
-        """
-        Poll Firestore for OTP messages sent for the current user after `timeStamp`.
-        Uses the global Firebase singleton; assumes it was initialized elsewhere in the app.
-        """
         try:
-            fb = Firebase()  # singleton instance (must have been initialized elsewhere)
+            fb = Firebase()
             db = fb.database()
-            # explicit per-job token context (do not mutate global state)
             token = fb.get_user_token(self.user_id)
         except Exception:
             logger.exception("Failed to obtain Firebase singleton or database")
@@ -404,18 +392,17 @@ class ErsteNetBroker:
                 )
                 if hasattr(changed_doc, "documents") and changed_doc.documents:
                     doc = changed_doc.documents[0]
-                    ts_field = doc.data_fields.get("timestamp")
+                    data_fields = doc.data_fields or {}
+                    ts_field = data_fields.get("timestamp")
                     if ts_field and ts_field > timeStamp:
-                        code = doc.data_fields.get("code")
-                        # Clean-up: delete the message doc if possible
+                        code_value = data_fields.get("code")
                         try:
                             db.delete_document(f"messages/{doc.name}", token=token)
                         except Exception:
                             logger.debug("Failed to delete OTP document %s", doc.name)
                         logger.info("OTP code found for user %s", token.get("userId"))
-                        return code
+                        return str(code_value) if code_value is not None else None
             except Exception:
-                # continue polling; log at debug to avoid noisy logs
                 logger.debug("No OTP message yet or query failed; will retry")
             time.sleep(1.0)
             retry_times -= 1

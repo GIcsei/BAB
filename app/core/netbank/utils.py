@@ -1,20 +1,21 @@
-﻿import glob
+import glob
 import logging
 import os
 import re
 from datetime import date, datetime
 from os import path
+from typing import List, Optional
 
 import pandas as pd
 
 logger = logging.getLogger(__name__)
 
 
-def is_today_in(date_obj):
+def is_today_in(date_obj: date) -> bool:
     return date_obj == datetime.today().date()
 
 
-def extract_date_from_filename(filename):
+def extract_date_from_filename(filename: str) -> Optional[date]:
     """
     Extract a date (YYYYMMDD) from a filename that contains pattern YYYYMMDD_HHMM.
     Returns a datetime.date or None.
@@ -30,7 +31,7 @@ def extract_date_from_filename(filename):
     return None
 
 
-def get_all_files_from_folder(folder, extension):
+def get_all_files_from_folder(folder: Optional[str], extension: str) -> List[str]:
     """
     Return list of files (full paths) in `folder` matching `*.{extension}`.
     """
@@ -68,17 +69,17 @@ class reportFormatter:
     ]
     TIME_STAMP = date.today()
 
-    def __init__(self, fileName=None, fileLoc=None) -> None:
+    def __init__(self, fileName: Optional[str] = None, fileLoc: Optional[str] = None):
         if fileLoc is not None:
             self.FOLDER = fileLoc
         if fileName is not None:
             self.fileName = fileName
             extracted = extract_date_from_filename(self.fileName)
             self.TIME_STAMP = extracted if extracted is not None else date.today()
-        self._load()
+        self.data: pd.DataFrame = self._load()
         self._format()
 
-    def _load(self):
+    def _load(self) -> pd.DataFrame:
         full = os.path.join(self.FOLDER, self.fileName)
         try:
             self.data = pd.read_excel(full)
@@ -87,7 +88,7 @@ class reportFormatter:
             raise
         return self.data
 
-    def save(self, zipped=False):
+    def save(self, zipped: bool = False) -> None:
         strTime = datetime.now().strftime("%Y%m%d_%H%M")
         if not is_today_in(self.TIME_STAMP):
             strTime = self.TIME_STAMP.strftime("%Y%m%d_%H%M")
@@ -104,7 +105,7 @@ class reportFormatter:
             logger.exception("Failed to save formatted data to %s", self.FOLDER)
             raise
 
-    def _format(self):
+    def _format(self) -> None:
         df = self.data
         self._remove_values()
         self.search_for_currency()
@@ -116,21 +117,18 @@ class reportFormatter:
             )
         df.reset_index(inplace=True, drop=True)
         df["Date_of_import"] = self.TIME_STAMP
-        # show a small preview in logs instead of calling undefined print()
         try:
             logger.debug("Formatted data preview:\n%s", df.head().to_string())
         except Exception:
             logger.debug("Formatted data available")
 
-    def _remove_values(self):
+    def _remove_values(self) -> None:
         df = self.data
         try:
-            # Drop last row
             df.drop(df.tail(1).index, inplace=True)
         except Exception:
             logger.debug("Failed to drop tail row - possibly empty dataframe")
         try:
-            # Drop first 6 rows (header/meta rows)
             df.drop(df.head(6).index, inplace=True)
         except Exception:
             logger.debug("Failed to drop head rows - possibly smaller dataframe")
@@ -140,7 +138,7 @@ class reportFormatter:
         if df.shape[1] > 1:
             df.dropna(subset=df.columns[1:], inplace=True)
 
-    def search_for_currency(self):
+    def search_for_currency(self) -> None:
         currency_values = {"HUF", "USD", "EUR"}
         df = self.data
         try:
@@ -153,7 +151,6 @@ class reportFormatter:
             cols_to_drop = []
         if len(cols_to_drop) == 0:
             return
-        # move first matching currency column into NewCurrency and then drop the originals
         try:
             df["NewCurrency"] = df[cols_to_drop[0]]
             df.drop(columns=cols_to_drop, inplace=True)

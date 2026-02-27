@@ -1,5 +1,6 @@
 README.md
 pyproject.toml
+app/__init__.py
 app/main.py
 app/application/services/token_service.py
 app/core/__init__.py

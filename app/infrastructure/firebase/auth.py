@@ -19,9 +19,14 @@ class FirebaseAuthAdapter:
 
         try:
             decoded = fauth.verify_id_token(id_token)
+            user_id = decoded.get("uid") or decoded.get("user_id")
+            if not isinstance(user_id, str):
+                return None
+            email_value = decoded.get("email")
+            email = email_value if isinstance(email_value, str) else ""
             return {
-                "user_id": decoded.get("uid") or decoded.get("user_id"),
-                "email": decoded.get("email"),
+                "user_id": user_id,
+                "email": email,
             }
         except Exception:
             logger.exception("Failed to verify id token via firebase-admin")
