@@ -3,8 +3,9 @@ from datetime import datetime, timedelta
 
 import jwt
 import requests
-from app.core.firestore_handler.Utils import raise_detailed_error
 from Crypto.PublicKey import RSA
+
+from app.core.firestore_handler.Utils import raise_detailed_error
 
 
 class Auth:

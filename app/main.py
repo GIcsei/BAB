@@ -3,6 +3,9 @@
 import logging
 from contextlib import asynccontextmanager
 
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
+
 from app.core.config import get_settings
 from app.core.error_mapping import exception_to_http, get_error_response
 from app.core.exceptions import AppException
@@ -16,8 +19,6 @@ from app.core.health import get_health
 from app.core.logging_config import configure_logging
 from app.routers import data_plot, login, netbank_credentials
 from app.services.scheduler import Scheduler, create_scheduler
-from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
 
 
 @asynccontextmanager
