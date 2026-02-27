@@ -83,7 +83,7 @@ fi
 # Stop stack cleanly
 # -------------------------
 echo -e "${YELLOW}Stopping stack...${NC}"
-docker compose $COMPOSE_FILES down -v
+docker compose --env-file ${ENV_FILE} $COMPOSE_FILES down -v
 
 # -------------------------
 # Build
@@ -107,7 +107,7 @@ else
   echo -e "${BLUE}Starting PRODUCTION environment...${NC}"
 fi
 
-docker compose $COMPOSE_FILES up -d
+docker compose --env-file ${ENV_FILE} $COMPOSE_FILES up -d
 echo -e "${GREEN}Containers running in background.${NC}"
 echo -e "${BLUE}Use 'docker compose logs -f' to stream logs.${NC}"
 echo -e "${GREEN}Done.${NC}"
