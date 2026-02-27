@@ -5,9 +5,10 @@ import threading
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
+from requests import Session
+
 from app.core.config import get_settings
 from app.core.firestore_handler.User import Auth
-from requests import Session
 
 logger = logging.getLogger(__name__)
 

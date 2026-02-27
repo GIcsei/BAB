@@ -2,8 +2,9 @@ import logging
 from typing import Optional
 
 import requests
-from app.core.firestore_handler.FirestoreService import FirestoreService
 from requests import Session
+
+from app.core.firestore_handler.FirestoreService import FirestoreService
 
 logger = logging.getLogger(__name__)
 

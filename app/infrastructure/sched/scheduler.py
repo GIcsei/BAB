@@ -3,8 +3,9 @@ import logging
 import os
 import threading
 import time
-from datetime import datetime, timedelta
+from datetime import datetime
 from datetime import time as dt_time
+from datetime import timedelta
 from pathlib import Path
 from types import ModuleType
 from typing import Any, Callable, Dict, Optional, Tuple, cast
@@ -12,6 +13,7 @@ from typing import Any, Callable, Dict, Optional, Tuple, cast
 fcntl: Optional[ModuleType]
 try:
     import fcntl as _fcntl
+
     fcntl = _fcntl
 except ImportError:  # pragma: no cover
     fcntl = None
@@ -278,7 +280,9 @@ class Scheduler:
             next_dt = job.compute_next_run_dt()
             with self._cond:
                 self._counter += 1
-                heapq.heappush(self._heap, (next_dt.timestamp(), self._counter, user_id))
+                heapq.heappush(
+                    self._heap, (next_dt.timestamp(), self._counter, user_id)
+                )
                 self._start_worker_if_needed()
         logger.info("Job scheduled for user=%s", user_id)
         return job

@@ -96,9 +96,7 @@ class Database:
         request_ref = "{0}{1}".format(self.database_url, self.path)
         return request_ref
 
-    def build_headers(
-        self, token: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, str]:
+    def build_headers(self, token: Optional[Dict[str, Any]] = None) -> Dict[str, str]:
         headers = {"content-type": "application/json; charset=UTF-8"}
         if token is not None:
             headers["Authorization"] = f"Bearer {token['idToken']}"
@@ -132,7 +130,9 @@ class Database:
         raise_detailed_error(request_object)
         return request_object.json(**json_kwargs)
 
-    def filtering(self, response_dict: Collection, filters: Dict[str, Any]) -> Collection:
+    def filtering(
+        self, response_dict: Collection, filters: Dict[str, Any]
+    ) -> Collection:
         for key, value in filters.items():
             if key == "limitToFirst":
                 response_dict.update_elems(slice(0, value))

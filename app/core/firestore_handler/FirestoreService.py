@@ -19,7 +19,9 @@ class _FirebaseProtocol(Protocol):
     requests: Session
 
 
-def deserialize_response(func: Callable[..., ResponsePayload]) -> Callable[..., Collection]:
+def deserialize_response(
+    func: Callable[..., ResponsePayload],
+) -> Callable[..., Collection]:
     @wraps(func)
     def wrapper(*args: Any, **kwargs: Any) -> Collection:
         response = func(*args, **kwargs)

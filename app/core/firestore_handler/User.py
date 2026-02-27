@@ -73,8 +73,8 @@ class Auth:
         return cast(Dict[str, Any], request_object.json())
 
     def refresh(self, refresh_token: str) -> Dict[str, Any]:
-        request_ref = (
-            "https://securetoken.googleapis.com/v1/token?key={0}".format(self.api_key)
+        request_ref = "https://securetoken.googleapis.com/v1/token?key={0}".format(
+            self.api_key
         )
         headers = {"content-type": "application/json; charset=UTF-8"}
         data = json.dumps({"grantType": "refresh_token", "refreshToken": refresh_token})
