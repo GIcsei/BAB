@@ -7,16 +7,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-from selenium import webdriver
-from selenium.common.exceptions import TimeoutException, WebDriverException
-from selenium.webdriver import ActionChains
-from selenium.webdriver.common.by import By
-from selenium.webdriver.edge.options import Options
-from selenium.webdriver.remote.webdriver import WebDriver
-from selenium.webdriver.remote.webelement import WebElement
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.ui import WebDriverWait
-
 from app.core.config import get_settings
 from app.core.firestore_handler.QueryHandler import Firebase
 from app.core.netbank.credentials import load_user_credentials
@@ -26,6 +16,15 @@ from app.core.netbank.utils import (
     is_today_in,
     reportFormatter,
 )
+from selenium import webdriver
+from selenium.common.exceptions import TimeoutException, WebDriverException
+from selenium.webdriver import ActionChains
+from selenium.webdriver.common.by import By
+from selenium.webdriver.edge.options import Options
+from selenium.webdriver.remote.webdriver import WebDriver
+from selenium.webdriver.remote.webelement import WebElement
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
 
 logger = logging.getLogger(__name__)
 
@@ -242,7 +241,7 @@ class ErsteNetBroker:
 
         import shutil
 
-        newFileName = f'Riport_{datetime.now().strftime("%Y%m%d_%H%M")}.xls'
+        newFileName = f"Riport_{datetime.now().strftime('%Y%m%d_%H%M')}.xls"
         new_path = self.__SAVE_TO / newFileName
         shutil.move(latest_file, new_path)
         self.RESULT = newFileName
@@ -388,7 +387,7 @@ class ErsteNetBroker:
             try:
                 changed_doc = db.run_query(
                     "messages",
-                    f'uid == {token["userId"]} AND timestamp >= {timeStamp}',
+                    f"uid == {token['userId']} AND timestamp >= {timeStamp}",
                     token=token,
                 )
                 if hasattr(changed_doc, "documents") and changed_doc.documents:
