@@ -61,6 +61,7 @@
     <Compile Include="app\services\login_service.py" />
     <Compile Include="app\services\scheduler.py" />
     <Compile Include="app\services\__init__.py" />
+    <Compile Include="app\__init__.py" />
     <Compile Include="tests\api\test_data_plot.py" />
     <Compile Include="tests\api\test_main.py" />
     <Compile Include="tests\conftest.py" />
@@ -93,6 +94,7 @@
     <Folder Include="app\services\" />
     <Folder Include="app\services\__pycache__\" />
     <Folder Include="app\__pycache__\" />
+    <Folder Include="docker\" />
     <Folder Include="scripts\" />
     <Folder Include="tests\" />
     <Folder Include="tests\api\" />
