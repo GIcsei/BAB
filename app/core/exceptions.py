@@ -1,6 +1,5 @@
-"""Typed exception hierarchy for Bank Analysis Backend.
-Enables narrow exception handling and consistent error mapping to HTTP responses.
-"""
+"""Enables narrow exception handling and consistent error mapping to HTTP responses."""
+from typing import Optional
 
 
 class AppException(Exception):
@@ -167,7 +166,7 @@ class StartupException(AppException):
 class ConfigurationError(StartupException):
     """Missing or invalid configuration."""
 
-    def __init__(self, missing_vars: list = None):
+    def __init__(self, missing_vars: Optional[list[str]] = None):
         vars_str = ", ".join(missing_vars) if missing_vars else "unknown"
         msg = f"Missing required environment variables: {vars_str}"
         super().__init__(msg, "CONFIG_ERROR", 500)

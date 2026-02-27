@@ -39,6 +39,8 @@ dev = [
     "pytest-cov>=5.0.0",
     "pytest-html>=4.1.1",
     "ruff>=0.9.10",
+    "types-requests>=2.32.0",
+    "pandas-stubs>=2.2.0",
 ]
 
 [build-system]
@@ -103,6 +105,7 @@ strict = true
 warn_unused_ignores = true
 show_error_codes = true
 pretty = true
+mypy_path = "typings"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

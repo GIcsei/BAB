@@ -1,0 +1,3 @@
+from typing import Any, Dict
+
+def verify_id_token(token: str) -> Dict[str, Any]: ...

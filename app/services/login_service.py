@@ -1,9 +1,9 @@
 import json
 import logging
 import os
-from typing import Optional
+from typing import Any, Dict, Optional
 
-from app.core.config import get_settings
+from app.core.config import Settings, get_settings
 from app.core.firestore_handler.QueryHandler import Firebase
 from app.infrastructure.sched.scheduler import Scheduler
 from app.schemas.login import LoginRequest, LoginResponse
@@ -11,11 +11,11 @@ from app.schemas.login import LoginRequest, LoginResponse
 logger = logging.getLogger(__name__)
 
 
-def _get_settings():
+def _get_settings() -> Settings:
     return get_settings()
 
 
-def _extract_user_id(user_obj: dict) -> Optional[str]:
+def _extract_user_id(user_obj: Dict[str, Any]) -> Optional[str]:
     return (
         user_obj.get("userId")
         or user_obj.get("localId")
@@ -61,10 +61,16 @@ def login_user(
             logger.debug("chmod on user_dir may not be supported in this environment")
 
         cred_path = user_dir / "credentials.json"
-        token_copy = {
-            "idToken": user.get("idToken"),
-            "refreshToken": user.get("refreshToken"),
-            "userId": user.get("localId") or user.get("user_id") or user.get("userId"),
+        refresh_token = user.get("refreshToken")
+        user_id_value = user.get("localId") or user.get("user_id") or user.get("userId")
+        if not isinstance(refresh_token, str):
+            raise ValueError("No refreshToken returned from authentication provider.")
+        if not isinstance(user_id_value, str):
+            raise ValueError("No userId returned from authentication provider.")
+        token_copy: Dict[str, str] = {
+            "idToken": id_token,
+            "refreshToken": refresh_token,
+            "userId": user_id_value,
             "email": data.email,
         }
         with open(cred_path, "w", encoding="utf-8") as file:

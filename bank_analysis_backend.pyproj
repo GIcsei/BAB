@@ -99,6 +99,9 @@
     <Folder Include="tests\" />
     <Folder Include="tests\api\" />
     <Folder Include="tests\unit\" />
+    <Folder Include="typings\" />
+    <Folder Include="typings\firebase_admin\" />
+    <Folder Include="typings\sseclient\" />
   </ItemGroup>
   <ItemGroup>
     <Content Include=".env" />
@@ -121,6 +124,10 @@
     <Content Include="scripts\dev.sh" />
     <Content Include="scripts\format.sh" />
     <Content Include="scripts\lint.sh" />
+    <Content Include="typings\firebase_admin\auth.pyi" />
+    <Content Include="typings\firebase_admin\credentials.pyi" />
+    <Content Include="typings\firebase_admin\__init__.pyi" />
+    <Content Include="typings\sseclient\__init__.pyi" />
   </ItemGroup>
   <ItemGroup>
     <InterpreterReference Include="Global|PythonCore|3.13" />

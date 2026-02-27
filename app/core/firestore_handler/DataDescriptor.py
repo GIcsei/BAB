@@ -1,5 +1,5 @@
-﻿from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from dataclasses import dataclass
+from typing import Any, Callable, Dict, List, Optional
 
 
 @dataclass
@@ -24,20 +24,22 @@ class Document:
         )
 
     def __repr__(self) -> str:
-        # shorter, single-line representation for debugging
         field_preview = ", ".join(
             f"{k}={repr(v)}" for k, v in (self.data_fields or {}).items()
         )
         if len(field_preview) > 60:
             field_preview = field_preview[:57] + "..."
-        return f"Document(name='{self.name}', created='{self.created}', updated='{self.updated}', fields={{ {field_preview} }})"
+        return (
+            "Document("
+            f"name='{self.name}', created='{self.created}', "
+            f"updated='{self.updated}', fields={{ {field_preview} }})"
+        )
 
     @staticmethod
-    def from_dict(input_dict: dict):
+    def from_dict(input_dict: Dict[str, Any]) -> "Document":
         if not isinstance(input_dict, dict):
             raise ValueError("Input must be a dictionary")
 
-        # Support wrapped format {"document": {...}} or bare document dict
         dictionary = input_dict.get("document", input_dict)
 
         required_keys = {"name", "createTime", "updateTime"}
@@ -60,12 +62,12 @@ class Document:
         return Document(name, created, updated, datafields)
 
     @staticmethod
-    def convert_firefield(fire_field: dict):
+    def convert_firefield(fire_field: Dict[str, Any]) -> Any:
         if not isinstance(fire_field, dict) or len(fire_field) != 1:
             raise ValueError("Given value is not a field!")
 
         key, value = next(iter(fire_field.items()))
-        type_casts = {
+        type_casts: Dict[str, Callable[[Any], Any]] = {
             "stringValue": str,
             "integerValue": int,
             "doubleValue": float,
@@ -91,11 +93,11 @@ class Collection:
         if docs:
             self.documents = docs
 
-    def add_doc(self, doc: Document):
+    def add_doc(self, doc: Document) -> None:
         self.documents.append(doc)
 
-    def sort_by(self, field: str, reverse: bool = True):
-        def sort_key(doc: Document):
+    def sort_by(self, field: str, reverse: bool = True) -> "Collection":
+        def sort_key(doc: Document) -> Any:
             return (
                 doc.data_fields.get(field)
                 if (doc.data_fields and (field in doc.data_fields))
@@ -105,7 +107,7 @@ class Collection:
         self.documents = sorted(self.documents, key=sort_key, reverse=reverse)
         return self
 
-    def update_elems(self, elemnum=None):
+    def update_elems(self, elemnum: Optional[object] = None) -> "Collection":
         """
         Narrow or pick elements from the collection.
         - If elemnum is int: keep only the element at that index (wrapped in list).
@@ -117,7 +119,6 @@ class Collection:
             return self
 
         if isinstance(elemnum, int):
-            # keep single element as a list (preserve documents type)
             try:
                 self.documents = [self.documents[elemnum]]
             except IndexError:
@@ -129,7 +130,7 @@ class Collection:
             return self
 
         if isinstance(elemnum, (list, tuple)):
-            selected = []
+            selected: List[Document] = []
             for i in elemnum:
                 if not isinstance(i, int):
                     raise TypeError("Indices must be integers")
@@ -141,16 +142,19 @@ class Collection:
         raise TypeError("Unsupported elemnum type for update_elems")
 
     @staticmethod
-    def from_list(name: str, list_of_docs):
+    def from_list(name: str, list_of_docs: List[Dict[str, Any]]) -> "Collection":
         new_docs = [Document.from_dict(elem) for elem in list_of_docs]
         return Collection(name, new_docs)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         doc_ids = [doc.name.split("/")[-1] for doc in self.documents]
-        return f"Collection({len(self.documents)} documents: {', '.join(doc_ids[:5])}{'...' if len(doc_ids) > 5 else ''})"
+        return (
+            f"Collection({len(self.documents)} documents: "
+            f"{', '.join(doc_ids[:5])}{'...' if len(doc_ids) > 5 else ''})"
+        )
 
-    def __str__(self):
+    def __str__(self) -> str:
         output = [f"Collection with {len(self.documents)} document(s):"]
         for doc in self.documents:
-            output.append(str(doc))  # uses Document.__str__()
+            output.append(str(doc))
         return "\n\n".join(output)

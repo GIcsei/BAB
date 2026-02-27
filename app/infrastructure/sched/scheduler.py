@@ -1,4 +1,3 @@
-import fcntl
 import heapq
 import logging
 import os
@@ -7,7 +6,15 @@ import time
 from datetime import datetime, timedelta
 from datetime import time as dt_time
 from pathlib import Path
-from typing import Any, Callable, Dict, Optional, Tuple
+from types import ModuleType
+from typing import Any, Callable, Dict, Optional, Tuple, cast
+
+fcntl: Optional[ModuleType]
+try:
+    import fcntl as _fcntl
+    fcntl = _fcntl
+except ImportError:  # pragma: no cover
+    fcntl = None
 
 from app.core.config import get_settings
 
@@ -29,7 +36,7 @@ class _Job:
         target_hour: int = 18,
         target_minute: int = 0,
         firebase_provider: Optional[Callable[[], Any]] = None,
-    ):
+    ) -> None:
         self.user_id = user_id
         self.user_dir = Path(user_dir)
         self.target_hour = int(target_hour)
@@ -65,13 +72,7 @@ class _Job:
         secs = self._seconds_until_next_target()
         return datetime.now() + timedelta(seconds=secs)
 
-    def _perform_task(self):
-        """
-        Create per-user report via the netbank module.
-        Import the heavy Selenium-based class lazily to avoid importing at module import time.
-        This method is intentionally the same as previous implementation; it should be run in a
-        separate thread so the scheduler worker can remain idle/sleeping.
-        """
+    def _perform_task(self) -> None:
         run_started = datetime.utcnow()
         self.logger.info("Report task start (utc): %s", run_started.isoformat() + "Z")
 
@@ -148,7 +149,7 @@ class Scheduler:
     Uses a heap for upcoming runs and a Condition to wake the worker only when needed.
     """
 
-    def __init__(self, firebase_provider: Optional[Callable[[], Any]] = None):
+    def __init__(self, firebase_provider: Optional[Callable[[], Any]] = None) -> None:
         self._jobs: Dict[str, _Job] = {}
         self._heap: list[Tuple[float, int, str]] = []
         self._counter = 0
@@ -159,7 +160,7 @@ class Scheduler:
         self._firebase_provider = firebase_provider
         logger.debug("Scheduler initialized")
 
-    def _start_worker_if_needed(self):
+    def _start_worker_if_needed(self) -> None:
         with self._cond:
             if not self._running:
                 self._running = True
@@ -169,7 +170,7 @@ class Scheduler:
             else:
                 self._cond.notify()
 
-    def _worker_loop(self):
+    def _worker_loop(self) -> None:
         logger.debug("Scheduler worker loop entered")
         while True:
             with self._cond:
@@ -224,7 +225,7 @@ class Scheduler:
                         )
                         self._cond.notify()
 
-    def _spawn_job_thread(self, job: _Job):
+    def _spawn_job_thread(self, job: _Job) -> None:
         thread = threading.Thread(target=job._perform_task, daemon=True)
         thread.start()
         logger.info(
@@ -239,7 +240,7 @@ class Scheduler:
         user_dir: Path,
         target_hour: int = 18,
         target_minute: int = 0,
-    ):
+    ) -> _Job:
         logger.info(
             "Request to start job for user=%s dir=%s target=%02d:%02d",
             user_id,
@@ -277,14 +278,12 @@ class Scheduler:
             next_dt = job.compute_next_run_dt()
             with self._cond:
                 self._counter += 1
-                heapq.heappush(
-                    self._heap, (next_dt.timestamp(), self._counter, user_id)
-                )
+                heapq.heappush(self._heap, (next_dt.timestamp(), self._counter, user_id))
                 self._start_worker_if_needed()
         logger.info("Job scheduled for user=%s", user_id)
         return job
 
-    def get_next_run_for_user(self, user_id: str) -> Optional[Dict]:
+    def get_next_run_for_user(self, user_id: str) -> Optional[Dict[str, Any]]:
         with self._lock:
             job = self._jobs.get(user_id)
         if not job:
@@ -298,7 +297,7 @@ class Scheduler:
             logger.exception("Failed to compute next run for user %s", user_id)
             return None
 
-    def stop_job_for_user(self, user_id: str):
+    def stop_job_for_user(self, user_id: str) -> bool:
         logger.info("Request to stop job for user=%s", user_id)
         with self._lock:
             job = self._jobs.pop(user_id, None)
@@ -312,7 +311,7 @@ class Scheduler:
         logger.warning("No job found to stop for user=%s", user_id)
         return False
 
-    def stop_all(self):
+    def stop_all(self) -> None:
         logger.info("Stopping all jobs (count=%d)", len(self._jobs))
         with self._lock:
             for job in self._jobs.values():
@@ -330,7 +329,7 @@ class Scheduler:
 
     def restore_jobs_from_dir(
         self, base_dir: Path, target_hour: int = 18, target_minute: int = 0
-    ):
+    ) -> None:
         base_dir = Path(base_dir)
         logger.info("Restoring jobs from directory: %s", str(base_dir))
         if not base_dir.exists():
@@ -351,7 +350,7 @@ class Scheduler:
             except Exception:
                 logger.exception("Failed to restore job for user=%s", user_id)
 
-    def trigger_run_for_user(self, user_id: str):
+    def trigger_run_for_user(self, user_id: str) -> bool:
         with self._lock:
             job = self._jobs.get(user_id)
 
@@ -388,11 +387,14 @@ class Scheduler:
 
 def _acquire_scheduler_lock() -> bool:
     global _SCHED_LOCK_FD
+    if fcntl is None:
+        return False
+    fcntl_mod = cast(Any, fcntl)
     try:
         _SCHED_LOCK_FD = os.open(
             "/tmp/bab_scheduler.lock", os.O_RDWR | os.O_CREAT, 0o600
         )
-        fcntl.lockf(_SCHED_LOCK_FD, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        fcntl_mod.lockf(_SCHED_LOCK_FD, fcntl_mod.LOCK_EX | fcntl_mod.LOCK_NB)
         return True
     except OSError:
         return False
@@ -401,7 +403,7 @@ def _acquire_scheduler_lock() -> bool:
 def create_scheduler(
     firebase_provider: Optional[Callable[[], Any]] = None,
     acquire_lock: bool = True,
-) -> Optional[Scheduler]:
+) -> Optional["Scheduler"]:
     if acquire_lock and not _acquire_scheduler_lock():
         logger.warning("Scheduler lock not acquired; skipping scheduler creation")
         return None

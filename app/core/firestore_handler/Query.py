@@ -1,5 +1,6 @@
-﻿import json
+import json
 import re
+from typing import Any, Dict, List, cast
 
 from app.core.firestore_handler.Utils import parse_to_firestore
 
@@ -14,10 +15,10 @@ class FirestoreQueryBuilder:
         "<=": "LESS_THAN_OR_EQUAL",
     }
 
-    def __init__(self, collection):
+    def __init__(self, collection: str) -> None:
         self.collection = collection
 
-    def _parse_condition(self, condition: str):
+    def _parse_condition(self, condition: str) -> Dict[str, Any]:
         match = re.match(r"(\w+)\s*(==|!=|>=|<=|>|<)\s*(.+)", condition.strip())
         if not match:
             raise ValueError(f"Invalid condition format: {condition}")
@@ -30,19 +31,15 @@ class FirestoreQueryBuilder:
             }
         }
 
-    def _tokenize(self, filter_string: str):
-        # Tokenizer to preserve parentheses and split by logical operators
-        # Match everything: conditions, AND, OR, and parentheses
+    def _tokenize(self, filter_string: str) -> List[str]:
         token_pattern = r"(\s+AND\s+|\s+OR\s+|\(|\))"
         tokens = re.split(token_pattern, filter_string)
-
-        # Clean up any leading/trailing spaces from tokens and remove empty tokens
         tokens = [token.strip() for token in tokens if token.strip()]
         return tokens
 
-    def _parse_expression(self, tokens):
-        def parse(tokens):
-            stack = []
+    def _parse_expression(self, tokens: List[str]) -> Dict[str, Any]:
+        def parse(tokens: List[str]) -> Dict[str, Any]:
+            stack: List[Any] = []
             while tokens:
                 token = tokens.pop(0)
                 if token == "(":
@@ -54,7 +51,6 @@ class FirestoreQueryBuilder:
                 else:
                     stack.append(self._parse_condition(token))
 
-            # Convert flat expression into nested structure
             while "OR" in stack or "AND" in stack:
                 for i, token in enumerate(stack):
                     if token in ("AND", "OR"):
@@ -65,11 +61,11 @@ class FirestoreQueryBuilder:
                         }
                         stack[i - 1 : i + 2] = [combined]
                         break
-            return stack[0]
+            return cast(Dict[str, Any], stack[0])
 
         return parse(tokens)
 
-    def build_query(self, filter_string):
+    def build_query(self, filter_string: str) -> Dict[str, Any]:
         if not filter_string:
             raise ValueError("Filter string is empty")
 
