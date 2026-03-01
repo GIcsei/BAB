@@ -89,7 +89,7 @@ docker compose --env-file ${ENV_FILE} $COMPOSE_FILES down -v
 # Build
 # -------------------------
 echo -e "${YELLOW}Building image...${NC}"
-docker build --env-file ${ENV_FILE}\
+docker build \
   -f "$DOCKERFILE_PATH" \
   --pull \
   -t "${PROJECT_NAME}:${IMAGE_TAG}_${ENV}" \
