@@ -18,10 +18,10 @@ class _FirebaseProtocol(Protocol):
     api_key: str
     requests: Session
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"Firebase\n\tprojectId={self.projectId}\n\tapi_key=****)"
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.__repr__()
 
 

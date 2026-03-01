@@ -45,7 +45,7 @@ class Settings:
     local_downloads_dir: Optional[str]
     is_testing: bool  # Based on flag, default test values shall be loaded. After implementation, other test params can be removed and set based on this flag.
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.app_job_hour < 0 or self.app_job_hour > 23:
             raise ValueError("app_job_hour must be between 0 and 23")
         if self.app_job_minute < 0 or self.app_job_minute > 59:
