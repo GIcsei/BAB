@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 _SCHED_LOCK_PATH = "/tmp/bab_scheduler.lock"
 _DEFAULT_LEADER_POLL_SECONDS = 5.0
 
+
 class _Job:
     """
     Lightweight descriptor for a per-user scheduled job.
@@ -437,7 +438,9 @@ class Scheduler:
                 try:
                     self._jobs[user_id]._stopped = True
                 except Exception:
-                    logger.debug("Error marking previous job stopped for user=%s", user_id)
+                    logger.debug(
+                        "Error marking previous job stopped for user=%s", user_id
+                    )
 
             job = _Job(
                 user_id,
@@ -451,7 +454,9 @@ class Scheduler:
 
             with self._cond:
                 self._counter += 1
-                heapq.heappush(self._heap, (next_dt.timestamp(), self._counter, user_id))
+                heapq.heappush(
+                    self._heap, (next_dt.timestamp(), self._counter, user_id)
+                )
                 self._start_worker_if_needed()
 
         logger.info("Job scheduled for user=%s", user_id)
