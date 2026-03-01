@@ -3,6 +3,7 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
+from app.core.logging_config import configure_logging
 
 logger = logging.getLogger(__name__)
 _SETTINGS: Optional["Settings"] = None
@@ -50,6 +51,7 @@ class Settings:
             raise ValueError("app_job_hour must be between 0 and 23")
         if self.app_job_minute < 0 or self.app_job_minute > 59:
             raise ValueError("app_job_minute must be between 0 and 59")
+        configure_logging(use_json=self.log_json) # Ensure logging is configured with the correct settings as soon as Settings is initialized
 
 
 def get_settings() -> Settings:
