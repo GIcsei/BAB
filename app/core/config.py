@@ -1,8 +1,8 @@
+import logging
 import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
-import logging
 
 logger = logging.getLogger(__name__)
 _SETTINGS: Optional["Settings"] = None
@@ -10,7 +10,9 @@ _SETTINGS: Optional["Settings"] = None
 
 def _to_bool(value: Optional[str], default: bool = False) -> bool:
     if value is None:
-        logger.debug("Boolean environment variable is not set, using default: %s", default)
+        logger.debug(
+            "Boolean environment variable is not set, using default: %s", default
+        )
         return default
     return value.strip().lower() in ("1", "true", "yes", "on")
 
@@ -19,7 +21,11 @@ def _to_int(value: Optional[str], default: int) -> int:
     try:
         return int(value) if value is not None else default
     except Exception:
-        logger.exception("Failed to convert environment variable to int: %s, using default: %d", value, default)
+        logger.exception(
+            "Failed to convert environment variable to int: %s, using default: %d",
+            value,
+            default,
+        )
         return default
 
 
@@ -27,27 +33,38 @@ def _to_int(value: Optional[str], default: int) -> int:
 class Settings:
     raw_app_user_data_dir: Optional[str]
     app_user_data_dir: Path
-    netbank_base_dir: Path # ? 
-    allow_unsafe_deserialize: bool # TODO: Remove this flag and related code once safe deserialization is implemented
+    netbank_base_dir: Path  # ?
+    allow_unsafe_deserialize: bool  # TODO: Remove this flag and related code once safe deserialization is implemented
     app_job_hour: int
     app_job_minute: int
-    google_application_credentials: Optional[Path] # Same as netbank_master_key, should we merge them?
-    firebase_project_id: Optional[str] # Coming from json file, should we merge it with google_application_credentials?
-    firebase_test_project_id: Optional[str] # Only used for testing, should we merge it with firebase_project_id and google_application_credentials?
-    firebase_api_key: Optional[str] # API key for Firebase, should we merge it with google_application_credentials?
+    google_application_credentials: Optional[
+        Path
+    ]  # Same as netbank_master_key, should we merge them?
+    firebase_project_id: Optional[
+        str
+    ]  # Coming from json file, should we merge it with google_application_credentials?
+    firebase_test_project_id: Optional[
+        str
+    ]  # Only used for testing, should we merge it with firebase_project_id and google_application_credentials?
+    firebase_api_key: Optional[
+        str
+    ]  # API key for Firebase, should we merge it with google_application_credentials?
     log_level: str
     log_file: str
     log_json: bool
-    selenium_downloads_dir: Optional[str] # Not used in the codebase, should we remove it or implement it?
+    selenium_downloads_dir: Optional[
+        str
+    ]  # Not used in the codebase, should we remove it or implement it?
     local_downloads_dir: Optional[str]
     netbank_master_key: Optional[str]
-    is_testing: bool # Based on flag, default test values shall be loaded. After implementation, other test params can be removed and set based on this flag.
+    is_testing: bool  # Based on flag, default test values shall be loaded. After implementation, other test params can be removed and set based on this flag.
 
     def __post_init__(self):
         if self.app_job_hour < 0 or self.app_job_hour > 23:
             raise ValueError("app_job_hour must be between 0 and 23")
         if self.app_job_minute < 0 or self.app_job_minute > 59:
             raise ValueError("app_job_minute must be between 0 and 59")
+
 
 def get_settings() -> Settings:
     global _SETTINGS
@@ -57,7 +74,10 @@ def get_settings() -> Settings:
 
     logger.info("Loading settings from environment variables")
 
-    logger.debug("Raw environment variables: %s", {key: os.getenv(key) for key in os.environ.keys()})
+    logger.debug(
+        "Raw environment variables: %s",
+        {key: os.getenv(key) for key in os.environ.keys()},
+    )
 
     logger.info("Loading directories...")
     raw_app_user_data_dir = os.getenv("APP_USER_DATA_DIR")
@@ -71,8 +91,12 @@ def get_settings() -> Settings:
     netbank_base_dir = (
         Path(raw_app_user_data_dir) if raw_app_user_data_dir else Path.home()
     )
-    logger.info("Directories loaded: app_user_data_dir=%s, selenium_downloads_dir=%s, local_downloads_dir=%s, netbank_base_dir=%s",
-                app_user_data_dir, selenium_downloads_dir, local_downloads_dir, netbank_base_dir
+    logger.info(
+        "Directories loaded: app_user_data_dir=%s, selenium_downloads_dir=%s, local_downloads_dir=%s, netbank_base_dir=%s",
+        app_user_data_dir,
+        selenium_downloads_dir,
+        local_downloads_dir,
+        netbank_base_dir,
     )
 
     logger.info("Loading other settings...")
@@ -81,8 +105,12 @@ def get_settings() -> Settings:
     )
     app_job_hour = _to_int(os.getenv("APP_JOB_HOUR"), 18)
     app_job_minute = _to_int(os.getenv("APP_JOB_MINUTE"), 0)
-    logger.info("Other settings loaded: allow_unsafe_deserialize=%s, app_job_hour=%d, app_job_minute=%d",
-                allow_unsafe_deserialize, app_job_hour, app_job_minute)
+    logger.info(
+        "Other settings loaded: allow_unsafe_deserialize=%s, app_job_hour=%d, app_job_minute=%d",
+        allow_unsafe_deserialize,
+        app_job_hour,
+        app_job_minute,
+    )
 
     logger.info("Loading application credentials...")
     google_application_credentials_env = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
@@ -102,11 +130,14 @@ def get_settings() -> Settings:
 
     log_level = os.getenv("LOG_LEVEL", "INFO").upper()
     log_file = os.getenv("LOG_FILE", "")
-    log_json = _to_bool(os.getenv("LOG_JSON"), False)    
+    log_json = _to_bool(os.getenv("LOG_JSON"), False)
 
-    logger.info("Logging settings loaded: log_level=%s, log_file=%s, log_json=%s",
-                log_level, log_file, log_json
-                )
+    logger.info(
+        "Logging settings loaded: log_level=%s, log_file=%s, log_json=%s",
+        log_level,
+        log_file,
+        log_json,
+    )
     logger.info("Determining testing mode...")
 
     is_testing = any(
@@ -115,7 +146,6 @@ def get_settings() -> Settings:
     )
 
     logger.info("Testing mode: %s", is_testing)
-    
 
     _SETTINGS = Settings(
         raw_app_user_data_dir=raw_app_user_data_dir,

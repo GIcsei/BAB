@@ -17,6 +17,7 @@ from app.core.config import get_settings
 TOKEN_KEYS = ("token", "idToken", "refreshToken", "authorization")
 LOGGER_CONFIGURED = False
 
+
 class TokenRedactingFilter(logging.Filter):
     def filter(self, record: logging.LogRecord) -> bool:
         msg = str(record.getMessage())
