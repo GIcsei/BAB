@@ -3,6 +3,7 @@ import logging
 import os
 import threading
 import time
+from contextlib import suppress
 from datetime import datetime, timedelta
 from datetime import time as dt_time
 from pathlib import Path
@@ -21,8 +22,8 @@ from app.core.config import get_settings
 
 logger = logging.getLogger(__name__)
 
-_SCHED_LOCK_FD = None
-
+_SCHED_LOCK_PATH = "/tmp/bab_scheduler.lock"
+_DEFAULT_LEADER_POLL_SECONDS = 5.0
 
 class _Job:
     """
@@ -74,7 +75,7 @@ class _Job:
         return datetime.now() + timedelta(seconds=secs)
 
     def _perform_task(self) -> None:
-        run_started = datetime.utcnow()
+        run_started = datetime.now()
         self.logger.info("Report task start (utc): %s", run_started.isoformat() + "Z")
 
         try:
@@ -150,7 +151,15 @@ class Scheduler:
     Uses a heap for upcoming runs and a Condition to wake the worker only when needed.
     """
 
-    def __init__(self, firebase_provider: Optional[Callable[[], Any]] = None) -> None:
+    def __init__(
+        self,
+        firebase_provider: Optional[Callable[[], Any]] = None,
+        base_dir: Optional[Path] = None,
+        target_hour: int = 18,
+        target_minute: int = 0,
+        acquire_lock: bool = True,
+        leader_poll_seconds: float = _DEFAULT_LEADER_POLL_SECONDS,
+    ) -> None:
         self._jobs: Dict[str, _Job] = {}
         self._heap: list[Tuple[float, int, str]] = []
         self._counter = 0
@@ -159,7 +168,157 @@ class Scheduler:
         self._running = False
         self._lock = threading.Lock()
         self._firebase_provider = firebase_provider
-        logger.debug("Scheduler initialized")
+
+        self._base_dir = (
+            Path(base_dir) if base_dir is not None else get_settings().app_user_data_dir
+        )
+        self._target_hour = int(target_hour)
+        self._target_minute = int(target_minute)
+        self._acquire_lock = acquire_lock
+        self._leader_poll_seconds = float(leader_poll_seconds)
+
+        self._leader_thread: Optional[threading.Thread] = None
+        self._leader_running = False
+        self._leader_stop_event = threading.Event()
+        self._leader_lock_fd: Optional[int] = None
+        self._is_leader = False
+
+        logger.debug(
+            "Scheduler initialized base_dir=%s target=%02d:%02d acquire_lock=%s",
+            self._base_dir,
+            self._target_hour,
+            self._target_minute,
+            self._acquire_lock,
+        )
+
+    def start(self) -> None:
+        with self._lock:
+            if self._leader_running:
+                return
+            self._leader_running = True
+            self._leader_stop_event.clear()
+            self._leader_thread = threading.Thread(
+                target=self._leader_loop,
+                daemon=True,
+                name="scheduler-leader-monitor",
+            )
+            self._leader_thread.start()
+        logger.info("Scheduler leader monitor started")
+
+    def _leader_loop(self) -> None:
+        logger.debug("Scheduler leader loop entered")
+        while not self._leader_stop_event.is_set():
+            became_leader = self._try_acquire_leadership()
+            if became_leader:
+                self._on_became_leader()
+                self._reconcile_jobs_from_dir(
+                    self._base_dir,
+                    self._target_hour,
+                    self._target_minute,
+                )
+            self._leader_stop_event.wait(timeout=self._leader_poll_seconds)
+        logger.debug("Scheduler leader loop exiting")
+
+    def _try_acquire_leadership(self) -> bool:
+        if self._is_leader:
+            return True
+
+        if not self._acquire_lock:
+            self._is_leader = True
+            logger.info("Scheduler leadership acquired (lock disabled)")
+            return True
+
+        if fcntl is None:
+            logger.warning(
+                "fcntl not available; scheduler leadership lock disabled for this platform"
+            )
+            self._is_leader = True
+            return True
+
+        fcntl_mod = cast(Any, fcntl)
+        try:
+            if self._leader_lock_fd is None:
+                self._leader_lock_fd = os.open(
+                    _SCHED_LOCK_PATH,
+                    os.O_RDWR | os.O_CREAT,
+                    0o600,
+                )
+            fcntl_mod.lockf(
+                self._leader_lock_fd,
+                fcntl_mod.LOCK_EX | fcntl_mod.LOCK_NB,
+            )
+            self._is_leader = True
+            logger.info("Scheduler leadership acquired")
+            return True
+        except OSError:
+            return False
+
+    def _release_leadership(self) -> None:
+        if not self._is_leader:
+            return
+
+        if fcntl is not None and self._leader_lock_fd is not None:
+            fcntl_mod = cast(Any, fcntl)
+            with suppress(OSError):
+                fcntl_mod.lockf(self._leader_lock_fd, fcntl_mod.LOCK_UN)
+
+        if self._leader_lock_fd is not None:
+            with suppress(OSError):
+                os.close(self._leader_lock_fd)
+
+        self._leader_lock_fd = None
+        self._is_leader = False
+        logger.info("Scheduler leadership released")
+
+    def _on_became_leader(self) -> None:
+        if self._running:
+            return
+        logger.info("This process is scheduler leader")
+        self.restore_jobs_from_dir(
+            self._base_dir,
+            self._target_hour,
+            self._target_minute,
+        )
+
+    def _discover_user_dirs(self, base_dir: Path) -> Dict[str, Path]:
+        users: Dict[str, Path] = {}
+        if not base_dir.exists():
+            return users
+
+        for child in base_dir.iterdir():
+            if not child.is_dir():
+                continue
+            if not (child / "credentials.json").exists():
+                continue
+            users[child.name] = child
+
+        return users
+
+    def _reconcile_jobs_from_dir(
+        self,
+        base_dir: Path,
+        target_hour: int,
+        target_minute: int,
+    ) -> None:
+        if not self._is_leader:
+            return
+
+        expected_users = self._discover_user_dirs(base_dir)
+        with self._lock:
+            active_users = set(self._jobs.keys())
+
+        for user_id, user_dir in expected_users.items():
+            if user_id not in active_users:
+                self.start_job_for_user(
+                    user_id,
+                    user_dir,
+                    target_hour,
+                    target_minute,
+                )
+
+        for user_id in active_users:
+            if user_id not in expected_users:
+                self.stop_job_for_user(user_id)
 
     def _start_worker_if_needed(self) -> None:
         with self._cond:
@@ -259,15 +418,27 @@ class Scheduler:
             logger.exception("Failed to create user_dir for user=%s", user_id)
             raise
 
+        if not self._is_leader:
+            logger.info(
+                "Deferring in-process scheduling for user=%s; leader will reconcile from disk",
+                user_id,
+            )
+            return _Job(
+                user_id=user_id,
+                user_dir=user_dir,
+                target_hour=target_hour,
+                target_minute=target_minute,
+                firebase_provider=self._firebase_provider,
+            )
+
         with self._lock:
             if user_id in self._jobs:
                 logger.info("Restarting existing job for user=%s", user_id)
                 try:
                     self._jobs[user_id]._stopped = True
                 except Exception:
-                    logger.debug(
-                        "Error marking previous job stopped for user=%s", user_id
-                    )
+                    logger.debug("Error marking previous job stopped for user=%s", user_id)
+
             job = _Job(
                 user_id,
                 user_dir,
@@ -277,21 +448,34 @@ class Scheduler:
             )
             self._jobs[user_id] = job
             next_dt = job.compute_next_run_dt()
+
             with self._cond:
                 self._counter += 1
-                heapq.heappush(
-                    self._heap, (next_dt.timestamp(), self._counter, user_id)
-                )
+                heapq.heappush(self._heap, (next_dt.timestamp(), self._counter, user_id))
                 self._start_worker_if_needed()
+
         logger.info("Job scheduled for user=%s", user_id)
         return job
 
     def get_next_run_for_user(self, user_id: str) -> Optional[Dict[str, Any]]:
         with self._lock:
             job = self._jobs.get(user_id)
+
         if not job:
-            logger.debug("get_next_run_for_user: no job for user %s", user_id)
-            return None
+            settings = get_settings()
+            user_dir = settings.app_user_data_dir / user_id
+            if not (user_dir / "credentials.json").exists():
+                logger.debug("get_next_run_for_user: no job for user %s", user_id)
+                return None
+
+            job = _Job(
+                user_id=user_id,
+                user_dir=user_dir,
+                target_hour=settings.app_job_hour,
+                target_minute=settings.app_job_minute,
+                firebase_provider=self._firebase_provider,
+            )
+
         try:
             secs = job._seconds_until_next_target()
             ts_ms = job.next_run_epoch_ms()
@@ -315,7 +499,17 @@ class Scheduler:
         return False
 
     def stop_all(self) -> None:
-        logger.info("Stopping all jobs (count=%d)", len(self._jobs))
+        logger.info("Stopping scheduler and all jobs (count=%d)", len(self._jobs))
+
+        with self._lock:
+            self._leader_running = False
+        self._leader_stop_event.set()
+
+        if self._leader_thread and self._leader_thread.is_alive():
+            self._leader_thread.join(timeout=2.0)
+
+        self._release_leadership()
+
         with self._lock:
             for job in self._jobs.values():
                 try:
@@ -323,30 +517,33 @@ class Scheduler:
                 except Exception:
                     logger.debug("Failed to mark job stopped")
             self._jobs.clear()
+
         with self._cond:
             self._running = False
             self._cond.notify_all()
+
         if self._worker and self._worker.is_alive():
             self._worker.join(timeout=2.0)
-        logger.debug("All jobs stopped and worker joined")
+
+        logger.debug("Scheduler stopped")
 
     def restore_jobs_from_dir(
-        self, base_dir: Path, target_hour: int = 18, target_minute: int = 0
+        self,
+        base_dir: Path,
+        target_hour: int = 18,
+        target_minute: int = 0,
     ) -> None:
+        if not self._is_leader:
+            logger.debug("Skipping restore_jobs_from_dir because process is not leader")
+            return
+
         base_dir = Path(base_dir)
         logger.info("Restoring jobs from directory: %s", str(base_dir))
         if not base_dir.exists():
             logger.debug("Base directory does not exist: %s", str(base_dir))
             return
-        for child in base_dir.iterdir():
-            if not child.is_dir():
-                logger.debug("Skipping non-directory entry: %s", child)
-                continue
-            cred_path = child / "credentials.json"
-            if not cred_path.exists():
-                logger.debug("Skipping folder without credentials.json: %s", child)
-                continue
-            user_id = child.name
+
+        for user_id, child in self._discover_user_dirs(base_dir).items():
             try:
                 logger.info("Restoring job for user=%s from %s", user_id, child)
                 self.start_job_for_user(user_id, child, target_hour, target_minute)
@@ -388,26 +585,17 @@ class Scheduler:
             return False
 
 
-def _acquire_scheduler_lock() -> bool:
-    global _SCHED_LOCK_FD
-    if fcntl is None:
-        return False
-    fcntl_mod = cast(Any, fcntl)
-    try:
-        _SCHED_LOCK_FD = os.open(
-            "/tmp/bab_scheduler.lock", os.O_RDWR | os.O_CREAT, 0o600
-        )
-        fcntl_mod.lockf(_SCHED_LOCK_FD, fcntl_mod.LOCK_EX | fcntl_mod.LOCK_NB)
-        return True
-    except OSError:
-        return False
-
-
 def create_scheduler(
     firebase_provider: Optional[Callable[[], Any]] = None,
     acquire_lock: bool = True,
 ) -> Optional["Scheduler"]:
-    if acquire_lock and not _acquire_scheduler_lock():
-        logger.warning("Scheduler lock not acquired; skipping scheduler creation")
-        return None
-    return Scheduler(firebase_provider=firebase_provider)
+    settings = get_settings()
+    scheduler = Scheduler(
+        firebase_provider=firebase_provider,
+        base_dir=settings.app_user_data_dir,
+        target_hour=settings.app_job_hour,
+        target_minute=settings.app_job_minute,
+        acquire_lock=acquire_lock,
+    )
+    scheduler.start()
+    return scheduler
