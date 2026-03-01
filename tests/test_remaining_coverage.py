@@ -107,6 +107,7 @@ def test_start_job_chmod_fails(tmp_path):
     from app.services.scheduler import Scheduler
 
     sched = Scheduler()
+    sched._is_leader = True
     sched._start_worker_if_needed = MagicMock()
 
     with patch(

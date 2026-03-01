@@ -1,4 +1,5 @@
 import logging
+import os
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
@@ -33,8 +34,8 @@ class Firebase:
         if config is None:
             return
 
-        self.projectId = config.get("project_id")
-        self.api_key = config.get("apiKey")
+        self.projectId = config.get("project_id") or config.get("projectId")
+        self.api_key = config.get("apiKey") or os.environ.get("FIREBASE_API_KEY")
         if not self.api_key:
             raise ValueError("FIREBASE_API_KEY is not configured")
 

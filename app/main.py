@@ -2,7 +2,7 @@
 
 import logging
 from contextlib import asynccontextmanager
-from typing import AsyncIterator, Awaitable, Callable, Dict
+from typing import Any, AsyncIterator, Awaitable, Callable, Dict, cast
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
@@ -58,10 +58,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     try:
         initialize_firebase_admin()
-
-        firebase = initialize_app(
-            config=get_credential(as_dict=True),
-        )
+        creds = get_credential(as_dict=True)
+        if creds is None:
+            raise ValueError("Failed to obtain Firebase credentials")
+        firebase = initialize_app(config=cast(Dict[str, Any], creds))
         app.state.firebase = firebase
 
         scheduler = create_scheduler(firebase_provider=lambda: app.state.firebase)
