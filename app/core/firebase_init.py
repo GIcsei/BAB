@@ -2,10 +2,11 @@ import logging
 import os
 import threading
 from pathlib import Path
-from typing import Optional
+from typing import Dict, Optional, Union
 
 import firebase_admin
 from firebase_admin import credentials
+from app.core.config import get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -13,7 +14,7 @@ _firebase_app: Optional[firebase_admin.App] = None
 _project_id: Optional[str] = None
 _init_lock = threading.Lock()
 _TEST_PROJECT_ID = "test-project"
-
+_settings = None
 
 def is_testing_env() -> bool:
     return bool(
@@ -24,7 +25,9 @@ def is_testing_env() -> bool:
 
 
 def initialize_firebase_admin(force: bool = False) -> Optional[firebase_admin.App]:
-    global _firebase_app, _project_id
+    global _firebase_app, _project_id, _settings
+    if _settings is None:
+        _settings = get_settings()
     if _firebase_app and not force:
         logger.debug("Firebase admin already initialized, returning existing app")
         return _firebase_app
@@ -50,28 +53,25 @@ def initialize_firebase_admin(force: bool = False) -> Optional[firebase_admin.Ap
             logger.debug("Reusing existing firebase-admin app")
             return _firebase_app
 
-        cred_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
-        if not cred_path or not Path(cred_path).is_file():
-            raise RuntimeError(
-                "GOOGLE_APPLICATION_CREDENTIALS must point to a readable service account JSON file"
-            )
-
-        cred = credentials.Certificate(cred_path)
+        cred = get_credential()
         _firebase_app = firebase_admin.initialize_app(cred)
-        _project_id = cred.project_id or os.getenv("FIREBASE_PROJECT_ID")
+        _project_id = cred.project_id or _settings.firebase_project_id
         logger.info("firebase-admin initialized with project_id=%s", _project_id)
         return _firebase_app
 
 
 def get_project_id(allow_default: bool = False) -> str:
-    global _project_id
+    global _project_id, _settings
     if _project_id:
         return _project_id
 
+    if _settings is None:
+        _settings = get_settings()
+
     if allow_default:
         fallback = (
-            os.getenv("FIREBASE_PROJECT_ID")
-            or os.getenv("FIREBASE_TEST_PROJECT_ID")
+            _settings.firebase_project_id
+            or _settings.firebase_test_project_id
             or _TEST_PROJECT_ID
         )
         _project_id = fallback
@@ -81,3 +81,21 @@ def get_project_id(allow_default: bool = False) -> str:
     if _project_id:
         return _project_id
     raise RuntimeError("Firebase not initialized; project_id unavailable")
+
+def get_credential(as_dict : bool = False) -> Union[credentials.Certificate, Dict[str, str]]:
+    if is_testing_env():
+        logger.info("Skipping credential loading in test mode")
+        return None
+    settings = get_settings()
+    cred_path = settings.google_application_credentials
+    if not cred_path or not Path(cred_path).is_file():
+        raise RuntimeError(
+            "GOOGLE_APPLICATION_CREDENTIALS must point to a readable service account JSON file"
+        )
+    if not as_dict:
+        return credentials.Certificate(cred_path)
+
+    import json
+    with open(cred_path, encoding='utf-8') as json_file:
+        json_data = json.load(json_file)
+        return json_data

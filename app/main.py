@@ -12,7 +12,7 @@ from app.core.config import get_settings
 from app.core.error_mapping import exception_to_http, get_error_response
 from app.core.exceptions import AppException
 from app.core.firebase_init import (
-    get_project_id,
+    get_credential,
     initialize_firebase_admin,
     is_testing_env,
 )
@@ -57,10 +57,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         initialize_firebase_admin()
 
         firebase = initialize_app(
-            {
-                "projectId": get_project_id(allow_default=True),
-                "apiKey": settings.firebase_api_key,
-            }
+            config = get_credential(as_dict=True),
         )
         app.state.firebase = firebase
 
