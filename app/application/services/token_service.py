@@ -107,6 +107,7 @@ class TokenRegistry:
 # TODO: Consider encrypting tokens at rest if they contain sensitive information, especially if the token files are stored in a shared or less secure environment. This would add an extra layer of security to protect user credentials.
 # TODO: Implement notidication or callback mechanism to alert the application when a token is refreshed or expires, so that the application can react accordingly (e.g., by prompting the user to re-authenticate or by updating in-memory state).
 
+
 class TokenService:
     def __init__(self, api_key: str, requests_session: Session) -> None:
         self._registry = TokenRegistry()

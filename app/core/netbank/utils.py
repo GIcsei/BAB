@@ -23,7 +23,9 @@ def extract_date_from_filename(filename: str) -> Optional[date]:
     base = path.basename(filename)
     logger.debug("Extracting date from filename: %s", base)
     match = re.search(r"(\d{8})_\d{4}", base)
-    logger.debug("Regex match for date extraction: %s", match.group(1) if match else "None")
+    logger.debug(
+        "Regex match for date extraction: %s", match.group(1) if match else "None"
+    )
     if match:
         try:
             return datetime.strptime(match.group(1), "%Y%m%d").date()
@@ -51,6 +53,7 @@ def get_all_files_from_folder(folder: Optional[str], extension: str) -> List[str
 
 class reportFormatter:
     """Class to load, format, and save netbank report data from Excel files."""
+
     FOLDER = r"D:\Erste"
     fileName = r"Riport.xlsx"
     COLUMNS = (
