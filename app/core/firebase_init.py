@@ -6,6 +6,7 @@ from typing import Dict, Optional, Union
 
 import firebase_admin
 from firebase_admin import credentials
+
 from app.core.config import get_settings
 
 logger = logging.getLogger(__name__)
@@ -15,6 +16,7 @@ _project_id: Optional[str] = None
 _init_lock = threading.Lock()
 _TEST_PROJECT_ID = "test-project"
 _settings = None
+
 
 def is_testing_env() -> bool:
     return bool(
@@ -82,7 +84,10 @@ def get_project_id(allow_default: bool = False) -> str:
         return _project_id
     raise RuntimeError("Firebase not initialized; project_id unavailable")
 
-def get_credential(as_dict : bool = False) -> Union[credentials.Certificate, Dict[str, str]]:
+
+def get_credential(
+    as_dict: bool = False,
+) -> Union[credentials.Certificate, Dict[str, str]]:
     if is_testing_env():
         logger.info("Skipping credential loading in test mode")
         return None
@@ -96,6 +101,7 @@ def get_credential(as_dict : bool = False) -> Union[credentials.Certificate, Dic
         return credentials.Certificate(cred_path)
 
     import json
-    with open(cred_path, encoding='utf-8') as json_file:
+
+    with open(cred_path, encoding="utf-8") as json_file:
         json_data = json.load(json_file)
         return json_data
