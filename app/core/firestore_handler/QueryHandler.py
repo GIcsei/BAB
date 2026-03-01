@@ -3,8 +3,6 @@ from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
 from app.application.services.token_service import TokenService
-from app.core.config import get_settings
-from app.core.firebase_init import get_project_id
 from app.core.firestore_handler.FirestoreService import FirestoreService
 from app.core.firestore_handler.User import Auth
 from app.infrastructure.firebase.auth import FirebaseAuthAdapter
@@ -35,9 +33,8 @@ class Firebase:
         if config is None:
             return
 
-        settings = get_settings()
-        self.projectId = config.get("projectId") or get_project_id(allow_default=True)
-        self.api_key = config.get("apiKey") or settings.firebase_api_key
+        self.projectId = config.get("projectId")
+        self.api_key = config.get("apiKey")
         if not self.api_key:
             raise ValueError("FIREBASE_API_KEY is not configured")
 

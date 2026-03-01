@@ -15,7 +15,6 @@ _firebase_app: Optional[firebase_admin.App] = None
 _project_id: Optional[str] = None
 _init_lock = threading.Lock()
 _TEST_PROJECT_ID = "test-project"
-_settings = None
 
 
 def is_testing_env() -> bool:
@@ -27,9 +26,7 @@ def is_testing_env() -> bool:
 
 
 def initialize_firebase_admin(force: bool = False) -> Optional[firebase_admin.App]:
-    global _firebase_app, _project_id, _settings
-    if _settings is None:
-        _settings = get_settings()
+    global _firebase_app, _project_id
     if _firebase_app and not force:
         logger.debug("Firebase admin already initialized, returning existing app")
         return _firebase_app
@@ -57,24 +54,20 @@ def initialize_firebase_admin(force: bool = False) -> Optional[firebase_admin.Ap
 
         cred = get_credential()
         _firebase_app = firebase_admin.initialize_app(cred)
-        _project_id = cred.project_id or _settings.firebase_project_id
+        _project_id = cred.project_id
         logger.info("firebase-admin initialized with project_id=%s", _project_id)
         return _firebase_app
 
 
 def get_project_id(allow_default: bool = False) -> str:
-    global _project_id, _settings
+    global _project_id
     if _project_id:
         return _project_id
 
-    if _settings is None:
-        _settings = get_settings()
-
     if allow_default:
         fallback = (
-            _settings.firebase_project_id
-            or _settings.firebase_test_project_id
-            or _TEST_PROJECT_ID
+            _TEST_PROJECT_ID
+            or None # Placeholder for other default
         )
         _project_id = fallback
         return _project_id
