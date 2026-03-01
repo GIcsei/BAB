@@ -19,21 +19,24 @@ class HealthStatus:
             "firebase": {"ready": False, "error": None},
             "scheduler": {"ready": False, "error": None},
             "tokens": {"ready": False, "error": None},
+            "other_dependencies": {"ready": False, "error": None},
         }
 
     def mark_startup_complete(self) -> None:
         """Mark startup phase as complete."""
         self.is_ready = True
-        self.startup_complete_time = datetime.utcnow()
+        self.startup_complete_time = datetime.now()
         logger.info("Application startup complete and ready to serve requests")
 
     def mark_component_ready(self, component: str, error: Optional[str] = None) -> None:
         """Mark a component as ready or failed."""
-        if component in self.components:
-            self.components[component]["ready"] = error is None
-            self.components[component]["error"] = error
-            status = "ready" if error is None else f"failed ({error})"
-            logger.info("Component '%s' is %s", component, status)
+        if component not in self.components:
+            logger.warning("Unknown component '%s'", component)
+            return
+        self.components[component]["ready"] = error is None
+        self.components[component]["error"] = error
+        status = "ready" if error is None else f"failed ({error})"
+        logger.info("Component '%s' is %s", component, status)
 
     def get_status(self) -> Dict[str, Any]:
         """Return health status for /health endpoint."""

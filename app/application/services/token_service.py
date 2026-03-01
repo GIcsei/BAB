@@ -1,3 +1,12 @@
+"""
+Service for managing user authentication tokens, including persistence and refresh logic.
+Tokens are stored in-memory for quick access and persisted to disk for durability across restarts.
+The TokenService class provides methods to authenticate users, save and load tokens, refresh tokens, and manage active user sessions.
+In case of a server restart, the service can load existing tokens from a specified directory and refresh them if needed.
+Tokens are expected to be in a JSON format containing at least an "idToken" and "refreshToken" for each user, along with optional metadata like "email".
+Tokens refreshed only if there is a valid communication with the client, otherwise existing token is lost. The user can still log in again to generate a new token. This design allows for a balance between security (by refreshing tokens) and usability (by not invalidating existing tokens if refresh fails).
+"""
+
 import asyncio
 import json
 import logging
@@ -90,6 +99,13 @@ class TokenRegistry:
                     return uid
         return None
 
+
+# TODO: Consider adding token expiration handling and proactive refresh logic based on token lifetimes, if such information is available in the token data.
+# TODO: Persistent data should contain last time of refresh and token expiration time, so that we can proactively refresh tokens before they expire, rather than waiting for a failed request to trigger a refresh. This would improve user experience by reducing the likelihood of encountering expired tokens during normal usage.
+# TODO: Implement a cleanup mechanism to remove tokens that have not been refreshed for a certain period, to prevent the registry from growing indefinitely with stale tokens.
+# TODO: Replace firestore_handler with admin sdk.
+# TODO: Consider encrypting tokens at rest if they contain sensitive information, especially if the token files are stored in a shared or less secure environment. This would add an extra layer of security to protect user credentials.
+# TODO: Implement notidication or callback mechanism to alert the application when a token is refreshed or expires, so that the application can react accordingly (e.g., by prompting the user to re-authenticate or by updating in-memory state).
 
 class TokenService:
     def __init__(self, api_key: str, requests_session: Session) -> None:

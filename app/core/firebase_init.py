@@ -26,6 +26,7 @@ def is_testing_env() -> bool:
 def initialize_firebase_admin(force: bool = False) -> Optional[firebase_admin.App]:
     global _firebase_app, _project_id
     if _firebase_app and not force:
+        logger.debug("Firebase admin already initialized, returning existing app")
         return _firebase_app
 
     if is_testing_env():
@@ -38,9 +39,6 @@ def initialize_firebase_admin(force: bool = False) -> Optional[firebase_admin.Ap
         return None
 
     with _init_lock:
-        if _firebase_app and not force:
-            return _firebase_app
-
         if firebase_admin._apps:
             _firebase_app = firebase_admin.get_app()
             if not _project_id:

@@ -22,6 +22,12 @@ from app.core.logging_config import configure_logging
 from app.routers import data_plot, login, netbank_credentials
 from app.services.scheduler import create_scheduler
 
+async def stop_scheduler_on_shutdown(app: FastAPI) -> None:
+    scheduler = getattr(app.state, "scheduler", None)
+    if scheduler:
+        await scheduler.stop_all()
+        logger = logging.getLogger(__name__)
+        logger.info("Scheduler stopped on application shutdown")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -36,19 +42,18 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     logger.info("=" * 60)
     logger.info("Starting application startup sequence")
     logger.info("=" * 60)
-
+    if is_testing_env():
+        logger.info(
+            "Test environment detected; skipping Firebase/token initialization"
+        )
+        health.mark_component_ready("scheduler", "skipped_in_tests")
+        health.mark_component_ready("tokens", "skipped_in_tests")
+        health.mark_component_ready("firebase", "skipped_in_tests")
+        health.mark_startup_complete()
+        yield
+        return
+    
     try:
-        if is_testing_env():
-            logger.info(
-                "Test environment detected; skipping Firebase/token initialization"
-            )
-            health.mark_component_ready("scheduler", "skipped_in_tests")
-            health.mark_component_ready("tokens", "skipped_in_tests")
-            health.mark_component_ready("firebase", "skipped_in_tests")
-            health.mark_startup_complete()
-            yield
-            return
-
         initialize_firebase_admin()
 
         firebase = initialize_app(
@@ -100,10 +105,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         logger.critical("Startup failed; application will not accept requests: %s", exc)
         raise
     finally:
-        scheduler = getattr(app.state, "scheduler", None)
-        if scheduler:
-            scheduler.stop_all()
-            logger.info("Scheduler stopped")
+        await stop_scheduler_on_shutdown(app)
 
 
 app = FastAPI(title="Bank analysis backend", lifespan=lifespan)
