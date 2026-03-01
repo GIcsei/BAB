@@ -33,19 +33,15 @@ def _to_int(value: Optional[str], default: int) -> int:
 class Settings:
     raw_app_user_data_dir: Optional[str]
     app_user_data_dir: Path
-    netbank_base_dir: Path # TODO: Should be used to security store netbank credentials and keys instead of app_user_data_dir
+    netbank_base_dir: Path  # TODO: Should be used to security store netbank credentials and keys instead of app_user_data_dir
     allow_unsafe_deserialize: bool  # TODO: Remove this flag and related code once safe deserialization is implemented
     app_job_hour: int
     app_job_minute: int
-    google_application_credentials: Optional[
-        Path
-    ]
+    google_application_credentials: Optional[Path]
     log_level: str
     log_file: str
     log_json: bool
-    selenium_downloads_dir: Optional[
-        str
-    ]
+    selenium_downloads_dir: Optional[str]
     local_downloads_dir: Optional[str]
     is_testing: bool  # Based on flag, default test values shall be loaded. After implementation, other test params can be removed and set based on this flag.
 
