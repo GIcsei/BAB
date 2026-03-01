@@ -52,7 +52,7 @@ class FirestoreService:
         self.api_key = firebase.api_key
         self.requests = firebase.requests
         self.logger = logging.getLogger(__name__)
-		self.logger.debug("Service initialized with data:\n%s", self.firebase)
+        self.logger.debug("Service initialized with data:\n%s", self.firebase)
 
     def _build_headers(self, token: Optional[Dict[str, Any]] = None) -> Dict[str, str]:
         headers = {"Content-Type": "application/json; charset=UTF-8"}
@@ -119,7 +119,7 @@ class FirestoreService:
     ) -> list[Dict[str, Any]]:
         url = self._build_url("runQuery")
         query_payload = FirestoreQueryBuilder(collection).build_query(query_string)
-		self.logger.debug("Sending request: %s", query_payload)
+        self.logger.debug("Sending request: %s", query_payload)
         response = self.requests.post(
             url, headers=self._build_headers(token), data=json.dumps(query_payload)
         )
