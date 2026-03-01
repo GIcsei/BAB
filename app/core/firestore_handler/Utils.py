@@ -106,9 +106,9 @@ class Stream:
                 self.stream_handler(msg_data)
 
     def close(self) -> "Stream":
+        while self.sse is None:
+            time.sleep(0.001)
         sse = self.sse
-        if sse is None:
-            return self
         while not hasattr(sse, "resp"):
             time.sleep(0.001)
         sse.running = False

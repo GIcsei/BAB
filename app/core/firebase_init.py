@@ -65,7 +65,7 @@ def get_project_id(allow_default: bool = False) -> str:
         return _project_id
 
     if allow_default:
-        fallback = _TEST_PROJECT_ID or None  # Placeholder for other default
+        fallback = os.environ.get("FIREBASE_PROJECT_ID", _TEST_PROJECT_ID)
         _project_id = fallback
         return _project_id
 
@@ -83,6 +83,9 @@ def get_credential(
         return None
     settings = get_settings()
     cred_path = settings.google_application_credentials
+    if not cred_path:
+        fallback = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+        cred_path = Path(fallback) if fallback else None
     if not cred_path or not Path(cred_path).is_file():
         raise RuntimeError(
             "GOOGLE_APPLICATION_CREDENTIALS must point to a readable service account JSON file"

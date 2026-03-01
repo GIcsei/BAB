@@ -62,15 +62,12 @@ def login_user(
 
         cred_path = user_dir / "credentials.json"
         refresh_token = user.get("refreshToken")
-        user_id_value = user.get("localId") or user.get("user_id") or user.get("userId")
         if not isinstance(refresh_token, str):
             raise ValueError("No refreshToken returned from authentication provider.")
-        if not isinstance(user_id_value, str):
-            raise ValueError("No userId returned from authentication provider.")
         token_copy: Dict[str, str] = {
             "idToken": id_token,
             "refreshToken": refresh_token,
-            "userId": user_id_value,
+            "userId": user_id,
             "email": data.email,
         }
         with open(cred_path, "w", encoding="utf-8") as file:

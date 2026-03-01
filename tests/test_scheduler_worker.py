@@ -112,6 +112,7 @@ def test_start_job_mkdir_failure(tmp_path):
 def test_start_job_restart_marking_stopped_exception(tmp_path):
     """start_job_for_user should handle exception when marking old job stopped."""
     sched = Scheduler()
+    sched._is_leader = True
     sched._start_worker_if_needed = MagicMock()
 
     # Create old job with a property that raises on attribute set
@@ -134,6 +135,7 @@ def test_start_job_restart_marking_stopped_exception(tmp_path):
 def test_get_next_run_exception_returns_none(tmp_path):
     """get_next_run_for_user should return None if _seconds_until_next_target raises."""
     sched = Scheduler()
+    sched._is_leader = True
     sched._start_worker_if_needed = MagicMock()
 
     user_dir = tmp_path / "u1"
@@ -190,6 +192,7 @@ def test_stop_all_joins_worker_thread(tmp_path):
 def test_restore_jobs_skips_files(tmp_path):
     """restore_jobs_from_dir should skip regular files."""
     sched = Scheduler()
+    sched._is_leader = True
     sched._start_worker_if_needed = MagicMock()
 
     # Create a file (not a directory) in base_dir
@@ -211,6 +214,7 @@ def test_restore_jobs_skips_files(tmp_path):
 def test_restore_jobs_handles_start_failure(tmp_path):
     """restore_jobs_from_dir should continue if one job fails to start."""
     sched = Scheduler()
+    sched._is_leader = True
     sched._start_worker_if_needed = MagicMock()
 
     # Two user dirs with credentials

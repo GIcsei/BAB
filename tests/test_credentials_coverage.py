@@ -58,7 +58,7 @@ def test_ensure_key_fdopen_failure_falls_back_to_open(tmp_path, monkeypatch):
 
 def test_save_with_default_config_dir(tmp_path, monkeypatch):
     """save_user_credentials uses default config dir when none provided."""
-    monkeypatch.setattr(creds_mod, "_DEFAULT_CONFIG_DIR", str(tmp_path))
+    monkeypatch.setattr(creds_mod, "_get_default_config_dir", lambda: str(tmp_path))
     # Should not raise
     save_user_credentials("u1", "user", "ACC1", "pass")
     # Verify the file was created
@@ -95,7 +95,7 @@ def test_save_fdopen_failure_falls_back_to_open(tmp_path, monkeypatch):
 
 def test_load_with_default_config_dir_returns_none(tmp_path, monkeypatch):
     """load_user_credentials returns None when user file doesn't exist in default dir."""
-    monkeypatch.setattr(creds_mod, "_DEFAULT_CONFIG_DIR", str(tmp_path))
+    monkeypatch.setattr(creds_mod, "_get_default_config_dir", lambda: str(tmp_path))
     result = load_user_credentials("nonexistent_user")
     assert result is None
 
@@ -231,7 +231,7 @@ def test_load_json_parse_error_after_decrypt(tmp_path):
 
 def test_delete_with_default_config_dir(tmp_path, monkeypatch):
     """delete_user_credentials works with default config dir."""
-    monkeypatch.setattr(creds_mod, "_DEFAULT_CONFIG_DIR", str(tmp_path))
+    monkeypatch.setattr(creds_mod, "_get_default_config_dir", lambda: str(tmp_path))
     save_user_credentials("u_del", "user", "ACC1", "pw", config_dir=str(tmp_path))
     with creds_mod._CACHE_LOCK:
         creds_mod._CREDENTIAL_CACHE.clear()
