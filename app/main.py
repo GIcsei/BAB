@@ -33,10 +33,11 @@ async def stop_scheduler_on_shutdown(app: FastAPI) -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    configure_logging()
+    configure_logging() # Basic logging configuration before initializing components
     logger = logging.getLogger(__name__)
     health = get_health()
     settings = get_settings()
+    configure_logging(use_json = settings.log_json) # Reconfigure logging with JSON format if enabled in settings
 
     app.state.scheduler = None
     app.state.firebase = None

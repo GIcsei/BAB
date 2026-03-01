@@ -4,8 +4,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
-from app.core.logging_config import configure_logging
-
 logger = logging.getLogger(__name__)
 _SETTINGS: Optional["Settings"] = None
 
@@ -144,7 +142,4 @@ def get_settings() -> Settings:
         local_downloads_dir=local_downloads_dir,
         is_testing=is_testing,
     )
-    configure_logging(
-        use_json=_SETTINGS.log_json
-    )  # Ensure logging is configured with the correct settings as soon as Settings is initialized
     return _SETTINGS
