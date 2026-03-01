@@ -52,9 +52,6 @@ class Settings:
             raise ValueError("app_job_hour must be between 0 and 23")
         if self.app_job_minute < 0 or self.app_job_minute > 59:
             raise ValueError("app_job_minute must be between 0 and 59")
-        configure_logging(
-            use_json=self.log_json
-        )  # Ensure logging is configured with the correct settings as soon as Settings is initialized
 
 
 def get_settings() -> Settings:
@@ -147,4 +144,7 @@ def get_settings() -> Settings:
         local_downloads_dir=local_downloads_dir,
         is_testing=is_testing,
     )
+    configure_logging(
+        use_json=_SETTINGS.log_json
+    )  # Ensure logging is configured with the correct settings as soon as Settings is initialized
     return _SETTINGS
