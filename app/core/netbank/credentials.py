@@ -16,13 +16,13 @@ except Exception as exc:
 from app.core.config import get_settings
 
 logger = logging.getLogger(__name__)
-settings = get_settings()
 
 _CLASS_TAG = "app.core.netbank.getReport.ErsteNetBroker"
 
-_DEFAULT_CONFIG_DIR = os.path.join(
-    settings.raw_app_user_data_dir or os.path.expanduser("~"), "netbank"
-)
+
+def _get_default_config_dir() -> str:
+    return str(get_settings().netbank_base_dir)
+
 
 # In-memory cache for decrypted credentials for the running process.
 _CREDENTIAL_CACHE: Dict[str, Dict[str, str]] = {}
@@ -110,7 +110,7 @@ def save_user_credentials(
         raise ValueError("user_id is required")
 
     if config_dir is None:
-        config_dir = _DEFAULT_CONFIG_DIR
+        config_dir = _get_default_config_dir()
     _ensure_config_dir(config_dir)
 
     key = _ensure_key(config_dir)
@@ -175,7 +175,7 @@ def load_user_credentials(
             return dict(cached)
 
     if config_dir is None:
-        config_dir = _DEFAULT_CONFIG_DIR
+        config_dir = _get_default_config_dir()
 
     cred_path = _cred_path_for_dir(config_dir, user_id)
     if not os.path.exists(cred_path):
@@ -261,7 +261,7 @@ def delete_user_credentials(user_id: str, config_dir: Optional[str] = None) -> b
     if not user_id:
         return False
     if config_dir is None:
-        config_dir = _DEFAULT_CONFIG_DIR
+        config_dir = _get_default_config_dir()
     cred_path = _cred_path_for_dir(config_dir, user_id)
     try:
         if os.path.exists(cred_path):

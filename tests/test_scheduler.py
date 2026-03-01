@@ -61,6 +61,7 @@ def test_job_stopped_flag(tmp_path):
 def sched(tmp_path):
     """Fresh scheduler instance without starting the worker thread."""
     s = Scheduler()
+    s._is_leader = True  # tests don't use leadership locking
     # Patch _start_worker_if_needed to prevent thread start in tests
     s._start_worker_if_needed = MagicMock()
     yield s

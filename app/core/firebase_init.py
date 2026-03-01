@@ -2,7 +2,7 @@ import logging
 import os
 import threading
 from pathlib import Path
-from typing import Dict, Optional, Union
+from typing import Any, Dict, Optional, Union, cast
 
 import firebase_admin
 from firebase_admin import credentials
@@ -52,7 +52,7 @@ def initialize_firebase_admin(force: bool = False) -> Optional[firebase_admin.Ap
             logger.debug("Reusing existing firebase-admin app")
             return _firebase_app
 
-        cred = get_credential()
+        cred = cast(credentials.Certificate, get_credential())
         _firebase_app = firebase_admin.initialize_app(cred)
         _project_id = cred.project_id
         logger.info("firebase-admin initialized with project_id=%s", _project_id)
@@ -65,7 +65,7 @@ def get_project_id(allow_default: bool = False) -> str:
         return _project_id
 
     if allow_default:
-        fallback = _TEST_PROJECT_ID or None  # Placeholder for other default
+        fallback = os.environ.get("FIREBASE_PROJECT_ID", _TEST_PROJECT_ID)
         _project_id = fallback
         return _project_id
 
@@ -77,22 +77,25 @@ def get_project_id(allow_default: bool = False) -> str:
 
 def get_credential(
     as_dict: bool = False,
-) -> Union[credentials.Certificate, Dict[str, str]]:
+) -> Union[credentials.Certificate, Dict[str, Any], None]:
     if is_testing_env():
         logger.info("Skipping credential loading in test mode")
         return None
     settings = get_settings()
     cred_path = settings.google_application_credentials
+    if not cred_path:
+        fallback = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+        cred_path = Path(fallback) if fallback else None
     if not cred_path or not Path(cred_path).is_file():
         raise RuntimeError(
             "GOOGLE_APPLICATION_CREDENTIALS must point to a readable service account JSON file"
         )
     if not as_dict:
-        return credentials.Certificate(cred_path)
+        return credentials.Certificate(str(cred_path))
 
     import json
 
     with open(cred_path, encoding="utf-8") as json_file:
         json_data = json.load(json_file)
         logger.debug("Credential JSON loaded successfully from %s", cred_path)
-        return json_data
+        return cast(Dict[str, Any], json_data)

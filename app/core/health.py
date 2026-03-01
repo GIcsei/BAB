@@ -19,7 +19,6 @@ class HealthStatus:
             "firebase": {"ready": False, "error": None},
             "scheduler": {"ready": False, "error": None},
             "tokens": {"ready": False, "error": None},
-            "other_dependencies": {"ready": False, "error": None},
         }
 
     def mark_startup_complete(self) -> None:

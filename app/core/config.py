@@ -33,8 +33,8 @@ def _to_int(value: Optional[str], default: int) -> int:
 class Settings:
     raw_app_user_data_dir: Optional[str]
     app_user_data_dir: Path
-    netbank_base_dir: Path  # TODO: Should be used to security store netbank credentials and keys instead of app_user_data_dir
-    allow_unsafe_deserialize: bool  # TODO: Remove this flag and related code once safe deserialization is implemented
+    netbank_base_dir: Path
+    allow_unsafe_deserialize: bool
     app_job_hour: int
     app_job_minute: int
     google_application_credentials: Optional[Path]
@@ -45,7 +45,7 @@ class Settings:
     local_downloads_dir: Optional[str]
     is_testing: bool  # Based on flag, default test values shall be loaded. After implementation, other test params can be removed and set based on this flag.
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.app_job_hour < 0 or self.app_job_hour > 23:
             raise ValueError("app_job_hour must be between 0 and 23")
         if self.app_job_minute < 0 or self.app_job_minute > 59:
@@ -75,7 +75,9 @@ def get_settings() -> Settings:
     selenium_downloads_dir = os.getenv("SELENIUM_DOWNLOADS_DIR")
     local_downloads_dir = os.getenv("LOCAL_DOWNLOADS_DIR")
     netbank_base_dir = (
-        Path(raw_app_user_data_dir) if raw_app_user_data_dir else Path.home()
+        Path(raw_app_user_data_dir) / "netbank"
+        if raw_app_user_data_dir
+        else Path.home() / "netbank"
     )
     logger.info(
         "Directories loaded: app_user_data_dir=%s, selenium_downloads_dir=%s, local_downloads_dir=%s, netbank_base_dir=%s",

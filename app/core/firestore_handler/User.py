@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from typing import Any, Dict, Optional, cast
 
 import jwt
+import requests
 from Crypto.PublicKey import RSA
 from requests import Session
 
@@ -15,12 +16,12 @@ class Auth:
     def __init__(
         self,
         api_key: str,
-        requests_session: Session,
+        requests_session: Optional[Session] = None,
         credentials: Optional[Any] = None,
     ) -> None:
         self.api_key = api_key
         self.current_user: Optional[Dict[str, Any]] = None
-        self.requests = requests_session
+        self.requests = requests_session if requests_session is not None else requests
         self.credentials = credentials
 
     def sign_in_with_email_and_password(

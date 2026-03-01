@@ -14,7 +14,9 @@ def setup_firebase_singleton():
     fb = initialize_app({"projectId": "test-proj"})
     fb.api_key = "test-api-key"
     fb.requests = MagicMock()
-    fb.token = {"idToken": "default-tok"}  # set default token
+    # register a default token so database operations have an active token
+    fb.token_service._registry.register("_test_user", {"idToken": "default-tok"})
+    fb.token_service._registry.set_active("_test_user")
     qh_mod._DEFAULT_FIREBASE = fb
     yield fb
     qh_mod._DEFAULT_FIREBASE = original
@@ -146,14 +148,15 @@ def test_remove_uses_firebase_token(setup_firebase_singleton):
 
 
 def test_stream_creates_stream_object(setup_firebase_singleton):
-    """Database.stream calls build_request_url (has a bug with token arg but code runs)."""
+    """Database.stream returns a Stream object."""
+    from app.core.firestore_handler.Utils import Stream
+
     db = _make_db()
     db.child("col", "doc1")
 
-    # The stream method has a bug: build_request_url(token) but it takes 0 args.
-    # Just verify the method exists and the TypeError propagates naturally.
-    with pytest.raises(TypeError):
-        db.stream(stream_handler=lambda x: None, token=None, stream_id="s1")
+    with patch("app.core.firestore_handler.Utils.ClosableSSEClient"):
+        stream = db.stream(stream_handler=lambda x: None, token=None, stream_id="s1")
+    assert isinstance(stream, Stream)
 
 
 # ── get method – patching typing.Collection to use DataDescriptor.Collection ─
