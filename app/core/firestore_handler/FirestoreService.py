@@ -18,6 +18,9 @@ class _FirebaseProtocol(Protocol):
     api_key: str
     requests: Session
 
+    def __repr__(self):
+        return f"Firebase\n\tprojectId={self.projectId}\n\tapi_key=****)"
+
 
 def deserialize_response(
     func: Callable[..., ResponsePayload],
