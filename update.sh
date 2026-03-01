@@ -107,7 +107,7 @@ else
   echo -e "${BLUE}Starting PRODUCTION environment...${NC}"
 fi
 
-docker compose --env-file ${ENV_FILE} $COMPOSE_FILES up -d
+docker compose --env-file ${ENV_FILE} $COMPOSE_FILES -p $PROJECT_NAME up -d -V --wait
 echo -e "${GREEN}Containers running in background.${NC}"
 echo -e "${BLUE}Use 'docker compose logs -f' to stream logs.${NC}"
 echo -e "${GREEN}Done.${NC}"
