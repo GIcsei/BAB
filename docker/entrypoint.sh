@@ -25,8 +25,9 @@ if [[ "$(id -u)" -eq 0 ]]; then
     usermod -o -u "${PUID}" -g "${PGID}" "${APP_USER}"
   fi
 
-  mkdir -p /var/app/user_data /var/app/downloads
-  chown -R "${PUID}:${PGID}" /var/app/user_data /var/app/downloads
+  mkdir -p /var/app/user_data /var/app/downloads 
+  touch /var/app/app.log
+  chown -R "${PUID}:${PGID}" /var/app/user_data /var/app/downloads /var/app/app.log
 
   exec gosu "${PUID}:${PGID}" "$@"
 fi
