@@ -15,7 +15,7 @@ from typing import Any, Dict
 from app.core.config import get_settings
 
 TOKEN_KEYS = ("token", "idToken", "refreshToken", "authorization")
-
+LOGGER_CONFIGURED = False
 
 class TokenRedactingFilter(logging.Filter):
     def filter(self, record: logging.LogRecord) -> bool:
@@ -58,10 +58,15 @@ def configure_logging(use_json: bool = False) -> None:
     - Redacts tokens, passwords, etc.
     - Logs to stdout if LOG_FILE not set (Docker-friendly)
     """
-    settings = get_settings()
-    log_level = settings.log_level
-    log_file = settings.log_file
-    use_json = settings.log_json
+    global LOGGER_CONFIGURED
+    log_level = "INFO"
+    log_file = None
+
+    if LOGGER_CONFIGURED:
+        settings = get_settings()
+        log_level = settings.log_level
+        log_file = settings.log_file
+        use_json = settings.log_json
 
     project_logger = logging.getLogger("app")
 
@@ -94,9 +99,12 @@ def configure_logging(use_json: bool = False) -> None:
 
     project_logger.propagate = False
 
+    project_logger.info("Logger configured first time: %s", LOGGER_CONFIGURED)
+
     project_logger.info(
         "Logging configured: level=%s, file=%s, json=%s",
         log_level,
         log_file or "stdout",
         use_json,
     )
+    LOGGER_CONFIGURED = True

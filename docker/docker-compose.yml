@@ -18,7 +18,7 @@ services:
       LOG_LEVEL: "${LOG_LEVEL:-INFO}"
       PUID: "${PUID:-568}"
       PGID: "${PGID:-568}"
-      GOOGLE_APPLICATION_CREDENTIALS: "${APP_GOOGLE_APPLICATION_CREDENTIALS:-/var/app/credentials.json}"
+      FIRESTORE_CREDENTIALS: "${FIRESTORE_CREDENTIALS:-/var/app/credentials.json}"
       SELENIUM_REMOTE_URL: "http://selenium:4444"
     depends_on:
       selenium:
@@ -26,7 +26,7 @@ services:
     volumes:
       - ${APP_USER_DATA_HOST_PATH}:${APP_USER_DATA_DIR:-/var/app/user_data}
       - ${APP_DOWNLOADS_HOST_PATH}:${LOCAL_DOWNLOADS_DIR:-/var/app/downloads}
-      - ${FIRESTORE_MASTER_KEY}:${APP_GOOGLE_APPLICATION_CREDENTIALS:-/var/app/credentials.json}:ro
+      - ${FIRESTORE_MASTER_KEY}:${FIRESTORE_CREDENTIALS:-/var/app/credentials.json}:ro
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:8000/health || exit 1"]
       interval: 30s

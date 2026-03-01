@@ -76,6 +76,7 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include=".github\" />
+    <Folder Include=".github\instructions\" />
     <Folder Include=".github\workflows\" />
     <Folder Include="app\" />
     <Folder Include="app\api\" />
@@ -106,6 +107,11 @@
   <ItemGroup>
     <Content Include=".env" />
     <Content Include=".github\copilot-instructions.md" />
+    <Content Include=".github\instructions\architecture.instructions.md" />
+    <Content Include=".github\instructions\api.instructions.md" />
+    <Content Include=".github\instructions\firebase.instructions.md" />
+    <Content Include=".github\instructions\testing.instructions.md" />
+    <Content Include=".github\instructions\verification_rules.instructions.md" />
     <Content Include=".github\workflows\ci.yml" />
     <Content Include=".github\workflows\docker.yml" />
     <Content Include=".github\workflows\release.yml" />
