@@ -21,6 +21,9 @@ class _FirebaseProtocol(Protocol):
     def __repr__(self):
         return f"Firebase\n\tprojectId={self.projectId}\n\tapi_key=****)"
 
+    def __str__(self):
+        return self.__repr__()
+
 
 def deserialize_response(
     func: Callable[..., ResponsePayload],
@@ -123,6 +126,8 @@ class FirestoreService:
         url = self._build_url("runQuery")
         query_payload = FirestoreQueryBuilder(collection).build_query(query_string)
         self.logger.debug("Sending request: %s", query_payload)
+        self.logger.debug("Request URL: %s", url)
+        self.logger.debug("Request headers: %s", self._build_headers(token))
         response = self.requests.post(
             url, headers=self._build_headers(token), data=json.dumps(query_payload)
         )
