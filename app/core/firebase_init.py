@@ -94,4 +94,5 @@ def get_credential(
 
     with open(cred_path, encoding="utf-8") as json_file:
         json_data = json.load(json_file)
+        logger.debug("Credential JSON loaded successfully from %s", cred_path)
         return json_data

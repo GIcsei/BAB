@@ -38,6 +38,9 @@ class Firebase:
         if not self.api_key:
             raise ValueError("FIREBASE_API_KEY is not configured")
 
+        if not self.projectId:
+            raise ValueError("FIREBASE_PROJECT_ID is not configured")
+
         self.firestore_adapter = FirestoreAdapter(self.projectId, self.api_key)
         self.requests = self.firestore_adapter.requests
         self.token_service = TokenService(self.api_key, self.firestore_adapter.requests)
