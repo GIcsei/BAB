@@ -65,10 +65,7 @@ def get_project_id(allow_default: bool = False) -> str:
         return _project_id
 
     if allow_default:
-        fallback = (
-            _TEST_PROJECT_ID
-            or None # Placeholder for other default
-        )
+        fallback = _TEST_PROJECT_ID or None  # Placeholder for other default
         _project_id = fallback
         return _project_id
 
