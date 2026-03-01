@@ -57,7 +57,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         initialize_firebase_admin()
 
         firebase = initialize_app(
-            config = get_credential(as_dict=True),
+            config=get_credential(as_dict=True),
         )
         app.state.firebase = firebase
 
