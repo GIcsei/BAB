@@ -51,7 +51,7 @@ class FirestoreService:
         )
         self.api_key = firebase.api_key
         self.requests = firebase.requests
-	self.logger = logging.get_logger(__name__)
+        self.logger = logging.get_logger(__name__)
 
     def _build_headers(self, token: Optional[Dict[str, Any]] = None) -> Dict[str, str]:
         headers = {"Content-Type": "application/json; charset=UTF-8"}
@@ -121,6 +121,6 @@ class FirestoreService:
         response = self.requests.post(
             url, headers=self._build_headers(token), data=json.dumps(query_payload)
         )
-	self.logger.debug("Received response: %s", response.json())
+        self.logger.debug("Received response: %s", response.json())
         raise_detailed_error(response)
         return cast(list[Dict[str, Any]], response.json())
