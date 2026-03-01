@@ -71,6 +71,7 @@ def test_lifespan_non_test_marks_all_components_ready(tmp_path, monkeypatch):
         patch("app.main.get_health", return_value=h),
         patch("app.main.is_testing_env", return_value=False),
         patch("app.main.initialize_firebase_admin"),
+        patch("app.main.get_credential", return_value={"project_id": "test-project"}),
         patch("app.main.initialize_app", return_value=mock_firebase),
         patch("app.main.create_scheduler", return_value=mock_scheduler),
     ):
@@ -95,6 +96,7 @@ def test_lifespan_scheduler_none(tmp_path, monkeypatch):
         patch("app.main.get_health", return_value=h),
         patch("app.main.is_testing_env", return_value=False),
         patch("app.main.initialize_firebase_admin"),
+        patch("app.main.get_credential", return_value={"project_id": "test-project"}),
         patch("app.main.initialize_app", return_value=mock_firebase),
         patch("app.main.create_scheduler", return_value=None),
     ):
@@ -118,6 +120,7 @@ def test_lifespan_token_load_failure_raises(tmp_path, monkeypatch):
         patch("app.main.get_health", return_value=h),
         patch("app.main.is_testing_env", return_value=False),
         patch("app.main.initialize_firebase_admin"),
+        patch("app.main.get_credential", return_value={"project_id": "test-project"}),
         patch("app.main.initialize_app", return_value=mock_firebase),
         patch("app.main.create_scheduler", return_value=mock_scheduler),
     ):
