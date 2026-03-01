@@ -61,9 +61,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         creds = get_credential(as_dict=True)
         if creds is None:
             raise ValueError("Failed to obtain Firebase credentials")
-        firebase = initialize_app(
-            config=cast(Dict[str, Any], creds)
-        )
+        firebase = initialize_app(config=cast(Dict[str, Any], creds))
         app.state.firebase = firebase
 
         scheduler = create_scheduler(firebase_provider=lambda: app.state.firebase)
