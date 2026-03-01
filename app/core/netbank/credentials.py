@@ -21,7 +21,7 @@ _CLASS_TAG = "app.core.netbank.getReport.ErsteNetBroker"
 
 
 def _get_default_config_dir() -> str:
-    return str(get_settings().netbank_base_dir / "netbank")
+    return str(get_settings().netbank_base_dir)
 
 # In-memory cache for decrypted credentials for the running process.
 _CREDENTIAL_CACHE: Dict[str, Dict[str, str]] = {}
