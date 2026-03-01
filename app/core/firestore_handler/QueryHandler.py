@@ -33,7 +33,7 @@ class Firebase:
         if config is None:
             return
 
-        self.projectId = config.get("projectId")
+        self.projectId = config.get("project_id")
         self.api_key = config.get("apiKey")
         if not self.api_key:
             raise ValueError("FIREBASE_API_KEY is not configured")
