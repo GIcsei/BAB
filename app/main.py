@@ -26,7 +26,7 @@ from app.services.scheduler import create_scheduler
 async def stop_scheduler_on_shutdown(app: FastAPI) -> None:
     scheduler = getattr(app.state, "scheduler", None)
     if scheduler:
-        await scheduler.stop_all()
+        scheduler.stop_all()
         logger = logging.getLogger(__name__)
         logger.info("Scheduler stopped on application shutdown")
 
