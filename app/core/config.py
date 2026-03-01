@@ -75,7 +75,9 @@ def get_settings() -> Settings:
     selenium_downloads_dir = os.getenv("SELENIUM_DOWNLOADS_DIR")
     local_downloads_dir = os.getenv("LOCAL_DOWNLOADS_DIR")
     netbank_base_dir = (
-        Path(raw_app_user_data_dir) if raw_app_user_data_dir else Path.home()
+        Path(raw_app_user_data_dir) / "netbank"
+        if raw_app_user_data_dir
+        else Path.home() / "netbank"
     )
     logger.info(
         "Directories loaded: app_user_data_dir=%s, selenium_downloads_dir=%s, local_downloads_dir=%s, netbank_base_dir=%s",

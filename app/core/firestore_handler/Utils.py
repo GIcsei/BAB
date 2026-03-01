@@ -106,11 +106,16 @@ class Stream:
                 self.stream_handler(msg_data)
 
     def close(self) -> "Stream":
-        while self.sse is None:
+        deadline = time.monotonic() + 10.0
+        while self.sse is None and time.monotonic() < deadline:
             time.sleep(0.001)
         sse = self.sse
-        while not hasattr(sse, "resp"):
+        if sse is None:
+            return self
+        while not hasattr(sse, "resp") and time.monotonic() < deadline:
             time.sleep(0.001)
+        if not hasattr(sse, "resp"):
+            return self
         sse.running = False
         sse.close()
         if self.thread:
