@@ -12,6 +12,7 @@ os.environ.setdefault("APP_ALLOW_UNSAFE_DESERIALIZE", "true")
 
 from app.core.exceptions import (
     DeserializationDisabledError,
+    FileNotFoundError,
     FileSizeExceededError,
 )
 from app.services import data_service
@@ -42,10 +43,9 @@ def test_validate_file_size_exceeds_limit(tmp_path):
 
 def test_validate_file_size_nonexistent(tmp_path):
     f = tmp_path / "missing.pkl"
-    # path.stat() raises the built-in FileNotFoundError (OSError);
-    # the custom except only catches app.core.exceptions.FileNotFoundError,
-    # so the built-in OSError propagates
-    with pytest.raises(OSError):
+    # path.stat() raises OSError which is caught and re-raised as the custom
+    # app.core.exceptions.FileNotFoundError
+    with pytest.raises(FileNotFoundError):
         _validate_file_size(f)
 
 
@@ -159,9 +159,8 @@ def test_preview_file_not_found_raises(tmp_path):
     base = tmp_path / "data"
     base.mkdir()
     (base / "u1").mkdir()
-    # _validate_file_size calls path.stat() which raises built-in OSError
-    # because the custom FileNotFoundError in data_service shadows the builtin
-    with pytest.raises(OSError):
+    # _validate_file_size catches OSError and re-raises as custom FileNotFoundError
+    with pytest.raises(FileNotFoundError):
         preview_pickle_file(base, "u1", "missing.pkl")
 
 

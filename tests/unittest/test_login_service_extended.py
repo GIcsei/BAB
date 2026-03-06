@@ -9,6 +9,7 @@ import pytest
 os.environ.setdefault("PYTEST_RUNNING", "1")
 os.environ.setdefault("APP_ALLOW_UNSAFE_DESERIALIZE", "true")
 
+from app.core.exceptions import LoginFailedError
 from app.schemas.login import LoginRequest
 from app.services.login_service import login_user, logout_user
 
@@ -67,7 +68,7 @@ def test_login_user_missing_id_token_raises(tmp_path, monkeypatch):
     data = LoginRequest(email="user@example.com", password="bad")
 
     try:
-        with pytest.raises(ValueError, match="Login failed"):
+        with pytest.raises(LoginFailedError, match="Login failed"):
             login_user(data, MagicMock(), mock_firebase)
     finally:
         import app.core.config as cfg
