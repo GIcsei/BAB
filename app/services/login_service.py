@@ -4,6 +4,7 @@ import os
 from typing import Any, Dict, Optional
 
 from app.core.config import Settings, get_settings
+from app.core.exceptions import LoginFailedError
 from app.core.firestore_handler.QueryHandler import Firebase
 from app.infrastructure.sched.scheduler import Scheduler
 from app.schemas.login import LoginRequest, LoginResponse
@@ -94,8 +95,8 @@ def login_user(
 
         return LoginResponse(access_token=id_token, message="Login successful")
     except Exception as exc:
-        logger.exception("Login failed for email=%s: %s", data.email, exc)
-        raise ValueError(f"Login failed: {exc}")
+        logger.exception("Login failed for email=%s", data.email)
+        raise LoginFailedError("Login failed") from exc
 
 
 def logout_user(user_id: str, scheduler: Scheduler, firebase: Firebase) -> bool:

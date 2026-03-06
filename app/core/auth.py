@@ -48,7 +48,5 @@ def get_current_user_id(
         )
         return user_id
 
-    logger.error(
-        "Token verification failed and no legacy token found for token: %s", token
-    )
+    logger.error("Token verification failed and no legacy token found")
     raise exception_to_http(InvalidTokenError())

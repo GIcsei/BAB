@@ -84,8 +84,8 @@ def configure_logging(use_json: bool = False) -> None:
     if log_file:
         try:
             Path(log_file).parent.mkdir(parents=True, exist_ok=True)
-        except Exception:
-            pass
+        except Exception as exc:
+            project_logger.warning("Could not create log directory: %s", exc)
         fh = RotatingFileHandler(log_file, maxBytes=10 * 1024 * 1024, backupCount=5)
         fh.setLevel(level)
         fh.setFormatter(formatter)

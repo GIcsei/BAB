@@ -75,12 +75,12 @@ def test_get_error_response_with_generic_exception():
     resp = get_error_response(exc)
     assert resp["error"] == "INTERNAL_ERROR"
     assert resp["status"] == 500
-    assert "unexpected failure" in resp["message"]
+    # Internal error details must not be exposed to clients
+    assert resp["message"] == "An unexpected error occurred"
 
 
 def test_get_error_response_with_empty_message():
     exc = RuntimeError("")
     resp = get_error_response(exc)
     assert resp["error"] == "INTERNAL_ERROR"
-    # empty string is falsy, falls back to default message
-    assert "unexpected" in resp["message"].lower() or resp["message"] == ""
+    assert resp["message"] == "An unexpected error occurred"
