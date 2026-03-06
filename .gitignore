@@ -12,6 +12,7 @@ __pycache__/
 .vs/
 htmlcov/
 coverage.xml
+.coverage
 .reports/
 reports/
 .ruff_cache/

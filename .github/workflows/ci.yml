@@ -125,6 +125,12 @@ jobs:
             coverage.xml
             htmlcov/
 
+      - name: Upload documentation
+        uses: actions/upload-artifact@v4
+        with:
+          name: documentation
+          path: docs/
+
   security:
     runs-on: ubuntu-latest
     strategy:
