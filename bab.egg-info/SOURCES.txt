@@ -33,6 +33,7 @@ app/routers/login.py
 app/routers/netbank_credentials.py
 app/schemas/__init__.py
 app/schemas/login.py
+app/schemas/netbank.py
 app/services/__init__.py
 app/services/data_service.py
 app/services/login_service.py

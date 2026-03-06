@@ -1,4 +1,5 @@
 import asyncio
+import builtins
 import logging
 import pickle
 from concurrent.futures import ThreadPoolExecutor
@@ -43,9 +44,9 @@ def _validate_file_size(path: Path, max_size_mb: int = 500) -> None:
         if size_bytes > max_size_mb * 1024 * 1024:
             size_mb = size_bytes // (1024 * 1024)
             raise FileSizeExceededError(size_mb, max_size_mb)
-    except OSError:
+    except builtins.FileNotFoundError as exc:
         logger.debug("File not found during size validation: %s", path)
-        raise FileNotFoundError(str(path))
+        raise FileNotFoundError(str(path)) from exc
 
 
 def list_pickles_for_user(base_data_dir: Path, user_id: str) -> List[Dict[str, Any]]:
