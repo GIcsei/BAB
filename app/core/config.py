@@ -60,11 +60,6 @@ def get_settings() -> Settings:
 
     logger.info("Loading settings from environment variables")
 
-    logger.debug(
-        "Raw environment variables: %s",
-        {key: os.getenv(key) for key in os.environ.keys()},
-    )
-
     logger.info("Loading directories...")
     raw_app_user_data_dir = os.getenv("APP_USER_DATA_DIR")
     app_user_data_dir = (
