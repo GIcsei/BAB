@@ -43,9 +43,8 @@ def _validate_file_size(path: Path, max_size_mb: int = 500) -> None:
         if size_bytes > max_size_mb * 1024 * 1024:
             size_mb = size_bytes // (1024 * 1024)
             raise FileSizeExceededError(size_mb, max_size_mb)
-    except FileNotFoundError as exc:
+    except OSError:
         logger.debug("File not found during size validation: %s", path)
-        logger.exception(exc)
         raise FileNotFoundError(str(path))
 
 

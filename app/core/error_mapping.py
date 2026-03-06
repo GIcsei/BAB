@@ -48,6 +48,6 @@ def get_error_response(exc: Exception) -> Dict[str, Any]:
         }
     return {
         "error": "INTERNAL_ERROR",
-        "message": str(exc) or "An unexpected error occurred",
+        "message": "An unexpected error occurred",
         "status": 500,
     }

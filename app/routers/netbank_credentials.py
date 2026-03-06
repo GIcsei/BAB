@@ -2,19 +2,13 @@ import logging
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
 
 from app.core.auth import get_current_user_id
 from app.core.netbank.credentials import delete_user_credentials, save_user_credentials
+from app.schemas.netbank import CredentialsIn
 
 router = APIRouter(prefix="/netbank", tags=["netbank"])
 logger = logging.getLogger(__name__)
-
-
-class CredentialsIn(BaseModel):
-    username: str
-    account_number: str
-    password: str
 
 
 @router.post("/credentials", status_code=201)
