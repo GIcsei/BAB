@@ -5,7 +5,7 @@ import os.path
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional
 
 from app.core.config import get_settings
 from app.core.firestore_handler.QueryHandler import Firebase
@@ -152,8 +152,10 @@ class ErsteNetBroker:
             )
             return False
 
-    def _file_exist_today(self) -> bool:
-        files = get_all_files_from_folder(str(self.__SAVE_TO), "xls")
+    def _file_exist_today(self, extension: List[str] = ["xls"]) -> bool:
+        files = []
+        for ext in extension:
+            files.extend(get_all_files_from_folder(str(self.__SAVE_TO), ext))
         for file in files:
             date = extract_date_from_filename(file)
             if date and is_today_in(date):
@@ -306,7 +308,7 @@ class ErsteNetBroker:
 
     def get_report(self) -> Optional[str]:
         self.RESULT = None
-        if self._file_exist_today():
+        if self._file_exist_today(["xls", "parquet"]):
             logger.info("Report for today already exists: %s", self.RESULT)
             return self.RESULT
 
