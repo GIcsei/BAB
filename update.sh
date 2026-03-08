@@ -4,7 +4,7 @@ set -euo pipefail
 # -------------------------
 # Configuration
 # -------------------------
-PROJECT_NAME="bank_analysis_backend"
+PROJECT_NAME="icseig/bank_analysis_backend"
 BASE_COMPOSE="docker/docker-compose.yml"
 DEV_COMPOSE="docker/docker-compose.dev.yml"
 PROD_COMPOSE="docker/docker-compose.prod.yml"
