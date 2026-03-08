@@ -153,9 +153,7 @@ class reportFormatter:
                 merged_data.append(existing)
                 logger.info("Included existing merged.parquet in merge")
             except Exception:
-                logger.exception(
-                    "Failed to load existing merged.parquet during merge"
-                )
+                logger.exception("Failed to load existing merged.parquet during merge")
 
         try:
             self.data = pd.concat(merged_data).drop_duplicates(ignore_index=True)
