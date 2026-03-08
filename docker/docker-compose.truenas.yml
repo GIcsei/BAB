@@ -54,6 +54,7 @@ services:
     restart: always
     shm_size: "2g"
     volumes:
+      # Must match selenium's internal download dir (default /home/seluser/Downloads)
       - ${APP_DOWNLOADS_HOST_PATH:?required}:${SELENIUM_DOWNLOADS_DIR:-/home/seluser/Downloads}
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:4444/status || exit 1"]
