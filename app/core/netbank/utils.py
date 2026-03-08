@@ -126,9 +126,7 @@ class reportFormatter:
         files = get_all_files_from_folder(self.FOLDER, "xls")
 
         if not files:
-            logger.warning(
-                "No xls files found in folder %s", self.FOLDER
-            )
+            logger.warning("No xls files found in folder %s", self.FOLDER)
             return False
         merged_data = []
         logger.info("Merging %d files from folder %s", len(files), self.FOLDER)
