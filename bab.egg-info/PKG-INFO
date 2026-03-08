@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: bab
-Version: 0.9.0
+Version: 0.10.0
 Summary: Creates backend to run on TrueNAS to collect data user level with a set interval.
 Requires-Python: >=3.12
 Description-Content-Type: text/markdown
