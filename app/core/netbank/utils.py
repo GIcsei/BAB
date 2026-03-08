@@ -102,14 +102,14 @@ class reportFormatter:
             self.data = data
         return data
 
-    def save(self, zipped: bool = False) -> None:
+    def save(self, zipped: bool = False, as_merged: bool = False) -> None:
         strTime = datetime.now().strftime("%Y%m%d_%H%M%S")
         if not is_today_in(self.TIME_STAMP):
             strTime = self.TIME_STAMP.strftime("%Y%m%d_%H%M%S")
         try:
             if zipped:
-                self.data.to_pickle(
-                    os.path.join(self.FOLDER, f"innerValue_{strTime}.pkl")
+                self.data.to_parquet(
+                    os.path.join(self.FOLDER, f"innerValue_{strTime}.parquet")
                 )
             else:
                 self.data.to_excel(
@@ -118,6 +118,11 @@ class reportFormatter:
         except Exception:
             logger.exception("Failed to save formatted data to %s", self.FOLDER)
             raise
+
+        if as_merged:
+            self.data.to_parquet(
+                os.path.join(self.FOLDER, f"merged_{strTime}.parquet"), index=False
+            )
 
     def merge_all(self, safe_mode: bool = True) -> bool:
         if self.FOLDER is None:
@@ -142,6 +147,16 @@ class reportFormatter:
             logger.warning("No data loaded from files in folder %s", self.FOLDER)
             return False
 
+        if os.path.exists(os.path.join(self.FOLDER, "merged.parquet")):
+            try:
+                existing = pd.read_parquet(os.path.join(self.FOLDER, "merged.parquet"))
+                merged_data.append(existing)
+                logger.info("Included existing merged.parquet in merge")
+            except Exception:
+                logger.exception(
+                    "Failed to load existing merged.parquet during merge"
+                )
+
         try:
             self.data = pd.concat(merged_data).drop_duplicates(ignore_index=True)
             logger.info("Successfully merged data from %d files", len(files))
@@ -151,8 +166,12 @@ class reportFormatter:
             )
             return False
 
+        clean_up_list = [".parquet", ".pkl"]
         if not safe_mode:
-            self._clean_up()
+            clean_up_list.append("xls")
+
+        for ext in clean_up_list:
+            self._clean_up(extension=ext)
 
         return True
 
@@ -168,7 +187,7 @@ class reportFormatter:
             "Cleanup completed for %d files in folder %s", len(files), self.FOLDER
         )
 
-    def _clean_up(self, extension: str = "pkl") -> None:
+    def _clean_up(self, extension: str = "parquet") -> None:
         if self.FOLDER is None:
             logger.error("No folder specified for cleanup")
             return
@@ -182,7 +201,7 @@ class reportFormatter:
             return
         self.__list_clean_up(files)
 
-    def _format(self, data: pd.DataFrame = None) -> None:
+    def _format(self, data: Optional[pd.DataFrame] = None) -> None:
         df = self.data if data is None else data
         self._remove_values(data=df)
         self.search_for_currency(data=df)
@@ -199,7 +218,7 @@ class reportFormatter:
         except Exception:
             logger.debug("Formatted data available")
 
-    def _remove_values(self, data: pd.DataFrame = None) -> None:
+    def _remove_values(self, data: Optional[pd.DataFrame] = None) -> None:
         df = self.data if data is None else data
         try:
             df.drop(df.tail(1).index, inplace=True)
@@ -215,7 +234,7 @@ class reportFormatter:
         if df.shape[1] > 1:
             df.dropna(subset=df.columns[1:], inplace=True)
 
-    def search_for_currency(self, data: pd.DataFrame = None) -> None:
+    def search_for_currency(self, data: Optional[pd.DataFrame] = None) -> None:
         currency_values = {"HUF", "USD", "EUR"}
         df = self.data if data is None else data
         try:

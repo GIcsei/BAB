@@ -342,8 +342,8 @@ class ErsteNetBroker:
                     fileName=result_name, fileLoc=str(self.__SAVE_TO)
                 )
                 formatter.save(True)
-                if formatter.merge_all(safe_mode=True):
-                    formatter.save(True)
+                if formatter.merge_all(safe_mode=False):
+                    formatter.save(zipped = True, as_merged = True)
             except Exception:
                 logger.exception("Failed to format/save report for %s", result_name)
             return result_name
