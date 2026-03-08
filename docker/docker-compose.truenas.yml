@@ -5,35 +5,41 @@ services:
 
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1
 
-    restart: unless-stopped
+    restart: always
     ports:
-      - "6767:8000"
+      - "${APP_PORT:-6767}:8000"
 
     environment:
       APP_USER_DATA_DIR: /var/app/user_data
       LOCAL_DOWNLOADS_DIR: /var/app/downloads
-      SELENIUM_DOWNLOADS_DIR: /home/seluser/Downloads
+      SELENIUM_DOWNLOADS_DIR: ${SELENIUM_DOWNLOADS_DIR:-/home/seluser/Downloads}
 
-      APP_JOB_HOUR: "17"
-      APP_JOB_MINUTE: "0"
-      LOG_LEVEL: "DEBUG"
+      APP_JOB_HOUR: "${APP_JOB_HOUR:-17}"
+      APP_JOB_MINUTE: "${APP_JOB_MINUTE:-0}"
+      LOG_LEVEL: "${LOG_LEVEL:-INFO}"
       LOG_FILE: "/var/app/app.log"
-      LOG_JSON: "false"
+      LOG_JSON: "${LOG_JSON:-false}"
 
-      PUID: "568"
-      PGID: "568"
+      PUID: "${PUID:-568}"
+      PGID: "${PGID:-568}"
 
       FIRESTORE_CREDENTIALS: "/run/secrets/firestore_credentials"
       SELENIUM_REMOTE_URL: "http://selenium:4444"
 
     volumes:
-      - /home/geri/bab_store/user_data:/var/app/user_data
-      - /home/geri/bab_store/downloads:/var/app/downloads
+      - ${APP_USER_DATA_HOST_PATH:?required}:/var/app/user_data
+      - ${APP_DOWNLOADS_HOST_PATH:?required}:/var/app/downloads
     secrets:
       - firestore_credentials
     depends_on:
       selenium:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8000/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
     networks:
       - bank_analysis_network
     deploy:
@@ -45,14 +51,15 @@ services:
   selenium:
     image: selenium/standalone-chromium:144.0-20260202
     container_name: bank-analysis-selenium
-    restart: unless-stopped
+    restart: always
     shm_size: "2g"
     volumes:
-      - /home/geri/bab_store/downloads:/home/seluser/Downloads
+      - ${APP_DOWNLOADS_HOST_PATH:?required}:${SELENIUM_DOWNLOADS_DIR:-/home/seluser/Downloads}
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:4444/status || exit 1"]
       interval: 15s
       timeout: 5s
+      start_period: 30s
       retries: 5
     networks:
       - bank_analysis_network
@@ -63,9 +70,9 @@ services:
           memory: '3G'
 
 networks:
-  bank-analysis-net:
+  bank_analysis_network:
     driver: bridge
 
 secrets:
   firestore_credentials:
-    file: /mnt/tank/apps/bank-analysis/secrets/firestore.json
+    file: ${FIRESTORE_MASTER_KEY:?required}

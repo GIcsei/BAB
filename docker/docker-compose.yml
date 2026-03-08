@@ -31,6 +31,7 @@ services:
       test: ["CMD-SHELL", "curl -fsS http://localhost:8000/health || exit 1"]
       interval: 30s
       timeout: 5s
+      start_period: 30s
       retries: 3
 
   selenium:
@@ -45,4 +46,5 @@ services:
       test: ["CMD-SHELL", "curl -f http://localhost:4444/status || exit 1"]
       interval: 15s
       timeout: 5s
+      start_period: 30s
       retries: 5
