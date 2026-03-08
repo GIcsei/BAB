@@ -1,6 +1,6 @@
 [project]
 name = "bab"
-version = "0.10.2"
+version = "0.10.3"
 description = "Creates backend to run on TrueNAS to collect data user level with a set interval."
 readme = "README.md"
 requires-python = ">=3.12"

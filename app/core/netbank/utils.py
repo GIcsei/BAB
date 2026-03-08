@@ -147,9 +147,10 @@ class reportFormatter:
             logger.warning("No data loaded from files in folder %s", self.FOLDER)
             return False
 
-        if os.path.exists(os.path.join(self.FOLDER, "merged.parquet")):
+        merged_earlier = glob.glob(os.path.join(self.FOLDER, "merged_*.parquet"))
+        if merged_earlier:
             try:
-                existing = pd.read_parquet(os.path.join(self.FOLDER, "merged.parquet"))
+                existing = pd.read_parquet(merged_earlier[0])
                 merged_data.append(existing)
                 logger.info("Included existing merged.parquet in merge")
             except Exception:
@@ -164,7 +165,7 @@ class reportFormatter:
             )
             return False
 
-        clean_up_list = [".parquet", ".pkl"]
+        clean_up_list = ["parquet", "pkl"]
         if not safe_mode:
             clean_up_list.append("xls")
 
