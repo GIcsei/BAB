@@ -22,7 +22,6 @@ ENV UV_PROJECT_ENVIRONMENT=/opt/venv \
     UV_CACHE_DIR=/tmp/uv-cache
 
 RUN uv sync --frozen --no-dev --no-install-project
-RUN /opt/venv/bin/python -m pip install --no-cache-dir --upgrade "pip>=26.0"
 RUN rm -rf /tmp/uv-cache
 
 FROM base AS runtime
