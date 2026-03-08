@@ -89,9 +89,22 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             health.mark_component_ready("tokens")
             logger.info("User tokens loaded successfully")
         except Exception as exc:
-            health.mark_component_ready("tokens", str(exc))
-            logger.exception("Failed to load user tokens: %s", exc)
-            raise
+            logger.warning(
+                "Token refresh failed during startup (network may not be ready); "
+                "continuing with stale tokens – scheduler jobs will retry: %s",
+                exc,
+                exc_info=True,
+            )
+            try:
+                firebase.load_tokens_from_dir(base_data_dir, refresh=False)
+                health.mark_component_ready("tokens", "loaded_without_refresh")
+                logger.info("User tokens loaded without refresh (stale)")
+            except Exception as fallback_exc:
+                health.mark_component_ready("tokens", str(fallback_exc))
+                logger.exception(
+                    "Failed to load user tokens even without refresh: %s",
+                    fallback_exc,
+                )
 
         health.mark_component_ready("firebase")
         health.mark_startup_complete()

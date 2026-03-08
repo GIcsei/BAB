@@ -47,7 +47,7 @@ Access the app at [http://localhost:8000](http://localhost:8000).
 
 ## Running on TrueNAS SCALE
 
-1. Copy `truenas.env.example` to `truenas.env` and set dataset paths (`APP_USER_DATA_HOST_PATH`, `APP_DOWNLOADS_HOST_PATH`) and `NETBANK_MASTER_KEY`.
+1. Copy `truenas.env.example` to `truenas.env` and set dataset paths (`APP_USER_DATA_HOST_PATH`, `APP_DOWNLOADS_HOST_PATH`) and `FIRESTORE_MASTER_KEY`.
 2. Use `docker-compose.truenas.yml` in TrueNAS Custom App / Docker Compose stack configuration.
 3. Keep container UID/GID aligned with TrueNAS apps user (`PUID=568`, `PGID=568` by default).
 4. Store secrets outside the repository and mount them read-only (for example under `/mnt/<pool>/apps/bab/secrets`).

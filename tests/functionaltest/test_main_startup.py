@@ -6,7 +6,6 @@ os.environ.setdefault("APP_ALLOW_UNSAFE_DESERIALIZE", "true")
 
 from unittest.mock import MagicMock, patch
 
-import pytest
 from app.core.health import HealthStatus
 from app.main import app
 from fastapi.testclient import TestClient
@@ -107,8 +106,8 @@ def test_lifespan_scheduler_none(tmp_path, monkeypatch):
     assert h.is_ready is True
 
 
-def test_lifespan_token_load_failure_raises(tmp_path, monkeypatch):
-    """If load_tokens_from_dir raises, startup should propagate the exception."""
+def test_lifespan_token_load_failure_continues_startup(tmp_path, monkeypatch):
+    """If load_tokens_from_dir raises, startup should continue with degraded health."""
     monkeypatch.setenv("APP_USER_DATA_DIR", str(tmp_path))
 
     h = HealthStatus()
@@ -124,7 +123,43 @@ def test_lifespan_token_load_failure_raises(tmp_path, monkeypatch):
         patch("app.main.initialize_app", return_value=mock_firebase),
         patch("app.main.create_scheduler", return_value=mock_scheduler),
     ):
-        with pytest.raises(RuntimeError, match="DB unavailable"):
-            client = TestClient(app, raise_server_exceptions=True)
-            with client:
-                pass
+        client = TestClient(app)
+        with client:
+            pass
+
+    assert h.is_ready is True
+    assert h.components["tokens"]["error"] is not None
+
+
+def test_lifespan_token_refresh_fails_fallback_no_refresh(tmp_path, monkeypatch):
+    """If token refresh fails, startup falls back to loading without refresh."""
+    monkeypatch.setenv("APP_USER_DATA_DIR", str(tmp_path))
+
+    h = HealthStatus()
+    mock_scheduler = MagicMock()
+    mock_firebase = MagicMock()
+    call_count = 0
+
+    def load_tokens_side_effect(base_dir, refresh=True):
+        nonlocal call_count
+        call_count += 1
+        if refresh:
+            raise RuntimeError("Network not ready")
+
+    mock_firebase.load_tokens_from_dir.side_effect = load_tokens_side_effect
+
+    with (
+        patch("app.main.get_health", return_value=h),
+        patch("app.main.is_testing_env", return_value=False),
+        patch("app.main.initialize_firebase_admin"),
+        patch("app.main.get_credential", return_value={"project_id": "test-project"}),
+        patch("app.main.initialize_app", return_value=mock_firebase),
+        patch("app.main.create_scheduler", return_value=mock_scheduler),
+    ):
+        client = TestClient(app)
+        with client:
+            pass
+
+    assert h.is_ready is True
+    assert h.components["tokens"]["error"] == "loaded_without_refresh"
+    assert call_count == 2
