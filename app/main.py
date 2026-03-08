@@ -93,6 +93,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
                 "Token refresh failed during startup (network may not be ready); "
                 "continuing with stale tokens – scheduler jobs will retry: %s",
                 exc,
+                exc_info=True,
             )
             try:
                 firebase.load_tokens_from_dir(base_data_dir, refresh=False)
