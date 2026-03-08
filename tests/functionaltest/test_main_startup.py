@@ -6,7 +6,6 @@ os.environ.setdefault("APP_ALLOW_UNSAFE_DESERIALIZE", "true")
 
 from unittest.mock import MagicMock, patch
 
-import pytest
 from app.core.health import HealthStatus
 from app.main import app
 from fastapi.testclient import TestClient
