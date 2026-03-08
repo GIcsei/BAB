@@ -85,19 +85,27 @@ class reportFormatter:
         self.data: pd.DataFrame = self._load()
         self._format()
 
-    def _load(self) -> pd.DataFrame:
-        full = os.path.join(self.FOLDER, self.fileName)
+    def _load(
+        self, file_path: Optional[str] = None, override: bool = False
+    ) -> pd.DataFrame:
+        """
+        Load Excel file into a DataFrame. If `file_path` is provided, it will be used; otherwise, it defaults to `FOLDER/fileName`.
+        Note: Only '.XLS' files are supported for loading. For '.XLSX' files, ensure they are saved in the correct format to avoid loading issues.
+        """
+        full = file_path if file_path else os.path.join(self.FOLDER, self.fileName)
         try:
-            self.data = pd.read_excel(full)
+            data = pd.read_excel(full)
         except Exception:
             logger.exception("Failed to load excel file %s", full)
             raise
-        return self.data
+        if override:
+            self.data = data
+        return data
 
     def save(self, zipped: bool = False) -> None:
-        strTime = datetime.now().strftime("%Y%m%d_%H%M")
+        strTime = datetime.now().strftime("%Y%m%d_%H%M%S")
         if not is_today_in(self.TIME_STAMP):
-            strTime = self.TIME_STAMP.strftime("%Y%m%d_%H%M")
+            strTime = self.TIME_STAMP.strftime("%Y%m%d_%H%M%S")
         try:
             if zipped:
                 self.data.to_pickle(
@@ -111,10 +119,75 @@ class reportFormatter:
             logger.exception("Failed to save formatted data to %s", self.FOLDER)
             raise
 
-    def _format(self) -> None:
-        df = self.data
-        self._remove_values()
-        self.search_for_currency()
+    def merge_all(self, safe_mode: bool = True) -> bool:
+        if self.FOLDER is None:
+            logger.error("No folder specified for merging files")
+            return False
+        files = get_all_files_from_folder(self.FOLDER, "xls")
+
+        if not files:
+            logger.warning(
+                "No xls files found in folder %s", self.FOLDER
+            )
+            return False
+        merged_data = []
+        logger.info("Merging %d files from folder %s", len(files), self.FOLDER)
+        for file in files:
+            try:
+                data = self._load(file_path=file)
+                self._format(data=data)
+                merged_data.append(data)
+            except Exception:
+                logger.exception("Failed to load file %s during merge", file)
+
+        if not merged_data:
+            logger.warning("No data loaded from files in folder %s", self.FOLDER)
+            return False
+
+        try:
+            self.data = pd.concat(merged_data).drop_duplicates(ignore_index=True)
+            logger.info("Successfully merged data from %d files", len(files))
+        except Exception:
+            logger.exception(
+                "Failed to concatenate data from files in folder %s", self.FOLDER
+            )
+            return False
+
+        if not safe_mode:
+            self._clean_up()
+
+        return True
+
+    def __list_clean_up(self, files: List[str]) -> None:
+        for file in files:
+            try:
+                os.remove(file)
+                logger.debug("Deleted file %s during cleanup", file)
+            except Exception:
+                logger.exception("Failed to delete file %s during cleanup", file)
+
+        logger.info(
+            "Cleanup completed for %d files in folder %s", len(files), self.FOLDER
+        )
+
+    def _clean_up(self, extension: str = "pkl") -> None:
+        if self.FOLDER is None:
+            logger.error("No folder specified for cleanup")
+            return
+        files = get_all_files_from_folder(self.FOLDER, extension)
+        if not files:
+            logger.warning(
+                "No files found in folder %s with extension %s for cleanup",
+                self.FOLDER,
+                extension,
+            )
+            return
+        self.__list_clean_up(files)
+
+    def _format(self, data: pd.DataFrame = None) -> None:
+        df = self.data if data is None else data
+        self._remove_values(data=df)
+        self.search_for_currency(data=df)
         try:
             df.columns = self.COLUMNS
         except Exception:
@@ -128,8 +201,8 @@ class reportFormatter:
         except Exception:
             logger.debug("Formatted data available")
 
-    def _remove_values(self) -> None:
-        df = self.data
+    def _remove_values(self, data: pd.DataFrame = None) -> None:
+        df = self.data if data is None else data
         try:
             df.drop(df.tail(1).index, inplace=True)
         except Exception:
@@ -144,9 +217,9 @@ class reportFormatter:
         if df.shape[1] > 1:
             df.dropna(subset=df.columns[1:], inplace=True)
 
-    def search_for_currency(self) -> None:
+    def search_for_currency(self, data: pd.DataFrame = None) -> None:
         currency_values = {"HUF", "USD", "EUR"}
-        df = self.data
+        df = self.data if data is None else data
         try:
             cols_to_drop = [
                 col
