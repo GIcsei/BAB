@@ -2,6 +2,14 @@
 
 ![CI](https://github.com/GIcsei/BAB/actions/workflows/ci.yml/badge.svg)
 
+## Lines of Code
+
+| Scope | Files | Total Lines |
+|-------|------:|------------:|
+| Application (`app/`) | 38 | 4,575 |
+| Tests (`tests/`) | 47 | 7,082 |
+| **All Python** | **85** | **11,657** |
+
 Backend service for authenticated data ingestion and plotting on TrueNAS and
 standard Docker environments.
 
