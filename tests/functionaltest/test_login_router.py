@@ -154,3 +154,35 @@ def test_next_run_generic_exception_returns_500(override_auth):
     mock_scheduler.get_next_run_for_user.side_effect = RuntimeError("scheduler down")
     r = client.post("/user/next_run")
     assert r.status_code in (500, 502)
+
+
+# ── GET /user/me ───────────────────────────────────────────────────────────
+
+
+def test_me_returns_user_id():
+    r = client.get("/user/me")
+    assert r.status_code == 200
+    data = r.json()
+    assert data["user_id"] == "test_user"
+
+
+# ── GET /user/next_run ─────────────────────────────────────────────────────
+
+
+def test_get_next_run_returns_info(override_auth):
+    mock_scheduler, _ = override_auth
+    mock_scheduler.get_next_run_for_user.return_value = {
+        "seconds_until_next_run": 1800,
+        "next_run_timestamp_ms": 8888888888,
+    }
+    r = client.get("/user/next_run")
+    assert r.status_code == 200
+    data = r.json()
+    assert data["seconds_until_next_run"] == 1800
+
+
+def test_get_next_run_no_job_returns_404(override_auth):
+    mock_scheduler, _ = override_auth
+    mock_scheduler.get_next_run_for_user.return_value = None
+    r = client.get("/user/next_run")
+    assert r.status_code == 404

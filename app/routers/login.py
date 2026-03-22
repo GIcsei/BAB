@@ -8,7 +8,7 @@ from app.core.error_mapping import exception_to_http
 from app.core.exceptions import JobNotFoundError, JobStartError, LoginFailedError
 from app.core.firestore_handler.QueryHandler import Firebase
 from app.infrastructure.sched.scheduler import Scheduler
-from app.schemas.login import LoginRequest, LoginResponse
+from app.schemas.login import LoginRequest, LoginResponse, NextRunInfo, UserMeResponse
 from app.services.login_service import login_user, logout_user
 
 router = APIRouter(prefix="/user", tags=["Authentication"])
@@ -40,6 +40,15 @@ def login(
     except Exception as exc:
         logger.exception("Unexpected error during login for email: %s", data.email)
         raise exception_to_http(LoginFailedError(str(exc)))
+
+
+@router.get(
+    "/me",
+    response_model=UserMeResponse,
+    summary="Return the authenticated user's identity",
+)
+def me(current_user_id: str = Depends(get_current_user_id)) -> UserMeResponse:
+    return UserMeResponse(user_id=current_user_id)
 
 
 @router.put(
@@ -85,9 +94,33 @@ def logout(
 
 
 @router.post(
-    "/next_run", summary="Get seconds until next scheduled run for the current user"
+    "/next_run",
+    response_model=NextRunInfo,
+    summary="Get seconds until next scheduled run for the current user",
 )
 def next_run(
+    current_user_id: str = Depends(get_current_user_id),
+    scheduler: Scheduler = Depends(get_scheduler_dep),
+) -> Dict[str, Any]:
+    try:
+        info = scheduler.get_next_run_for_user(current_user_id)
+        if not info:
+            raise JobNotFoundError(current_user_id)
+        return info
+    except JobNotFoundError as exc:
+        logger.info("No scheduled job for user: %s", current_user_id)
+        raise exception_to_http(exc)
+    except Exception as exc:
+        logger.exception("Error retrieving next run for user: %s", current_user_id)
+        raise exception_to_http(exc)
+
+
+@router.get(
+    "/next_run",
+    response_model=NextRunInfo,
+    summary="Get seconds until next scheduled run for the current user",
+)
+def next_run_get(
     current_user_id: str = Depends(get_current_user_id),
     scheduler: Scheduler = Depends(get_scheduler_dep),
 ) -> Dict[str, Any]:
