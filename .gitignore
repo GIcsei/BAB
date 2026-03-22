@@ -2,7 +2,9 @@
 __pycache__/
 *.pyc
 .venv/
+.env
 .env.*
+!.env.example
 *.sqlite3
 .idea/
 .DS_Store
@@ -20,3 +22,20 @@ bab.egg-info/
 site/
 backups/
 bandit-report.json
+
+# Secrets & credentials – never commit these
+**/service-account*.json
+**/REDACTED_PROJECT*.json
+**/credentials.json
+!app/core/netbank/credentials.py
+!app/routers/netbank_credentials.py
+!tests/unittest/test_credentials.py
+!tests/unittest/test_credentials_coverage.py
+!tests/unittest/test_credentials_extended.py
+!typings/firebase_admin/credentials.pyi
+*.pem
+*.key
+*.p12
+*.pfx
+auth_token*.json
+master.json
