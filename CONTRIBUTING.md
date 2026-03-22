@@ -48,7 +48,7 @@ Thank you for considering a contribution to the Bank Analysis Backend! This guid
 
 ## Documentation Workflow
 
-Documentation lives in the `docs/` directory and is built with [MkDocs](https://www.mkdocs.org/) using the [Material](https://squidfundamental.github.io/mkdocs-material/) theme.
+Documentation lives in the `docs/` directory and is built with [MkDocs](https://www.mkdocs.org/) using the [Material](https://squidfunk.github.io/mkdocs-material/) theme.
 
 ### Editing Documentation
 

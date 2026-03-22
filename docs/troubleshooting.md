@@ -67,7 +67,7 @@
 
 ### How do I update the documentation site?
 
-Edit files in `docs/`, update `mkdocs.yml` if adding new pages, and merge to `main`. The GitHub Pages workflow deploys automatically. See [CONTRIBUTING.md](https://github.com/GIcsei/BAB/blob/main/CONTRIBUTING.md) for local preview instructions.
+Edit files in `docs/`, update `mkdocs.yml` if adding new pages, and merge to `main`. The GitHub Pages workflow deploys automatically. See the [contributing guide](https://github.com/GIcsei/BAB/blob/main/CONTRIBUTING.md) for local preview instructions.
 
 ### How do I run a one-off data collection for a user?
 
