@@ -17,3 +17,6 @@ coverage.xml
 reports/
 .ruff_cache/
 bab.egg-info/
+site/
+backups/
+bandit-report.json
