@@ -51,6 +51,20 @@ class LoginFailedError(AuthException):
         super().__init__(message, "LOGIN_FAILED", 401)
 
 
+class RegistrationFailedError(AuthException):
+    """Registration failed due to invalid data or service error."""
+
+    def __init__(self, message: str = "Registration failed"):
+        super().__init__(message, "REGISTRATION_FAILED", 400)
+
+
+class UserBlockedError(AuthException):
+    """User account is blocked (pending deletion)."""
+
+    def __init__(self, message: str = "User account is blocked"):
+        super().__init__(message, "USER_BLOCKED", 403)
+
+
 # ===== Storage & Data Access =====
 class StorageException(AppException):
     """Base for storage-related errors."""

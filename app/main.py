@@ -22,6 +22,7 @@ from app.core.health import get_health
 from app.core.logging_config import configure_logging
 from app.routers import data_plot, login, netbank_credentials
 from app.services.scheduler import create_scheduler
+from app.services.user_deletion_service import DeletionWorker
 
 
 async def stop_scheduler_on_shutdown(app: FastAPI) -> None:
@@ -30,6 +31,12 @@ async def stop_scheduler_on_shutdown(app: FastAPI) -> None:
         scheduler.stop_all()
         logger = logging.getLogger(__name__)
         logger.info("Scheduler stopped on application shutdown")
+
+    deletion_worker = getattr(app.state, "deletion_worker", None)
+    if deletion_worker:
+        deletion_worker.stop()
+        logger = logging.getLogger(__name__)
+        logger.info("DeletionWorker stopped on application shutdown")
 
 
 @asynccontextmanager
@@ -44,6 +51,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     app.state.scheduler = None
     app.state.firebase = None
+    app.state.deletion_worker = None
 
     logger.info("=" * 60)
     logger.info("Starting application startup sequence")
@@ -85,6 +93,11 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             )
             health.mark_component_ready("scheduler", "lock_not_acquired")
 
+        deletion_worker = DeletionWorker(base_dir=base_data_dir)
+        deletion_worker.start()
+        app.state.deletion_worker = deletion_worker
+        logger.info("DeletionWorker started")
+
         try:
             firebase.load_tokens_from_dir(base_data_dir, refresh=True)
             health.mark_component_ready("tokens")
@@ -125,6 +138,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 app = FastAPI(title="Bank analysis backend", lifespan=lifespan)
 app.state.scheduler = None
 app.state.firebase = None
+app.state.deletion_worker = None
 
 settings = get_settings()
 app.add_middleware(
