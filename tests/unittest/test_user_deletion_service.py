@@ -5,6 +5,7 @@ import time
 from unittest.mock import patch
 
 from app.services.user_deletion_service import (
+    DeletionWorker,
     cancel_user_deletion,
     execute_expired_deletions,
     get_pending_deletion,
@@ -205,3 +206,60 @@ def test_execute_handles_rmtree_failure_gracefully(tmp_path):
 
     # Failed deletion should not count, and function should not raise
     assert deleted == 0
+
+
+# ── DeletionWorker ─────────────────────────────────────────────────────────
+
+
+def test_deletion_worker_starts_and_stops(tmp_path):
+    """DeletionWorker can be started and stopped cleanly."""
+    worker = DeletionWorker(base_dir=tmp_path, check_interval_seconds=60)
+    worker.start()
+    assert worker._thread is not None
+    assert worker._thread.is_alive()
+    worker.stop()
+    assert not (worker._thread is not None and worker._thread.is_alive())
+
+
+def test_deletion_worker_start_is_idempotent(tmp_path):
+    """Calling start() twice does not create a second thread."""
+    worker = DeletionWorker(base_dir=tmp_path, check_interval_seconds=60)
+    worker.start()
+    first_thread = worker._thread
+    worker.start()
+    assert worker._thread is first_thread
+    worker.stop()
+
+
+def test_deletion_worker_executes_deletions(tmp_path):
+    """Worker calls execute_expired_deletions on its cycle."""
+    with patch(
+        "app.services.user_deletion_service.execute_expired_deletions",
+        return_value=0,
+    ) as mock_exec:
+        worker = DeletionWorker(base_dir=tmp_path, check_interval_seconds=0.05)
+        worker.start()
+        time.sleep(0.2)
+        worker.stop()
+
+    assert mock_exec.call_count >= 1
+    mock_exec.assert_called_with(tmp_path)
+
+
+def test_deletion_worker_does_not_raise_on_execute_error(tmp_path):
+    """Worker survives execute_expired_deletions raising an exception."""
+    with patch(
+        "app.services.user_deletion_service.execute_expired_deletions",
+        side_effect=RuntimeError("boom"),
+    ):
+        worker = DeletionWorker(base_dir=tmp_path, check_interval_seconds=0.05)
+        worker.start()
+        time.sleep(0.2)
+        worker.stop()
+    # If we reach here the worker did not crash the test process
+
+
+def test_deletion_worker_stop_before_start_is_safe(tmp_path):
+    """Calling stop() before start() must not raise."""
+    worker = DeletionWorker(base_dir=tmp_path)
+    worker.stop()  # should be a no-op

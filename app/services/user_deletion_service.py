@@ -3,6 +3,7 @@
 import json
 import logging
 import shutil
+import threading
 import time
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -10,6 +11,7 @@ from typing import Any, Dict, Optional
 logger = logging.getLogger(__name__)
 
 _DELETION_PENDING_FILENAME = "deletion_pending.json"
+_DEFAULT_CHECK_INTERVAL_SECONDS = 24 * 60 * 60  # 24 hours
 
 
 def schedule_user_deletion(user_dir: Path, user_id: str, days: int) -> Dict[str, int]:
@@ -109,3 +111,64 @@ def execute_expired_deletions(base_dir: Path) -> int:
                 )
 
     return deleted_count
+
+
+class DeletionWorker:
+    """
+    Background daemon that periodically calls execute_expired_deletions().
+
+    Runs in its own thread independently of the FastAPI request lifecycle.
+    The check interval defaults to 24 hours and is configurable at construction
+    time (e.g. set to a short interval in tests).
+    """
+
+    def __init__(
+        self,
+        base_dir: Path,
+        check_interval_seconds: float = _DEFAULT_CHECK_INTERVAL_SECONDS,
+    ) -> None:
+        self._base_dir = Path(base_dir)
+        self._check_interval_seconds = check_interval_seconds
+        self._stop_event = threading.Event()
+        self._thread: Optional[threading.Thread] = None
+
+    def start(self) -> None:
+        """Start the background deletion worker thread (idempotent)."""
+        if self._thread is not None and self._thread.is_alive():
+            return
+        self._stop_event.clear()
+        self._thread = threading.Thread(
+            target=self._run,
+            daemon=True,
+            name="deletion-worker",
+        )
+        self._thread.start()
+        logger.info(
+            "DeletionWorker started (base_dir=%s, interval=%ds)",
+            self._base_dir,
+            self._check_interval_seconds,
+        )
+
+    def stop(self) -> None:
+        """Signal the worker to stop and wait for it to exit."""
+        self._stop_event.set()
+        if self._thread is not None:
+            self._thread.join(timeout=5)
+            self._thread = None
+        logger.info("DeletionWorker stopped")
+
+    def _run(self) -> None:
+        logger.debug("DeletionWorker loop entered")
+        while not self._stop_event.is_set():
+            try:
+                deleted = execute_expired_deletions(self._base_dir)
+                if deleted:
+                    logger.info(
+                        "DeletionWorker: removed %d expired user account(s)", deleted
+                    )
+            except Exception:
+                logger.exception("DeletionWorker: unexpected error during scan")
+
+            # Sleep for the configured interval, but wake immediately on stop
+            self._stop_event.wait(timeout=self._check_interval_seconds)
+        logger.debug("DeletionWorker loop exiting")
