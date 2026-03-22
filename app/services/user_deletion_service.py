@@ -5,6 +5,7 @@ import logging
 import shutil
 import threading
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -131,6 +132,12 @@ class DeletionWorker:
         self._check_interval_seconds = check_interval_seconds
         self._stop_event = threading.Event()
         self._thread: Optional[threading.Thread] = None
+        self._metrics: Dict[str, Any] = {
+            "last_run_at": None,
+            "total_deleted": 0,
+            "total_errors": 0,
+            "total_scans": 0,
+        }
 
     def start(self) -> None:
         """Start the background deletion worker thread (idempotent)."""
@@ -162,13 +169,21 @@ class DeletionWorker:
         while not self._stop_event.is_set():
             try:
                 deleted = execute_expired_deletions(self._base_dir)
+                self._metrics["total_scans"] += 1
+                self._metrics["total_deleted"] += deleted
+                self._metrics["last_run_at"] = datetime.now(timezone.utc).isoformat()
                 if deleted:
                     logger.info(
                         "DeletionWorker: removed %d expired user account(s)", deleted
                     )
             except Exception:
                 logger.exception("DeletionWorker: unexpected error during scan")
+                self._metrics["total_errors"] += 1
 
             # Sleep for the configured interval, but wake immediately on stop
             self._stop_event.wait(timeout=self._check_interval_seconds)
         logger.debug("DeletionWorker loop exiting")
+
+    def get_metrics(self) -> Dict[str, Any]:
+        """Return current metrics snapshot."""
+        return dict(self._metrics)

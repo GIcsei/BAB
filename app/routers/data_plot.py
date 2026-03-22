@@ -35,13 +35,15 @@ def _validate_user_id(user_id: str) -> str:
 
 
 def _validate_filename(filename: str) -> str:
-    """Validate filename to ensure only .pkl/.pickle files are accessed."""
-    if not re.match(r"^[a-zA-Z0-9_\-\.]+\.(pkl|pickle)$", filename, re.IGNORECASE):
+    """Validate filename to ensure only supported data files are accessed."""
+    if not re.match(
+        r"^[a-zA-Z0-9_\-\.]+\.(pkl|pickle|csv|parquet)$", filename, re.IGNORECASE
+    ):
         from fastapi import HTTPException
 
         raise HTTPException(
             status_code=400,
-            detail="Invalid filename format; only .pkl and .pickle files are allowed",
+            detail="Invalid filename format; only .pkl, .pickle, .csv, and .parquet files are allowed",
         )
     return filename
 
@@ -49,17 +51,23 @@ def _validate_filename(filename: str) -> str:
 @router.get(
     "/list",
     response_model=FileListResponse,
-    summary="List available pickle files for authenticated user",
+    summary="List available data files (pickle, CSV, Parquet) for authenticated user",
 )
 async def list_files(
+    offset: int = Query(0, ge=0, description="Pagination offset"),
+    limit: int = Query(50, ge=1, le=500, description="Maximum files per page"),
     current_user_id: str = Depends(get_current_user_id),
 ) -> FileListResponse:
     user_id = _validate_user_id(current_user_id)
     try:
-        files = data_service.list_pickles_for_user(_base_dir(), user_id)
-        return FileListResponse(files=[FileItem(**f) for f in files])
+        all_files = data_service.list_data_files_for_user(_base_dir(), user_id)
+        total_count = len(all_files)
+        paginated = all_files[offset : offset + limit]
+        return FileListResponse(
+            files=[FileItem(**f) for f in paginated], total_count=total_count
+        )
     except Exception as exc:
-        logger.exception("Error listing pickles for user %s", user_id)
+        logger.exception("Error listing data files for user %s", user_id)
         raise exception_to_http(exc)
 
 
