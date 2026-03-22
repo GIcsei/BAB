@@ -7,25 +7,17 @@
 
 ### 1. Firebase Service-Account Private Key Committed
 
-| Field | Value |
-|---|---|
-| **File** | `app/REDACTED_CREDENTIAL_FILE.json` |
-| **Content** | Full GCP service-account JSON including RSA private key |
-| **Introduced in** | `222c4c9` (Initial commit) |
-| **Re-introduced in** | `fc53412` ("SECURITY VULNERABILITY" commit) |
-| **Removed in** | `d2072e3`, `dd298f6` |
+A full GCP service-account JSON file (including the RSA private key) was
+committed to the repository. It was introduced in the initial commit and
+re-introduced in a later commit titled "SECURITY VULNERABILITY".
 
-**Impact:** Anyone with read access to the repository can extract the
-private key and impersonate the `REDACTED_SERVICE_ACCOUNT_EMAIL`
-service account.
+**Impact:** Anyone with read access to the repository could extract the
+private key and impersonate the associated service account.
 
 ### 2. Firebase API Key Hardcoded in Source
 
-| Field | Value |
-|---|---|
-| **Key** | `REDACTED_FIREBASE_API_KEY` |
-| **Introduced in** | `95bf8a4` (`app/services/login_service.py`), `fc53412` (`QueryHandler.py`) |
-| **Removed in** | `0fa7c8c`, `c2ff966` |
+A Firebase Web API key was hardcoded in `app/services/login_service.py`
+and `app/core/firestore_handler/QueryHandler.py`.
 
 **Impact:** The API key was embedded in plaintext. While Firebase API keys
 are often restricted by project settings, exposure broadens the attack
@@ -33,15 +25,17 @@ surface (quota abuse, phishing via the project identity).
 
 ### 3. `.env` File Tracked in Repository
 
-| Field | Value |
-|---|---|
-| **File** | `.env` |
-| **Content** | Deployment-specific host paths, user IDs, container config |
-| **Introduced in** | `187ad46` |
+The `.env` file was tracked in git, leaking deployment-specific host paths,
+operator usernames, and container configuration.
 
-**Impact:** Leaks internal directory structure and operator username
-(`REDACTED_PATH`). While no secrets (passwords/keys) are stored directly,
-the information aids targeted attacks.
+**Impact:** Leaks internal directory structure and operator identity.
+While no secrets (passwords/keys) were stored directly, the information
+aids targeted attacks.
+
+### 4. Hardcoded Credentials in Source
+
+A personal email address and placeholder password were hardcoded in the
+`QueryHandler.py` `__main__` block.
 
 ## Required Actions
 
@@ -49,23 +43,26 @@ the information aids targeted attacks.
 
 1. **Rotate the Firebase service-account key.**
    Go to the GCP Console → IAM → Service Accounts →
-   `REDACTED_SERVICE_ACCOUNT_EMAIL` →
-   Keys → delete key ID `ebd117266a99…` and create a new one.
+   delete the compromised key and create a new one.
 
 2. **Restrict or regenerate the Firebase API key.**
    GCP Console → APIs & Services → Credentials → restrict the key to
    your production domains/IPs, or generate a new one.
 
 3. **Purge secrets from git history.**
-   Use [BFG Repo-Cleaner](https://rtyley.github.io/bfg-repo-cleaner/) or
-   `git filter-repo` to remove:
-   - `app/REDACTED_CREDENTIAL_FILE.json`
-   - All occurrences of `REDACTED_FIREBASE_API_KEY`
-   - All occurrences of the private key blob
-
-   After purging, force-push all branches and have every contributor
-   re-clone. GitHub may still cache objects; open a support ticket to
-   request garbage collection on the remote.
+   Run the provided `filter-secrets.sh` script (uses `git-filter-repo`
+   with `replacements.txt`):
+   ```bash
+   git clone https://github.com/GIcsei/BAB.git BAB-clean
+   cd BAB-clean
+   bash filter-secrets.sh
+   git remote add origin https://github.com/GIcsei/BAB.git
+   git push --force --all origin
+   git push --force --tags origin
+   ```
+   Then have every contributor delete their old clone and re-clone.
+   Open a GitHub support ticket to request server-side GC of
+   unreachable objects.
 
 ### Completed in This PR
 
@@ -74,3 +71,5 @@ the information aids targeted attacks.
 - `.gitignore` hardened to prevent future commits of credential files
   (`*.json` service accounts, `*.pem`, `*.key`, `*.p12`, `*.pfx`,
   `auth_token*.json`, `master.json`).
+- `replacements.txt` created listing all sensitive strings for `git-filter-repo`.
+- `filter-secrets.sh` script created to automate the history purge.
