@@ -22,6 +22,7 @@ from app.core.health import get_health
 from app.core.logging_config import configure_logging
 from app.routers import data_plot, login, netbank_credentials
 from app.services.scheduler import create_scheduler
+from app.services.user_deletion_service import execute_expired_deletions
 
 
 async def stop_scheduler_on_shutdown(app: FastAPI) -> None:
@@ -84,6 +85,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
                 "Scheduler lock not acquired; skipping scheduler restore in this process"
             )
             health.mark_component_ready("scheduler", "lock_not_acquired")
+
+        deleted = execute_expired_deletions(base_data_dir)
+        if deleted:
+            logger.info("Deleted %d expired user account(s) on startup", deleted)
 
         try:
             firebase.load_tokens_from_dir(base_data_dir, refresh=True)

@@ -8,10 +8,28 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class RegisterRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+
 class LoginResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     message: str
+
+
+class RegisterResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user_id: str
+    message: str
+
+
+class UnregisterResponse(BaseModel):
+    message: str
+    deletion_scheduled_at_ms: int
+    deletion_at_ms: int
 
 
 class UserMeResponse(BaseModel):

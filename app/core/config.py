@@ -44,6 +44,7 @@ class Settings:
     selenium_downloads_dir: Optional[str]
     local_downloads_dir: Optional[str]
     is_testing: bool  # Based on flag, default test values shall be loaded. After implementation, other test params can be removed and set based on this flag.
+    unregister_deletion_days: int
     cors_allowed_origins: List[str] = field(default_factory=list)
 
     def __post_init__(self) -> None:
@@ -125,6 +126,9 @@ def get_settings() -> Settings:
 
     logger.info("Testing mode: %s", is_testing)
 
+    unregister_deletion_days = _to_int(os.getenv("APP_UNREGISTER_DELETION_DAYS"), 60)
+    logger.info("Unregister deletion days: %d", unregister_deletion_days)
+
     raw_cors = os.getenv("CORS_ALLOWED_ORIGINS", "")
     cors_allowed_origins: List[str] = (
         [o.strip() for o in raw_cors.split(",") if o.strip()] if raw_cors else ["*"]
@@ -145,6 +149,7 @@ def get_settings() -> Settings:
         selenium_downloads_dir=selenium_downloads_dir,
         local_downloads_dir=local_downloads_dir,
         is_testing=is_testing,
+        unregister_deletion_days=unregister_deletion_days,
         cors_allowed_origins=cors_allowed_origins,
     )
     return _SETTINGS

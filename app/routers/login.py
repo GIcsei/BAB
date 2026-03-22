@@ -5,11 +5,29 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 
 from app.core.auth import get_current_user_id, get_firebase_dep
 from app.core.error_mapping import exception_to_http
-from app.core.exceptions import JobNotFoundError, JobStartError, LoginFailedError
+from app.core.exceptions import (
+    JobNotFoundError,
+    JobStartError,
+    LoginFailedError,
+    RegistrationFailedError,
+)
 from app.core.firestore_handler.QueryHandler import Firebase
 from app.infrastructure.sched.scheduler import Scheduler
-from app.schemas.login import LoginRequest, LoginResponse, NextRunInfo, UserMeResponse
-from app.services.login_service import login_user, logout_user
+from app.schemas.login import (
+    LoginRequest,
+    LoginResponse,
+    NextRunInfo,
+    RegisterRequest,
+    RegisterResponse,
+    UnregisterResponse,
+    UserMeResponse,
+)
+from app.services.login_service import (
+    login_user,
+    logout_user,
+    register_user,
+    unregister_user,
+)
 
 router = APIRouter(prefix="/user", tags=["Authentication"])
 logger = logging.getLogger(__name__)
@@ -20,6 +38,29 @@ def get_scheduler_dep(request: Request) -> Scheduler:
     if scheduler is None:
         raise HTTPException(status_code=503, detail="Scheduler unavailable")
     return scheduler
+
+
+@router.post(
+    "/register",
+    response_model=RegisterResponse,
+    status_code=201,
+    summary="Register a new user with email and password",
+)
+def register(
+    data: RegisterRequest,
+    scheduler: Scheduler = Depends(get_scheduler_dep),
+    firebase: Firebase = Depends(get_firebase_dep),
+) -> RegisterResponse:
+    try:
+        return register_user(data, scheduler, firebase)
+    except RegistrationFailedError as exc:
+        logger.warning("Registration failed for email: %s", data.email)
+        raise exception_to_http(exc)
+    except Exception as exc:
+        logger.exception(
+            "Unexpected error during registration for email: %s", data.email
+        )
+        raise exception_to_http(RegistrationFailedError(str(exc)))
 
 
 @router.post(
@@ -90,6 +131,23 @@ def logout(
         return logout_user(current_user_id, scheduler, firebase)
     except Exception as exc:
         logger.exception("Logout failed for user: %s", current_user_id)
+        raise exception_to_http(exc)
+
+
+@router.post(
+    "/unregister",
+    response_model=UnregisterResponse,
+    summary="Unregister user: stop jobs and schedule account deletion in 60 days",
+)
+def unregister(
+    current_user_id: str = Depends(get_current_user_id),
+    scheduler: Scheduler = Depends(get_scheduler_dep),
+    firebase: Firebase = Depends(get_firebase_dep),
+) -> UnregisterResponse:
+    try:
+        return unregister_user(current_user_id, scheduler, firebase)
+    except Exception as exc:
+        logger.exception("Unregister failed for user: %s", current_user_id)
         raise exception_to_http(exc)
 
 
