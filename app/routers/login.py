@@ -4,6 +4,7 @@ from typing import Any, Dict, cast
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from app.core.auth import get_current_user, get_current_user_id, get_firebase_dep
+from app.core.config import get_settings
 from app.core.error_mapping import exception_to_http
 from app.core.exceptions import (
     JobNotFoundError,
@@ -32,6 +33,7 @@ from app.services.login_service import (
     request_password_reset,
     unregister_user,
 )
+from app.services.user_deletion_service import get_pending_deletion
 
 router = APIRouter(prefix="/user", tags=["Authentication"])
 logger = logging.getLogger(__name__)
@@ -109,10 +111,6 @@ def job_status(
         info = scheduler.get_next_run_for_user(current_user_id)
         has_job = info is not None
         next_run = NextRunInfo(**info) if info else None
-
-        # Check deletion pending
-        from app.core.config import get_settings
-        from app.services.user_deletion_service import get_pending_deletion
 
         settings = get_settings()
         user_dir = settings.app_user_data_dir / current_user_id

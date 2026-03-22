@@ -52,8 +52,8 @@ def _validate_filename(filename: str) -> str:
     summary="List available data files (pickle, CSV, Parquet) for authenticated user",
 )
 async def list_files(
-    offset: int = Query(0, ge=0),
-    limit: int = Query(50, ge=1, le=500),
+    offset: int = Query(0, ge=0, description="Pagination offset"),
+    limit: int = Query(50, ge=1, le=500, description="Maximum files per page"),
     current_user_id: str = Depends(get_current_user_id),
 ) -> FileListResponse:
     user_id = _validate_user_id(current_user_id)

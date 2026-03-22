@@ -49,7 +49,7 @@ def _validate_file_size(path: Path, max_size_mb: int = 500) -> None:
         raise FileNotFoundError(str(path)) from exc
 
 
-def list_data_files_for_user(base_data_dir: Path, user_id: str, offset: int = 0, limit: int = 0) -> List[Dict[str, Any]]:
+def list_data_files_for_user(base_data_dir: Path, user_id: str) -> List[Dict[str, Any]]:
     user_dir = base_data_dir / user_id
     out: List[Dict[str, Any]] = []
     if not user_dir.exists() or not user_dir.is_dir():
@@ -69,8 +69,6 @@ def list_data_files_for_user(base_data_dir: Path, user_id: str, offset: int = 0,
                     logger.exception("Error reading file metadata: %s", p)
     except Exception:
         logger.exception("Error listing data files in directory: %s", user_dir)
-    if limit > 0:
-        return out[offset:offset + limit]
     return out
 
 
