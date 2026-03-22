@@ -17,3 +17,8 @@ literal:\\wsl.localhost\REDACTED_PATH\master.json==>\\wsl.localhost\REDACTED_PAT
 literal:REDACTED_CREDENTIAL_FILE.json==>REDACTED_CREDENTIAL_FILE.json
 literal:REDACTED_PROJECT==>REDACTED_PROJECT
 literal:REDACTED_PATH==>REDACTED_PATH
+literal:==>
+literal:==>
+literal:==>
+literal:echo "    git log --all -p -S 'REDACTED_PASSWORD'     # should return nothing"==>
+literal:==>
