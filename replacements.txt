@@ -14,3 +14,6 @@ literal:/path/to/master.json==>/path/to/master.json
 literal:/path/to/user_data==>/path/to/user_data
 literal:/path/to/downloads==>/path/to/downloads
 literal:\\wsl.localhost\REDACTED_PATH\master.json==>\\wsl.localhost\REDACTED_PATH\master.json
+literal:REDACTED_CREDENTIAL_FILE.json==>REDACTED_CREDENTIAL_FILE.json
+literal:REDACTED_PROJECT==>REDACTED_PROJECT
+literal:REDACTED_PATH==>REDACTED_PATH

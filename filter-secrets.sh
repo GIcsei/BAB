@@ -33,11 +33,5 @@ git filter-repo \
     --force
 
 echo ""
-echo "==> Done. Verify with:"
-
-
-
-echo "    git log --all -p -S 'REDACTED_PASSWORD'     # should return nothing"
-
-echo ""
-echo "Then force-push all branches and tags."
+echo "==> Done. Verify by searching for sensitive strings — all should return empty."
+echo "    Then force-push all branches and tags."
