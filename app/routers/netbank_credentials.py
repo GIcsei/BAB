@@ -1,20 +1,19 @@
 import logging
-from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
 
 from app.core.auth import get_current_user_id
 from app.core.netbank.credentials import delete_user_credentials, save_user_credentials
-from app.schemas.netbank import CredentialsIn
+from app.schemas.netbank import CredentialsIn, CredentialsStoreResponse
 
 router = APIRouter(prefix="/netbank", tags=["netbank"])
 logger = logging.getLogger(__name__)
 
 
-@router.post("/credentials", status_code=201)
+@router.post("/credentials", response_model=CredentialsStoreResponse, status_code=201)
 def store_credentials(
     payload: CredentialsIn, current_user_id: str = Depends(get_current_user_id)
-) -> Any:
+) -> CredentialsStoreResponse:
     """
     Store NetBroker credentials for the authenticated user.
     Call over HTTPS with authenticated user context and Bearer token returned at login.
@@ -36,7 +35,7 @@ def store_credentials(
         raise HTTPException(
             status_code=500, detail="Failed to save credentials"
         ) from exc
-    return {"status": "ok"}
+    return CredentialsStoreResponse(status="ok")
 
 
 @router.delete("/credentials", status_code=204)
