@@ -56,7 +56,12 @@ def list_data_files_for_user(base_data_dir: Path, user_id: str) -> List[Dict[str
         return out
     try:
         for p in sorted(user_dir.iterdir(), key=lambda x: x.name):
-            if p.is_file() and p.suffix.lower() in {".pkl", ".pickle", ".csv", ".parquet"}:
+            if p.is_file() and p.suffix.lower() in {
+                ".pkl",
+                ".pickle",
+                ".csv",
+                ".parquet",
+            }:
                 try:
                     out.append(
                         {

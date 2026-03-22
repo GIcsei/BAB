@@ -19,7 +19,10 @@ def override_auth():
     mock_scheduler = MagicMock()
     mock_firebase = MagicMock()
     app.dependency_overrides[get_current_user_id] = lambda: "test_user"
-    app.dependency_overrides[get_current_user] = lambda: {"user_id": "test_user", "email": "test@example.com"}
+    app.dependency_overrides[get_current_user] = lambda: {
+        "user_id": "test_user",
+        "email": "test@example.com",
+    }
     app.dependency_overrides[get_scheduler_dep] = lambda: mock_scheduler
     app.dependency_overrides[get_firebase_dep] = lambda: mock_firebase
     yield mock_scheduler, mock_firebase

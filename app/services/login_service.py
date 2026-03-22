@@ -324,7 +324,7 @@ def logout_user(user_id: str, scheduler: Scheduler, firebase: Firebase) -> bool:
     return True
 
 
-def request_password_reset(email: str, firebase: Firebase) -> dict:
+def request_password_reset(email: str, firebase: Firebase) -> Dict[str, str]:
     """Send a password reset email via Firebase Auth."""
     settings = _get_settings()
     base_data_dir = settings.app_user_data_dir
@@ -332,4 +332,6 @@ def request_password_reset(email: str, firebase: Firebase) -> dict:
     temp_token_path = base_data_dir / "auth_token_tmp.json"
     auth_client, _ = firebase.auth(temp_token_path)
     auth_client.send_password_reset_email(email)
-    return {"message": "If the email is registered, a password reset link has been sent."}
+    return {
+        "message": "If the email is registered, a password reset link has been sent."
+    }

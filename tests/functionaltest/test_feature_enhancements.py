@@ -371,7 +371,9 @@ class TestCleanupMetrics:
     def test_cleanup_metrics_returns_200_with_worker(self):
         from app.services.user_deletion_service import DeletionWorker
 
-        worker = DeletionWorker(base_dir=Path("/tmp/nonexistent"), check_interval_seconds=9999)
+        worker = DeletionWorker(
+            base_dir=Path("/tmp/nonexistent"), check_interval_seconds=9999
+        )
         app.state.deletion_worker = worker
 
         r = client.get("/admin/cleanup-metrics")

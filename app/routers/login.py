@@ -95,7 +95,9 @@ def login(
     summary="Return the authenticated user's identity",
 )
 def me(current_user: Dict[str, Any] = Depends(get_current_user)) -> UserMeResponse:
-    return UserMeResponse(user_id=current_user["user_id"], email=current_user.get("email"))
+    return UserMeResponse(
+        user_id=current_user["user_id"], email=current_user.get("email")
+    )
 
 
 @router.get(

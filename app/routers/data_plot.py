@@ -36,7 +36,9 @@ def _validate_user_id(user_id: str) -> str:
 
 def _validate_filename(filename: str) -> str:
     """Validate filename to ensure only supported data files are accessed."""
-    if not re.match(r"^[a-zA-Z0-9_\-\.]+\.(pkl|pickle|csv|parquet)$", filename, re.IGNORECASE):
+    if not re.match(
+        r"^[a-zA-Z0-9_\-\.]+\.(pkl|pickle|csv|parquet)$", filename, re.IGNORECASE
+    ):
         from fastapi import HTTPException
 
         raise HTTPException(
@@ -60,8 +62,10 @@ async def list_files(
     try:
         all_files = data_service.list_data_files_for_user(_base_dir(), user_id)
         total_count = len(all_files)
-        paginated = all_files[offset:offset + limit]
-        return FileListResponse(files=[FileItem(**f) for f in paginated], total_count=total_count)
+        paginated = all_files[offset : offset + limit]
+        return FileListResponse(
+            files=[FileItem(**f) for f in paginated], total_count=total_count
+        )
     except Exception as exc:
         logger.exception("Error listing data files for user %s", user_id)
         raise exception_to_http(exc)
