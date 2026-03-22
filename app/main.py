@@ -205,6 +205,8 @@ async def health_check() -> JSONResponse:
             "ready": True,
             "startup_complete_time": status["startup_complete_time"],
             "components": status["components"],
+            "version": status["version"],
+            "uptime_seconds": status["uptime_seconds"],
         },
     )
 
@@ -212,3 +214,15 @@ async def health_check() -> JSONResponse:
 app.include_router(login.router)
 app.include_router(netbank_credentials.router)
 app.include_router(data_plot.router)
+
+
+@app.get("/admin/cleanup-metrics")
+async def cleanup_metrics(request: Request) -> JSONResponse:
+    """Return deletion worker metrics."""
+    worker = getattr(request.app.state, "deletion_worker", None)
+    if worker is None:
+        return JSONResponse(
+            status_code=503,
+            content={"error": "Deletion worker not available"},
+        )
+    return JSONResponse(status_code=200, content=worker.get_metrics())

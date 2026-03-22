@@ -1,5 +1,5 @@
 import logging
-from typing import Optional, cast
+from typing import Any, Dict, Optional, cast
 
 from fastapi import Depends, HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -47,6 +47,42 @@ def get_current_user_id(
             "Using legacy in-memory token fallback; consider migrating to stateless idTokens"
         )
         return user_id
+
+    logger.error("Token verification failed and no legacy token found")
+    raise exception_to_http(InvalidTokenError())
+
+
+def get_current_user(
+    creds: HTTPAuthorizationCredentials = Depends(security),
+    firebase: Firebase = Depends(get_firebase_dep),
+) -> Dict[str, Any]:
+    """Return a dict with user_id and email extracted from the verified token."""
+    token = creds.credentials if creds else None
+    if not token:
+        raise exception_to_http(MissingTokenError())
+
+    try:
+        verified = firebase.verify_id_token(token)
+    except Exception:
+        logger.exception("Token verification failed")
+        raise exception_to_http(InvalidTokenError())
+
+    if verified and verified.get("user_id"):
+        logger.debug("Token verified successfully for user_id: %s", verified["user_id"])
+        return {
+            "user_id": verified["user_id"],
+            "email": verified.get("email"),
+        }
+
+    logger.warning(
+        "Token verification did not return user_id; checking legacy token registry"
+    )
+    user_id = firebase.get_user_id_by_token(token)
+    if user_id:
+        logger.warning(
+            "Using legacy in-memory token fallback; consider migrating to stateless idTokens"
+        )
+        return {"user_id": user_id, "email": None}
 
     logger.error("Token verification failed and no legacy token found")
     raise exception_to_http(InvalidTokenError())

@@ -2,8 +2,9 @@
 Tracks startup completion and dependency health.
 """
 
+import importlib.metadata
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
@@ -14,6 +15,7 @@ class HealthStatus:
 
     def __init__(self) -> None:
         self.is_ready = False
+        self._startup_time = datetime.now(timezone.utc)
         self.startup_complete_time: Optional[datetime] = None
         self.components: Dict[str, Dict[str, Any]] = {
             "firebase": {"ready": False, "error": None},
@@ -39,6 +41,11 @@ class HealthStatus:
 
     def get_status(self) -> Dict[str, Any]:
         """Return health status for /health endpoint."""
+        uptime = (datetime.now(timezone.utc) - self._startup_time).total_seconds()
+        try:
+            version = importlib.metadata.version("bab")
+        except importlib.metadata.PackageNotFoundError:
+            version = "unknown"
         return {
             "ready": self.is_ready,
             "startup_complete_time": (
@@ -47,6 +54,8 @@ class HealthStatus:
                 else None
             ),
             "components": self.components,
+            "uptime_seconds": round(uptime, 2),
+            "version": version,
         }
 
 

@@ -173,7 +173,7 @@ def test_list_files_exception_returns_500():
     client = TestClient(app, raise_server_exceptions=False)
 
     with patch(
-        "app.routers.data_plot.data_service.list_pickles_for_user",
+        "app.routers.data_plot.data_service.list_data_files_for_user",
         side_effect=OSError("disk error"),
     ):
         r = client.get("/data/list")

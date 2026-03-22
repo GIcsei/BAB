@@ -34,6 +34,7 @@ class UnregisterResponse(BaseModel):
 
 class UserMeResponse(BaseModel):
     user_id: str
+    email: Optional[str] = None
 
 
 class NextRunInfo(BaseModel):
@@ -41,3 +42,18 @@ class NextRunInfo(BaseModel):
     next_run_timestamp_ms: Optional[int] = None
 
     model_config = {"extra": "allow"}
+
+
+class PasswordResetRequest(BaseModel):
+    email: EmailStr
+
+
+class PasswordResetResponse(BaseModel):
+    message: str
+
+
+class JobStatusResponse(BaseModel):
+    user_id: str
+    has_scheduled_job: bool
+    next_run: Optional[NextRunInfo] = None
+    deletion_pending: Optional[bool] = None
