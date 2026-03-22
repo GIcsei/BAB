@@ -46,7 +46,11 @@ def _validate_filename(filename: str) -> str:
     return filename
 
 
-@router.get("/list", response_model=FileListResponse, summary="List available pickle files for authenticated user")
+@router.get(
+    "/list",
+    response_model=FileListResponse,
+    summary="List available pickle files for authenticated user",
+)
 async def list_files(
     current_user_id: str = Depends(get_current_user_id),
 ) -> FileListResponse:
@@ -59,7 +63,11 @@ async def list_files(
         raise exception_to_http(exc)
 
 
-@router.get("/files/{filename}/preview", response_model=PreviewResponse, summary="Preview contents of a pickle file")
+@router.get(
+    "/files/{filename}/preview",
+    response_model=PreviewResponse,
+    summary="Preview contents of a pickle file",
+)
 async def preview_file(
     filename: str,
     rows: int = Query(200, ge=1, le=5000),
@@ -91,7 +99,11 @@ async def preview_file(
         raise exception_to_http(exc)
 
 
-@router.get("/files/{filename}/series", response_model=SeriesResponse, summary="Extract x/y series for plotting")
+@router.get(
+    "/files/{filename}/series",
+    response_model=SeriesResponse,
+    summary="Extract x/y series for plotting",
+)
 async def get_series(
     filename: str,
     y: str = Query(..., description="Column or series name to use as Y"),

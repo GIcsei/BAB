@@ -155,6 +155,7 @@ def test_next_run_generic_exception_returns_500(override_auth):
     r = client.post("/user/next_run")
     assert r.status_code in (500, 502)
 
+
 # ── GET /user/me ───────────────────────────────────────────────────────────
 
 
