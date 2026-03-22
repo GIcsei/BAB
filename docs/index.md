@@ -8,6 +8,8 @@
 - [Deployment Instructions](deployment.md) — Docker, TrueNAS, production deployment
 - [Testing Instructions](testing.md) — Running tests, test structure, writing new tests
 - [Security Notes](security.md) — Security considerations, scanning tools, vulnerability policy
+- [CI/CD Pipeline](ci.md) — GitHub Actions workflows, checks, and deployment
+- [Troubleshooting & FAQ](troubleshooting.md) — Common issues and frequently asked questions
 
 ## Quick Links
 

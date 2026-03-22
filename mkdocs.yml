@@ -34,8 +34,10 @@ nav:
   - API Reference: api.md
   - Setup: setup.md
   - Deployment: deployment.md
+  - CI/CD: ci.md
   - Testing: testing.md
   - Security: security.md
+  - Troubleshooting: troubleshooting.md
 
 plugins:
   - search

@@ -3,7 +3,8 @@
 ![CI](https://github.com/GIcsei/BAB/actions/workflows/ci.yml/badge.svg)
 ![Docker](https://github.com/GIcsei/BAB/actions/workflows/docker.yml/badge.svg)
 ![Release](https://github.com/GIcsei/BAB/actions/workflows/release.yml/badge.svg)
-[![Docs](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://gicsei.github.io/BAB/)
+![Docs](https://github.com/GIcsei/BAB/actions/workflows/pages.yml/badge.svg)
+[![Docs Site](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://gicsei.github.io/BAB/)
 
 Backend service for authenticated data ingestion and plotting on TrueNAS and
 standard Docker environments.
