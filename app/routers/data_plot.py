@@ -1,7 +1,7 @@
 import logging
 import re
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends, Query
 
@@ -14,6 +14,7 @@ from app.core.exceptions import (
     FileNotFoundError,
     FileSizeExceededError,
 )
+from app.schemas.data import FileItem, FileListResponse, PreviewResponse, SeriesResponse
 from app.services import data_service
 
 router = APIRouter(prefix="/data", tags=["Data"])
@@ -45,32 +46,32 @@ def _validate_filename(filename: str) -> str:
     return filename
 
 
-@router.get("/list", summary="List available pickle files for authenticated user")
+@router.get("/list", response_model=FileListResponse, summary="List available pickle files for authenticated user")
 async def list_files(
     current_user_id: str = Depends(get_current_user_id),
-) -> Dict[str, List[Dict[str, Any]]]:
+) -> FileListResponse:
     user_id = _validate_user_id(current_user_id)
     try:
         files = data_service.list_pickles_for_user(_base_dir(), user_id)
-        return {"files": files}
+        return FileListResponse(files=[FileItem(**f) for f in files])
     except Exception as exc:
         logger.exception("Error listing pickles for user %s", user_id)
         raise exception_to_http(exc)
 
 
-@router.get("/files/{filename}/preview", summary="Preview contents of a pickle file")
+@router.get("/files/{filename}/preview", response_model=PreviewResponse, summary="Preview contents of a pickle file")
 async def preview_file(
     filename: str,
     rows: int = Query(200, ge=1, le=5000),
     current_user_id: str = Depends(get_current_user_id),
-) -> Dict[str, Any]:
+) -> PreviewResponse:
     user_id = _validate_user_id(current_user_id)
     filename = _validate_filename(filename)
     try:
         preview = await data_service.preview_pickle_file_async(
             _base_dir(), user_id, filename, max_rows=rows
         )
-        return {"preview": preview}
+        return PreviewResponse(preview=preview)
     except FileNotFoundError as exc:
         logger.warning("File not found: %s/%s", user_id, filename)
         raise exception_to_http(exc)
@@ -90,7 +91,7 @@ async def preview_file(
         raise exception_to_http(exc)
 
 
-@router.get("/files/{filename}/series", summary="Extract x/y series for plotting")
+@router.get("/files/{filename}/series", response_model=SeriesResponse, summary="Extract x/y series for plotting")
 async def get_series(
     filename: str,
     y: str = Query(..., description="Column or series name to use as Y"),
