@@ -111,6 +111,7 @@ def test_settings_rejects_invalid_job_hour():
             selenium_downloads_dir=None,
             local_downloads_dir=None,
             is_testing=True,
+            unregister_deletion_days=60,
         )
 
 
@@ -131,6 +132,7 @@ def test_settings_rejects_negative_job_hour():
             selenium_downloads_dir=None,
             local_downloads_dir=None,
             is_testing=True,
+            unregister_deletion_days=60,
         )
 
 
@@ -151,6 +153,7 @@ def test_settings_rejects_invalid_job_minute():
             selenium_downloads_dir=None,
             local_downloads_dir=None,
             is_testing=True,
+            unregister_deletion_days=60,
         )
 
 
