@@ -49,14 +49,14 @@ def _validate_file_size(path: Path, max_size_mb: int = 500) -> None:
         raise FileNotFoundError(str(path)) from exc
 
 
-def list_pickles_for_user(base_data_dir: Path, user_id: str) -> List[Dict[str, Any]]:
+def list_data_files_for_user(base_data_dir: Path, user_id: str, offset: int = 0, limit: int = 0) -> List[Dict[str, Any]]:
     user_dir = base_data_dir / user_id
     out: List[Dict[str, Any]] = []
     if not user_dir.exists() or not user_dir.is_dir():
         return out
     try:
         for p in sorted(user_dir.iterdir(), key=lambda x: x.name):
-            if p.is_file() and p.suffix.lower() in {".pkl", ".pickle"}:
+            if p.is_file() and p.suffix.lower() in {".pkl", ".pickle", ".csv", ".parquet"}:
                 try:
                     out.append(
                         {
@@ -68,8 +68,14 @@ def list_pickles_for_user(base_data_dir: Path, user_id: str) -> List[Dict[str, A
                 except Exception:
                     logger.exception("Error reading file metadata: %s", p)
     except Exception:
-        logger.exception("Error listing pickles in directory: %s", user_dir)
+        logger.exception("Error listing data files in directory: %s", user_dir)
+    if limit > 0:
+        return out[offset:offset + limit]
     return out
+
+
+# Backward-compatible alias
+list_pickles_for_user = list_data_files_for_user
 
 
 def _try_load(path: Path) -> Any:
@@ -104,6 +110,17 @@ def _try_load(path: Path) -> Any:
     except Exception as exc:
         logger.exception("All deserialization attempts failed for %s", path)
         raise DeserializationError(str(path), str(last_exc or exc))
+
+
+def _load_file(path: Path) -> Any:
+    """Load a data file based on its extension."""
+    suffix = path.suffix.lower()
+    if suffix == ".csv":
+        return pd.read_csv(path)
+    elif suffix == ".parquet":
+        return pd.read_parquet(path)
+    else:
+        return _try_load(path)
 
 
 def _to_json_serializable(obj: Any, max_rows: int = 200) -> Dict[str, Any]:
@@ -178,7 +195,7 @@ def preview_pickle_file(
     _validate_file_size(path)
     if not path.exists() or not path.is_file():
         raise FileNotFoundError(str(path))
-    obj = _try_load(path)
+    obj = _load_file(path)
     return _to_json_serializable(obj, max_rows=max_rows)
 
 
@@ -210,7 +227,7 @@ def extract_series(
     if not path.exists() or not path.is_file():
         raise FileNotFoundError(str(path))
 
-    obj = _try_load(path)
+    obj = _load_file(path)
 
     if isinstance(obj, pd.DataFrame):
         df = obj

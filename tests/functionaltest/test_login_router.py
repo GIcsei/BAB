@@ -7,7 +7,7 @@ os.environ.setdefault("APP_ALLOW_UNSAFE_DESERIALIZE", "true")
 from unittest.mock import MagicMock, patch
 
 import pytest
-from app.core.auth import get_current_user_id, get_firebase_dep
+from app.core.auth import get_current_user, get_current_user_id, get_firebase_dep
 from app.main import app
 from app.routers.login import get_scheduler_dep
 from fastapi.testclient import TestClient
@@ -19,10 +19,12 @@ def override_auth():
     mock_scheduler = MagicMock()
     mock_firebase = MagicMock()
     app.dependency_overrides[get_current_user_id] = lambda: "test_user"
+    app.dependency_overrides[get_current_user] = lambda: {"user_id": "test_user", "email": "test@example.com"}
     app.dependency_overrides[get_scheduler_dep] = lambda: mock_scheduler
     app.dependency_overrides[get_firebase_dep] = lambda: mock_firebase
     yield mock_scheduler, mock_firebase
     app.dependency_overrides.pop(get_current_user_id, None)
+    app.dependency_overrides.pop(get_current_user, None)
     app.dependency_overrides.pop(get_scheduler_dep, None)
     app.dependency_overrides.pop(get_firebase_dep, None)
 
@@ -164,6 +166,7 @@ def test_me_returns_user_id():
     assert r.status_code == 200
     data = r.json()
     assert data["user_id"] == "test_user"
+    assert data["email"] == "test@example.com"
 
 
 # ── GET /user/next_run ─────────────────────────────────────────────────────

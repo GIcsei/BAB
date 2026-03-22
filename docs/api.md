@@ -34,7 +34,9 @@ Liveness and readiness probe.
     "firebase": {"ready": true, "error": null},
     "scheduler": {"ready": true, "error": null},
     "tokens": {"ready": true, "error": null}
-  }
+  },
+  "version": "0.10.4",
+  "uptime_seconds": 123.45
 }
 ```
 
@@ -94,6 +96,26 @@ Logout the authenticated user. Stops scheduled jobs and removes stored credentia
 true
 ```
 
+#### `POST /user/password-reset`
+
+Request a password reset email. No authentication required.
+
+**Request Body**:
+```json
+{
+  "email": "user@example.com"
+}
+```
+
+**Response 200**:
+```json
+{
+  "message": "If the email is registered, a password reset link has been sent."
+}
+```
+
+> **Note**: This endpoint always returns a success message to prevent email enumeration attacks.
+
 #### `PUT /user/collect_automatically`
 
 Trigger an immediate data collection run for the authenticated user.
@@ -122,6 +144,25 @@ Get information about the next scheduled run.
 ```
 
 **Response 404**: No scheduled job found.
+
+#### `GET /user/job-status`
+
+Get job status and deletion status for the authenticated user.
+
+**Headers**: `Authorization: Bearer <idToken>`
+
+**Response 200**:
+```json
+{
+  "user_id": "abc123",
+  "has_scheduled_job": true,
+  "next_run": {
+    "seconds_until_next_run": 3600,
+    "next_run_timestamp_ms": 1704110400000
+  },
+  "deletion_pending": false
+}
+```
 
 ---
 
@@ -162,9 +203,13 @@ Remove stored credentials.
 
 #### `GET /data/list`
 
-List available pickle files for the authenticated user.
+List available data files (pickle, CSV, Parquet) for the authenticated user.
 
 **Headers**: `Authorization: Bearer <idToken>`
+
+**Query Parameters**:
+- `offset` (int, default: 0, min: 0): Pagination offset.
+- `limit` (int, default: 50, range: 1-500): Maximum files per page.
 
 **Response 200**:
 ```json
@@ -174,14 +219,25 @@ List available pickle files for the authenticated user.
       "filename": "report_2025.pkl",
       "size_bytes": 102400,
       "modified_ms": 1704067200000
+    },
+    {
+      "filename": "data.csv",
+      "size_bytes": 51200,
+      "modified_ms": 1704153600000
+    },
+    {
+      "filename": "summary.parquet",
+      "size_bytes": 204800,
+      "modified_ms": 1704240000000
     }
-  ]
+  ],
+  "total_count": 3
 }
 ```
 
 #### `GET /data/files/{filename}/preview`
 
-Preview contents of a pickle file.
+Preview contents of a data file. Supports `.pkl`, `.pickle`, `.csv`, and `.parquet` formats.
 
 **Headers**: `Authorization: Bearer <idToken>`
 
@@ -210,7 +266,7 @@ Preview contents of a pickle file.
 
 #### `GET /data/files/{filename}/series`
 
-Extract x/y series for plotting.
+Extract x/y series for plotting. Supports `.pkl`, `.pickle`, `.csv`, and `.parquet` formats.
 
 **Headers**: `Authorization: Bearer <idToken>`
 
@@ -231,6 +287,26 @@ Extract x/y series for plotting.
 }
 ```
 
+---
+
+### Admin (`/admin`)
+
+#### `GET /admin/cleanup-metrics`
+
+Return deletion worker metrics. No authentication required.
+
+**Response 200**:
+```json
+{
+  "last_run_at": "2025-01-01T12:00:00+00:00",
+  "total_deleted": 5,
+  "total_errors": 0,
+  "total_scans": 42
+}
+```
+
+**Response 503**: Deletion worker not available.
+
 ## Error Response Format
 
 All error responses follow this structure:
@@ -238,7 +314,8 @@ All error responses follow this structure:
 ```json
 {
   "error": "ERROR_CODE",
-  "message": "Human-readable description"
+  "message": "Human-readable description",
+  "timestamp": "2025-01-01T12:00:00+00:00"
 }
 ```
 
@@ -250,6 +327,8 @@ All error responses follow this structure:
 | `TOKEN_EXPIRED` | 401 | Token has expired |
 | `MISSING_TOKEN` | 401 | Authorization header missing |
 | `LOGIN_FAILED` | 401 | Invalid credentials |
+| `REGISTRATION_FAILED` | 400 | Registration failed |
+| `USER_BLOCKED` | 403 | User account is blocked (pending deletion) |
 | `FILE_NOT_FOUND` | 404 | Requested file does not exist |
 | `FILE_SIZE_EXCEEDED` | 413 | File exceeds size limit |
 | `DESERIALIZATION_ERROR` | 400 | Failed to deserialize file |

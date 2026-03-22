@@ -11,6 +11,7 @@ class FileItem(BaseModel):
 
 class FileListResponse(BaseModel):
     files: List[FileItem]
+    total_count: int
 
 
 class ColumnInfo(BaseModel):

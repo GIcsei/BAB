@@ -3,7 +3,7 @@ from typing import Any, Dict, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 
-from app.core.auth import get_current_user_id, get_firebase_dep
+from app.core.auth import get_current_user, get_current_user_id, get_firebase_dep
 from app.core.error_mapping import exception_to_http
 from app.core.exceptions import (
     JobNotFoundError,
@@ -14,9 +14,12 @@ from app.core.exceptions import (
 from app.core.firestore_handler.QueryHandler import Firebase
 from app.infrastructure.sched.scheduler import Scheduler
 from app.schemas.login import (
+    JobStatusResponse,
     LoginRequest,
     LoginResponse,
     NextRunInfo,
+    PasswordResetRequest,
+    PasswordResetResponse,
     RegisterRequest,
     RegisterResponse,
     UnregisterResponse,
@@ -26,6 +29,7 @@ from app.services.login_service import (
     login_user,
     logout_user,
     register_user,
+    request_password_reset,
     unregister_user,
 )
 
@@ -88,8 +92,42 @@ def login(
     response_model=UserMeResponse,
     summary="Return the authenticated user's identity",
 )
-def me(current_user_id: str = Depends(get_current_user_id)) -> UserMeResponse:
-    return UserMeResponse(user_id=current_user_id)
+def me(current_user: Dict[str, Any] = Depends(get_current_user)) -> UserMeResponse:
+    return UserMeResponse(user_id=current_user["user_id"], email=current_user.get("email"))
+
+
+@router.get(
+    "/job-status",
+    response_model=JobStatusResponse,
+    summary="Get job status for the authenticated user",
+)
+def job_status(
+    current_user_id: str = Depends(get_current_user_id),
+    scheduler: Scheduler = Depends(get_scheduler_dep),
+) -> JobStatusResponse:
+    try:
+        info = scheduler.get_next_run_for_user(current_user_id)
+        has_job = info is not None
+        next_run = NextRunInfo(**info) if info else None
+
+        # Check deletion pending
+        from app.core.config import get_settings
+        from app.services.user_deletion_service import get_pending_deletion
+
+        settings = get_settings()
+        user_dir = settings.app_user_data_dir / current_user_id
+        pending = get_pending_deletion(user_dir)
+        deletion_pending = pending is not None
+
+        return JobStatusResponse(
+            user_id=current_user_id,
+            has_scheduled_job=has_job,
+            next_run=next_run,
+            deletion_pending=deletion_pending,
+        )
+    except Exception as exc:
+        logger.exception("Error getting job status for user: %s", current_user_id)
+        raise exception_to_http(exc)
 
 
 @router.put(
@@ -193,3 +231,23 @@ def next_run_get(
     except Exception as exc:
         logger.exception("Error retrieving next run for user: %s", current_user_id)
         raise exception_to_http(exc)
+
+
+@router.post(
+    "/password-reset",
+    response_model=PasswordResetResponse,
+    summary="Request a password reset email",
+)
+def password_reset(
+    data: PasswordResetRequest,
+    firebase: Firebase = Depends(get_firebase_dep),
+) -> PasswordResetResponse:
+    try:
+        result = request_password_reset(data.email, firebase)
+        return PasswordResetResponse(**result)
+    except Exception:
+        logger.exception("Password reset request failed for email: %s", data.email)
+        # Always return success to prevent email enumeration
+        return PasswordResetResponse(
+            message="If the email is registered, a password reset link has been sent."
+        )
