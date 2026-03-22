@@ -434,13 +434,14 @@ class Scheduler:
 
         with self._lock:
             if user_id in self._jobs:
-                logger.info("Restarting existing job for user=%s", user_id)
-                try:
-                    self._jobs[user_id]._stopped = True
-                except Exception:
-                    logger.debug(
-                        "Error marking previous job stopped for user=%s", user_id
+                existing_job = self._jobs[user_id]
+                if not getattr(existing_job, "_stopped", False):
+                    logger.info(
+                        "Job already active for user=%s; skipping duplicate schedule",
+                        user_id,
                     )
+                    return existing_job
+                logger.info("Replacing stopped job for user=%s", user_id)
 
             job = _Job(
                 user_id,

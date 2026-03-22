@@ -82,13 +82,24 @@ def test_start_job_creates_user_dir(sched, tmp_path):
     assert user_dir.exists()
 
 
-def test_start_job_restarts_existing(sched, tmp_path):
+def test_start_job_no_duplicate_for_active_user(sched, tmp_path):
     user_dir = tmp_path / "u1"
     job1 = sched.start_job_for_user("u1", user_dir, 18, 0)
     job2 = sched.start_job_for_user("u1", user_dir, 18, 0)
-    # Previous job should be marked stopped
-    assert job1._stopped is True
-    assert "u1" in sched._jobs
+    # Active job must not be replaced; same object returned
+    assert job1 is job2
+    assert not job1._stopped
+    assert sched._jobs["u1"] is job1
+
+
+def test_start_job_replaces_stopped_job(sched, tmp_path):
+    user_dir = tmp_path / "u1"
+    job1 = sched.start_job_for_user("u1", user_dir, 18, 0)
+    job1._stopped = True
+    job2 = sched.start_job_for_user("u1", user_dir, 18, 0)
+    # Stopped job should be replaced with a fresh one
+    assert job1 is not job2
+    assert not job2._stopped
     assert sched._jobs["u1"] is job2
 
 
