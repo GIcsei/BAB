@@ -15,6 +15,7 @@ TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
 LOG_FILE="$LOG_DIR/run_$TIMESTAMP.log"
 DATE_TAG=$(date +"%Y%m%d")
 
+BACKUP_DIR="./backups"
 ENV_FILE="./.env"
 # -------------------------
 # Colors
@@ -68,6 +69,67 @@ ENV=${ENV:-dev}
 if [[ "$ENV" != "dev" && "$ENV" != "prod" ]]; then
   echo -e "${RED}Invalid environment.${NC}"
   exit 1
+fi
+
+# -------------------------
+# Backup option
+# -------------------------
+read -p "Create offline backup before deploy? (y/N): " DO_BACKUP
+DO_BACKUP=${DO_BACKUP:-N}
+
+if [[ "${DO_BACKUP,,}" == "y" ]]; then
+  BACKUP_STAMP="${BACKUP_DIR}/backup_${VERSION}_${TIMESTAMP}"
+  mkdir -p "$BACKUP_STAMP"
+
+  echo -e "${YELLOW}Creating offline backup in ${BACKUP_STAMP}...${NC}"
+
+  # Back up compose files
+  cp "$BASE_COMPOSE" "$BACKUP_STAMP/"
+  if [[ "$ENV" == "dev" ]]; then
+    cp "$DEV_COMPOSE" "$BACKUP_STAMP/"
+  else
+    cp "$PROD_COMPOSE" "$BACKUP_STAMP/"
+  fi
+
+  # Back up .env (exclude secrets from logs – only copy, never print)
+  if [[ -f "$ENV_FILE" ]]; then
+    cp "$ENV_FILE" "$BACKUP_STAMP/.env"
+    echo -e "${GREEN}Backed up .env${NC}"
+  fi
+
+  # Back up pyproject.toml for version record
+  cp pyproject.toml "$BACKUP_STAMP/"
+
+  # Export named Docker volumes for the current stack
+  echo -e "${YELLOW}Exporting Docker volumes (if any)...${NC}"
+  if [[ "$ENV" == "dev" ]]; then
+    COMPOSE_FILES_BACKUP="-f $BASE_COMPOSE -f $DEV_COMPOSE"
+  else
+    COMPOSE_FILES_BACKUP="-f $BASE_COMPOSE -f $PROD_COMPOSE"
+  fi
+
+  VOLUMES=$(docker compose --env-file "${ENV_FILE}" ${COMPOSE_FILES_BACKUP} \
+    config --volumes 2>/dev/null || true)
+
+  if [[ -n "$VOLUMES" ]]; then
+    while IFS= read -r VOL; do
+      VOL_FULL="${PROJECT_NAME/\//_}_${VOL}"
+      TAR_OUT="${BACKUP_STAMP}/${VOL}.tar.gz"
+      if docker volume inspect "$VOL_FULL" &>/dev/null; then
+        echo -e "${BLUE}Backing up volume: ${VOL_FULL}${NC}"
+        docker run --rm \
+          -v "${VOL_FULL}:/data:ro" \
+          -v "$(realpath "$BACKUP_STAMP"):/backup" \
+          busybox sh -c "tar czf /backup/${VOL}.tar.gz -C /data ." \
+          && echo -e "${GREEN}Volume ${VOL} backed up to ${TAR_OUT}${NC}" \
+          || echo -e "${YELLOW}Could not back up volume ${VOL} (may be empty or unavailable)${NC}"
+      fi
+    done <<< "$VOLUMES"
+  else
+    echo -e "${YELLOW}No named volumes found for this stack.${NC}"
+  fi
+
+  echo -e "${GREEN}Backup complete: ${BACKUP_STAMP}${NC}"
 fi
 
 # -------------------------

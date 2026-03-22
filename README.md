@@ -1,6 +1,9 @@
 # Bank Analysis Backend
 
 ![CI](https://github.com/GIcsei/BAB/actions/workflows/ci.yml/badge.svg)
+![Docker](https://github.com/GIcsei/BAB/actions/workflows/docker.yml/badge.svg)
+![Release](https://github.com/GIcsei/BAB/actions/workflows/release.yml/badge.svg)
+[![Docs](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://gicsei.github.io/BAB/)
 
 Backend service for authenticated data ingestion and plotting on TrueNAS and
 standard Docker environments.
@@ -229,9 +232,11 @@ The GitHub Actions workflow runs:
 
 - **Lint**: Ruff + Black
 - **Typecheck**: Mypy (strict)
-- **Tests**: Pytest + coverage + HTML report
-- **Security**: `pip-audit`
-- **Docker build** (main only)
+- **Tests**: Pytest + coverage (minimum 70%) + HTML report
+- **Security**: `pip-audit` (dependency CVEs) + `bandit` (static analysis, medium+ severity)
+- **Docker build** (main only) + Trivy image scan
+- **GitHub Pages**: Auto-deploys docs to [GitHub Pages](https://gicsei.github.io/BAB/) on every push to `main`
+- **Release**: Tagged release triggers full validation, GHCR Docker image push, and GitHub release with auto-generated changelog
 
 ## Security Considerations
 

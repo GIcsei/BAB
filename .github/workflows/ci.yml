@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: write
 
 jobs:
   lint:
@@ -109,6 +110,7 @@ jobs:
           mkdir -p reports
           uv run pytest -v --maxfail=1 \
             --cov=app \
+            --cov-fail-under=70 \
             --cov-report=xml:coverage.xml \
             --cov-report=term-missing \
             --cov-report=html:htmlcov \
@@ -162,6 +164,21 @@ jobs:
       - name: Pip audit
         run: uv run pip-audit
 
+      - name: Bandit static analysis
+        run: |
+          uv run bandit -r app \
+            -ll \
+            -f json \
+            -o bandit-report.json || true
+          uv run bandit -r app -ll
+
+      - name: Upload Bandit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bandit-report
+          path: bandit-report.json
+
   build:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
@@ -182,3 +199,30 @@ jobs:
           load: true
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  notify:
+    runs-on: ubuntu-latest
+    if: failure() && github.event_name == 'pull_request'
+    needs: [lint, typecheck, test, security]
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Comment on PR about failure
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const runUrl = `https://github.com/${context.repo.owner}` +
+              `/${context.repo.repo}/actions/runs/${context.runId}`;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: [
+                '## \u274c CI Failed',
+                '',
+                'One or more CI jobs failed on this pull request.' +
+                  ` Please review the [workflow run](${runUrl}) for details.`,
+                '',
+                '**Jobs**: lint \u00b7 typecheck \u00b7 test \u00b7 security',
+              ].join('\n'),
+            });
