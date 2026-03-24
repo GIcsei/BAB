@@ -237,7 +237,7 @@ The GitHub Actions workflow runs:
 - **Security**: `pip-audit` (dependency CVEs) + `bandit` (static analysis, medium+ severity)
 - **Docker build** (main only) + Trivy image scan
 - **GitHub Pages**: Auto-deploys docs to [GitHub Pages](https://gicsei.github.io/BAB/) on every push to `main`
-- **Release**: Tagged release triggers full validation, GHCR Docker image push, and GitHub release with auto-generated changelog
+- **Release**: Tagged release triggers full validation, Docker Hub image push, and GitHub release with auto-generated changelog
 
 ## Security Considerations
 
