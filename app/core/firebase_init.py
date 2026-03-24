@@ -27,7 +27,8 @@ def _validate_credential_path(path: Path) -> None:
         )
 
     # Warn if the credential file sits inside the source tree
-    project_root = Path(__file__).resolve().parent
+    # __file__ is app/core/firebase_init.py → .parent.parent.parent = project root
+    project_root = Path(__file__).resolve().parent.parent.parent
     try:
         path.resolve().relative_to(project_root)
         logger.warning(

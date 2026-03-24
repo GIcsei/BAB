@@ -84,8 +84,7 @@ def _validate_file_size(path: Path, max_size_mb: int = 500) -> None:
 
 
 def list_data_files_for_user(base_data_dir: Path, user_id: str) -> List[Dict[str, Any]]:
-    _validate_user_path(base_data_dir, user_id)
-    user_dir = base_data_dir / user_id
+    user_dir = _validate_user_path(base_data_dir, user_id)
     out: List[Dict[str, Any]] = []
     if not user_dir.exists() or not user_dir.is_dir():
         return out
