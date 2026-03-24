@@ -40,6 +40,13 @@ Triggered by version tags (`v*`). Runs the full validation suite (lint, typechec
 1. Builds and pushes a Docker image to Docker Hub (`icseig/bank_analysis_backend`).
 2. Creates a GitHub Release with auto-generated changelog.
 
+**Required secrets** (configure in *Settings → Secrets and variables → Actions*):
+
+| Secret | Description |
+|--------|-------------|
+| `DOCKERHUB_USERNAME` | Docker Hub username (e.g. `icseig`) |
+| `DOCKERHUB_TOKEN` | Docker Hub access token (create at <https://hub.docker.com/settings/security>) |
+
 ## Running Checks Locally
 
 Replicate CI checks on your machine:
