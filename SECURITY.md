@@ -4,7 +4,7 @@
 
 If you discover a security vulnerability, please report it responsibly:
 
-- **Email**: security@example.com *(replace with your actual contact)*
+- **Email**: T.B.D.
 - **Do not** open a public GitHub issue for security vulnerabilities.
 - We aim to acknowledge reports within 48 hours and provide a fix within 7 days for critical issues.
 
