@@ -44,7 +44,7 @@ core (config, security, logging)
 ↓
 schemas/models (contracts)
 
-```id="f9u1sx"
+```
 
 ## Rules
 
@@ -260,7 +260,7 @@ mypy .
 pytest --cov
 pip-audit
 
-```id="m9iq3h"
+```
 
 ---
 
@@ -317,7 +317,7 @@ pytest --cov
 pip-audit
 python -m app.main --export-openapi openapi.json
 
-```id="9qcs4f"
+```
 
 ---
 
