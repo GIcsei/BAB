@@ -37,7 +37,7 @@ Builds and optionally pushes Docker images for the application.
 
 Triggered by version tags (`v*`). Runs the full validation suite (lint, typecheck, tests, security), then:
 
-1. Builds and pushes a Docker image to GitHub Container Registry (`ghcr.io`).
+1. Builds and pushes a Docker image to Docker Hub (`icseig/bank_analysis_backend`).
 2. Creates a GitHub Release with auto-generated changelog.
 
 ## Running Checks Locally
