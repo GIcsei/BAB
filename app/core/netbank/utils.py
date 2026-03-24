@@ -22,7 +22,7 @@ def extract_date_from_filename(filename: str) -> Optional[date]:
     """
     base = path.basename(filename)
     logger.debug("Extracting date from filename: %s", base)
-    match = re.search(r"(\d{8})_\d{4}", base)
+    match = re.search(r"(\d{8})_\d{4,6}", base)
     logger.debug(
         "Regex match for date extraction: %s", match.group(1) if match else "None"
     )

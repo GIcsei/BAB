@@ -1,6 +1,6 @@
 services:
   app:
-    image: ghcr.io/gicsei/bank_analysis_backend:latest
+    image: icseig/bank_analysis_backend:latest
     container_name: bank_analysis_backend
 
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1
@@ -27,8 +27,8 @@ services:
       SELENIUM_REMOTE_URL: "http://selenium:4444"
 
     volumes:
-      - ${APP_USER_DATA_HOST_PATH:?required}:/var/app/user_data
-      - ${APP_DOWNLOADS_HOST_PATH:?required}:/var/app/downloads
+      - ${APP_USER_DATA_HOST_PATH:-/mnt/cloud/BAB_store/user_data}:/var/app/user_data
+      - ${APP_DOWNLOADS_HOST_PATH:-/mnt/cloud/BAB_store/downloads}:/var/app/downloads
     secrets:
       - firestore_credentials
     depends_on:
@@ -49,13 +49,13 @@ services:
           memory: '512M'
 
   selenium:
-    image: selenium/standalone-chromium:144.0-20260202
+    image: selenium/standalone-edge:144.0-20260202
     container_name: bank-analysis-selenium
     restart: always
     shm_size: "2g"
     volumes:
       # Must match selenium's internal download dir (default /home/seluser/Downloads)
-      - ${APP_DOWNLOADS_HOST_PATH:?required}:${SELENIUM_DOWNLOADS_DIR:-/home/seluser/Downloads}
+      - ${APP_DOWNLOADS_HOST_PATH:-/mnt/cloud/BAB_store/downloads}:${SELENIUM_DOWNLOADS_DIR:-/home/seluser/Downloads}
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:4444/status || exit 1"]
       interval: 15s
@@ -76,4 +76,4 @@ networks:
 
 secrets:
   firestore_credentials:
-    file: ${FIRESTORE_MASTER_KEY:?required}
+    file: ${FIRESTORE_MASTER_KEY:-/mnt/cloud/BAB_store/master.json}
