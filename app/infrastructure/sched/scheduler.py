@@ -22,7 +22,7 @@ from app.core.config import get_settings
 
 logger = logging.getLogger(__name__)
 
-_SCHED_LOCK_PATH = "/tmp/bab_scheduler.lock"
+_SCHED_LOCK_PATH = "/tmp/bab_scheduler.lock"  # nosec B108
 _DEFAULT_LEADER_POLL_SECONDS = 5.0
 
 

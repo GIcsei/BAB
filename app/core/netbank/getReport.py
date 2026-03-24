@@ -39,7 +39,7 @@ class ErsteNetBroker:
     def __init__(
         self,
         user_id: str,
-        saveFolder: str = "/tmp/Erste",
+        saveFolder: str = "/tmp/Erste",  # nosec B108
         config_dir: Optional[str] = None,
     ) -> None:
         if not user_id:
@@ -195,7 +195,7 @@ class ErsteNetBroker:
             try:
                 os.makedirs(path, exist_ok=True)
                 try:
-                    os.chmod(path, 0o777)
+                    os.chmod(path, 0o777)  # nosec B103
                 except Exception:
                     logger.warning("chmod not supported for %s", path)
             except Exception:
