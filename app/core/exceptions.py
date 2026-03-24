@@ -103,13 +103,6 @@ class DeserializationError(StorageException):
         super().__init__(msg, "DESERIALIZATION_ERROR", 400)
 
 
-class DeserializationDisabledError(StorageException):
-    """Unsafe deserialization is disabled."""
-
-    def __init__(self, message: str = "Unsafe deserialization is disabled"):
-        super().__init__(message, "DESERIALIZATION_DISABLED", 403)
-
-
 # ===== Scheduler & Background Jobs =====
 class SchedulerException(AppException):
     """Base for scheduler-related errors."""

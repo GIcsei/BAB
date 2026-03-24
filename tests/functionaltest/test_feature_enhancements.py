@@ -217,7 +217,7 @@ class TestFileListPagination:
         user_dir = base / "test_user"
         user_dir.mkdir(parents=True)
         for i in range(5):
-            pd.DataFrame({"v": [i]}).to_pickle(user_dir / f"f{i}.pkl")
+            pd.DataFrame({"v": [i]}).to_parquet(user_dir / f"f{i}.parquet")
 
         with patch("app.routers.data_plot._base_dir", return_value=base):
             r = client.get("/data/list", params={"offset": 0, "limit": 3})
@@ -231,7 +231,7 @@ class TestFileListPagination:
         user_dir = base / "test_user"
         user_dir.mkdir(parents=True)
         for i in range(5):
-            pd.DataFrame({"v": [i]}).to_pickle(user_dir / f"f{i}.pkl")
+            pd.DataFrame({"v": [i]}).to_parquet(user_dir / f"f{i}.parquet")
 
         with patch("app.routers.data_plot._base_dir", return_value=base):
             r = client.get("/data/list", params={"offset": 3, "limit": 10})
@@ -244,7 +244,7 @@ class TestFileListPagination:
         base = tmp_path / "userdata"
         user_dir = base / "test_user"
         user_dir.mkdir(parents=True)
-        pd.DataFrame({"v": [1]}).to_pickle(user_dir / "single.pkl")
+        pd.DataFrame({"v": [1]}).to_parquet(user_dir / "single.parquet")
 
         with patch("app.routers.data_plot._base_dir", return_value=base):
             r = client.get("/data/list")
@@ -254,14 +254,14 @@ class TestFileListPagination:
         assert body["total_count"] == 1
 
     def test_pagination_mixed_formats(self, mock_deps, tmp_path):
-        """Pagination works across pickle, CSV, and Parquet files."""
+        """Pagination works across CSV, Parquet, and JSON files."""
         base = tmp_path / "userdata"
         user_dir = base / "test_user"
         user_dir.mkdir(parents=True)
         df = pd.DataFrame({"v": [1]})
-        df.to_pickle(user_dir / "a.pkl")
-        df.to_csv(user_dir / "b.csv", index=False)
-        df.to_parquet(user_dir / "c.parquet")
+        df.to_csv(user_dir / "a.csv", index=False)
+        df.to_parquet(user_dir / "b.parquet")
+        df.to_json(user_dir / "c.json")
 
         with patch("app.routers.data_plot._base_dir", return_value=base):
             r = client.get("/data/list", params={"offset": 0, "limit": 100})
@@ -269,9 +269,9 @@ class TestFileListPagination:
         body = r.json()
         assert body["total_count"] == 3
         filenames = [f["filename"] for f in body["files"]]
-        assert "a.pkl" in filenames
-        assert "b.csv" in filenames
-        assert "c.parquet" in filenames
+        assert "a.csv" in filenames
+        assert "b.parquet" in filenames
+        assert "c.json" in filenames
 
 
 # ── 6. Job status ────────────────────────────────────────────────────────

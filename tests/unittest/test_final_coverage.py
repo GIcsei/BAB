@@ -2,35 +2,11 @@
 
 import json
 import os
-import pickle
-from types import ModuleType
 from unittest.mock import MagicMock, PropertyMock, patch
 
-import pandas as pd
 import pytest
 
 os.environ.setdefault("APP_ALLOW_UNSAFE_DESERIALIZE", "true")
-
-from app.services import data_service
-
-# ── data_service – joblib fallback (lines 93-97) ──────────────────────────
-
-
-def test_try_load_joblib_fails_falls_back_to_pandas(tmp_path):
-    """_try_load tries joblib first (fails), then falls back to pandas.read_pickle."""
-    df = pd.DataFrame({"a": [1, 2, 3]})
-    path = tmp_path / "df.pkl"
-    path.write_bytes(pickle.dumps(df))
-
-    # Create a fake joblib module that fails on load
-    fake_joblib = ModuleType("joblib")
-    fake_joblib.load = MagicMock(side_effect=ValueError("joblib cannot load this"))
-
-    with patch.dict("sys.modules", {"joblib": fake_joblib}):
-        # Also reload the data_service module to pick up the patched joblib
-        result = data_service._try_load(path)
-
-    assert isinstance(result, pd.DataFrame)
 
 
 # ── firebase_init – get project_id from credential raises (lines 48-52) ───

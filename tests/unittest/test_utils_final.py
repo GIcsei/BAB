@@ -1,10 +1,10 @@
 """Tests for remaining data_service and Utils coverage."""
 
 import os
-import pickle
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pandas as pd
 import pytest
 
 os.environ.setdefault("APP_ALLOW_UNSAFE_DESERIALIZE", "true")
@@ -22,10 +22,10 @@ def test_preview_file_not_exists_raises(tmp_path):
     user_dir = base / "u1"
     user_dir.mkdir()
     # Create a directory at the "file" path so stat() passes but is_file() fails
-    (user_dir / "fake.pkl").mkdir()
+    (user_dir / "fake.parquet").mkdir()
 
     with pytest.raises(AppFileNotFoundError):
-        preview_pickle_file(base, "u1", "fake.pkl")
+        preview_pickle_file(base, "u1", "fake.parquet")
 
 
 # ── extract_series – file doesn't exist (line 233) ────────────────────────
@@ -38,30 +38,30 @@ def test_extract_series_file_not_exists_raises(tmp_path):
     user_dir = base / "u1"
     user_dir.mkdir()
     # Create a directory at the "file" path so stat() passes but is_file() fails
-    (user_dir / "fake.pkl").mkdir()
+    (user_dir / "fake.parquet").mkdir()
 
     with pytest.raises(AppFileNotFoundError):
-        extract_series(base, "u1", "fake.pkl", x_column=None, y_column="val")
+        extract_series(base, "u1", "fake.parquet", x_column=None, y_column="val")
 
 
 # ── list_pickles_for_user – stat fails (lines 67-68) ────────────────────
 
 
-def test_list_pickles_stat_error_for_pkl_files(tmp_path):
-    """list_pickles_for_user catches exception when stat fails for pkl file."""
-    from app.services.data_service import list_pickles_for_user
+def test_list_data_files_stat_error(tmp_path):
+    """list_data_files_for_user catches exception when stat fails for a data file."""
+    from app.services.data_service import list_data_files_for_user
 
     user_dir = tmp_path / "u1"
     user_dir.mkdir()
-    pkl_file = user_dir / "data.pkl"
-    pkl_file.write_bytes(pickle.dumps([1, 2, 3]))
+    csv_file = user_dir / "data.csv"
+    pd.DataFrame({"x": [1]}).to_csv(csv_file, index=False)
 
     original_stat = Path.stat
     stat_call_count = [0]
 
     def failing_stat(self, **kwargs):
         result = original_stat(self, **kwargs)
-        if self.suffix == ".pkl":
+        if self.suffix == ".csv":
             stat_call_count[0] += 1
             # First call is from is_file() - return normal result
             # Second call is from p.stat().st_size - raise
@@ -70,7 +70,7 @@ def test_list_pickles_stat_error_for_pkl_files(tmp_path):
         return result
 
     with patch.object(Path, "stat", failing_stat):
-        result = list_pickles_for_user(tmp_path, "u1")
+        result = list_data_files_for_user(tmp_path, "u1")
 
     # The exception is caught and the file is skipped
     assert result == []

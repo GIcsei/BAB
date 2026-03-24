@@ -1,8 +1,6 @@
 """Extended tests for app.services.data_service – more branches and types."""
 
 import os
-import pickle
-from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
@@ -11,7 +9,6 @@ import pytest
 os.environ.setdefault("APP_ALLOW_UNSAFE_DESERIALIZE", "true")
 
 from app.core.exceptions import (
-    DeserializationDisabledError,
     FileNotFoundError,
     FileSizeExceededError,
 )
@@ -27,14 +24,14 @@ from app.services.data_service import (
 
 
 def test_validate_file_size_ok(tmp_path):
-    f = tmp_path / "small.pkl"
+    f = tmp_path / "small.parquet"
     f.write_bytes(b"x" * 100)
     # should not raise
     _validate_file_size(f)
 
 
 def test_validate_file_size_exceeds_limit(tmp_path):
-    f = tmp_path / "large.pkl"
+    f = tmp_path / "large.parquet"
     # write just over 1 MB
     f.write_bytes(b"x" * (1 * 1024 * 1024 + 1))
     with pytest.raises(FileSizeExceededError):
@@ -42,7 +39,7 @@ def test_validate_file_size_exceeds_limit(tmp_path):
 
 
 def test_validate_file_size_nonexistent(tmp_path):
-    f = tmp_path / "missing.pkl"
+    f = tmp_path / "missing.parquet"
     # path.stat() raises OSError which is caught and re-raised as the custom
     # app.core.exceptions.FileNotFoundError
     with pytest.raises(FileNotFoundError):
@@ -125,34 +122,33 @@ def test_to_json_serializable_unknown_type():
 # ── preview_pickle_file ────────────────────────────────────────────────────
 
 
-def test_preview_pickle_series(tmp_path):
+def test_preview_parquet_series(tmp_path):
     base = tmp_path / "data"
     user = base / "u1"
     user.mkdir(parents=True)
     s = pd.Series([10.0, 20.0, 30.0])
-    (user / "series.pkl").write_bytes(pickle.dumps(s))
-    result = preview_pickle_file(base, "u1", "series.pkl")
-    assert result["type"] == "series"
+    pd.DataFrame({"value": s}).to_parquet(user / "series.parquet")
+    result = preview_pickle_file(base, "u1", "series.parquet")
+    assert result["type"] == "dataframe"
 
 
-def test_preview_pickle_ndarray(tmp_path):
+def test_preview_parquet_dataframe(tmp_path):
     base = tmp_path / "data"
     user = base / "u1"
     user.mkdir(parents=True)
-    arr = np.array([1, 2, 3, 4, 5])
-    (user / "arr.pkl").write_bytes(pickle.dumps(arr))
-    result = preview_pickle_file(base, "u1", "arr.pkl")
-    assert result["type"] == "ndarray"
+    df = pd.DataFrame({"a": [1, 2, 3, 4, 5]})
+    df.to_parquet(user / "arr.parquet")
+    result = preview_pickle_file(base, "u1", "arr.parquet")
+    assert result["type"] == "dataframe"
 
 
-def test_preview_pickle_list(tmp_path):
+def test_preview_csv_list(tmp_path):
     base = tmp_path / "data"
     user = base / "u1"
     user.mkdir(parents=True)
-    lst = [1, 2, 3]
-    (user / "lst.pkl").write_bytes(pickle.dumps(lst))
-    result = preview_pickle_file(base, "u1", "lst.pkl")
-    assert result["type"] == "list"
+    pd.DataFrame({"x": [1, 2, 3]}).to_csv(user / "lst.csv", index=False)
+    result = preview_pickle_file(base, "u1", "lst.csv")
+    assert result["type"] == "dataframe"
 
 
 def test_preview_file_not_found_raises(tmp_path):
@@ -161,19 +157,7 @@ def test_preview_file_not_found_raises(tmp_path):
     (base / "u1").mkdir()
     # _validate_file_size catches OSError and re-raises as custom FileNotFoundError
     with pytest.raises(FileNotFoundError):
-        preview_pickle_file(base, "u1", "missing.pkl")
-
-
-def test_preview_deserialization_disabled(tmp_path, monkeypatch):
-    with patch(
-        "app.services.data_service._allow_unsafe_deserialize", return_value=False
-    ):
-        base = tmp_path / "data"
-        user = base / "u1"
-        user.mkdir(parents=True)
-        (user / "x.pkl").write_bytes(b"data")
-        with pytest.raises(DeserializationDisabledError):
-            preview_pickle_file(base, "u1", "x.pkl")
+        preview_pickle_file(base, "u1", "missing.parquet")
 
 
 # ── extract_series – more branches ────────────────────────────────────────
@@ -184,8 +168,8 @@ def test_extract_series_dataframe_with_explicit_x_column(tmp_path):
     user = base / "u1"
     user.mkdir(parents=True)
     df = pd.DataFrame({"ts": ["2020-01", "2020-02", "2020-03"], "val": [1, 2, 3]})
-    (user / "df.pkl").write_bytes(pickle.dumps(df))
-    res = extract_series(base, "u1", "df.pkl", x_column="ts", y_column="val")
+    df.to_parquet(user / "df.parquet")
+    res = extract_series(base, "u1", "df.parquet", x_column="ts", y_column="val")
     assert res["x"] == ["2020-01", "2020-02", "2020-03"]
     assert res["y"] == [1.0, 2.0, 3.0]
 
@@ -195,9 +179,9 @@ def test_extract_series_dataframe_auto_pick_y_column(tmp_path):
     user = base / "u1"
     user.mkdir(parents=True)
     df = pd.DataFrame({"label": ["a", "b"], "amount": [100.0, 200.0]})
-    (user / "df.pkl").write_bytes(pickle.dumps(df))
+    df.to_parquet(user / "df.parquet")
     # y_column 'missing' is not in df, auto-picks numeric
-    res = extract_series(base, "u1", "df.pkl", x_column=None, y_column="missing")
+    res = extract_series(base, "u1", "df.parquet", x_column=None, y_column="missing")
     assert "y" in res
     assert len(res["y"]) == 2
 
@@ -208,8 +192,8 @@ def test_extract_series_dataframe_date_column(tmp_path):
     user = base / "u1"
     user.mkdir(parents=True)
     df = pd.DataFrame({"date": ["2020-01-01", "2020-01-02"], "val": [5, 6]})
-    (user / "df.pkl").write_bytes(pickle.dumps(df))
-    res = extract_series(base, "u1", "df.pkl", x_column=None, y_column="val")
+    df.to_parquet(user / "df.parquet")
+    res = extract_series(base, "u1", "df.parquet", x_column=None, y_column="val")
     assert "x" in res
 
 
@@ -218,9 +202,9 @@ def test_extract_series_dataframe_no_numeric_column_raises(tmp_path):
     user = base / "u1"
     user.mkdir(parents=True)
     df = pd.DataFrame({"label": ["a", "b"], "name": ["x", "y"]})
-    (user / "df.pkl").write_bytes(pickle.dumps(df))
+    df.to_parquet(user / "df.parquet")
     with pytest.raises(ValueError, match="No numeric column"):
-        extract_series(base, "u1", "df.pkl", x_column=None, y_column="missing")
+        extract_series(base, "u1", "df.parquet", x_column=None, y_column="missing")
 
 
 def test_extract_series_dataframe_missing_x_column_uses_index(tmp_path):
@@ -230,8 +214,10 @@ def test_extract_series_dataframe_missing_x_column_uses_index(tmp_path):
     user.mkdir(parents=True)
     dates = pd.date_range("2021-01-01", periods=3, freq="D")
     df = pd.DataFrame({"val": [1, 2, 3]}, index=dates)
-    (user / "df.pkl").write_bytes(pickle.dumps(df))
-    res = extract_series(base, "u1", "df.pkl", x_column="nonexistent", y_column="val")
+    df.to_parquet(user / "df.parquet")
+    res = extract_series(
+        base, "u1", "df.parquet", x_column="nonexistent", y_column="val"
+    )
     assert len(res["x"]) == 3
 
 
@@ -241,61 +227,19 @@ def test_extract_series_dataframe_range_index_fallback(tmp_path):
     user = base / "u1"
     user.mkdir(parents=True)
     df = pd.DataFrame({"val": [1, 2, 3]})
-    (user / "df.pkl").write_bytes(pickle.dumps(df))
-    res = extract_series(base, "u1", "df.pkl", x_column="noexist", y_column="val")
+    df.to_parquet(user / "df.parquet")
+    res = extract_series(base, "u1", "df.parquet", x_column="noexist", y_column="val")
     assert res["x"] == ["0", "1", "2"]
 
 
-def test_extract_series_pandas_series(tmp_path):
+def test_extract_series_csv(tmp_path):
     base = tmp_path / "data"
     user = base / "u1"
     user.mkdir(parents=True)
-    s = pd.Series([10.0, 20.0, 30.0], name="price")
-    (user / "s.pkl").write_bytes(pickle.dumps(s))
-    res = extract_series(base, "u1", "s.pkl", x_column=None, y_column="price")
-    assert res["meta"]["series_name"] == "price"
+    df = pd.DataFrame({"price": [10.0, 20.0, 30.0]})
+    df.to_csv(user / "s.csv", index=False)
+    res = extract_series(base, "u1", "s.csv", x_column=None, y_column="price")
     assert len(res["y"]) == 3
-
-
-def test_extract_series_dict(tmp_path):
-    base = tmp_path / "data"
-    user = base / "u1"
-    user.mkdir(parents=True)
-    d = {"prices": [1.0, 2.0, 3.0]}
-    (user / "d.pkl").write_bytes(pickle.dumps(d))
-    res = extract_series(base, "u1", "d.pkl", x_column=None, y_column="prices")
-    assert "y" in res
-    assert res["meta"]["key_used"] == "prices"
-
-
-def test_extract_series_dict_no_numeric_raises(tmp_path):
-    base = tmp_path / "data"
-    user = base / "u1"
-    user.mkdir(parents=True)
-    d = {"labels": ["a", "b", "c"]}
-    (user / "d.pkl").write_bytes(pickle.dumps(d))
-    with pytest.raises(ValueError, match="Could not extract numeric series"):
-        extract_series(base, "u1", "d.pkl", x_column=None, y_column="unused")
-
-
-def test_extract_series_list(tmp_path):
-    base = tmp_path / "data"
-    user = base / "u1"
-    user.mkdir(parents=True)
-    lst = [1.0, 2.0, 3.0, 4.0]
-    (user / "lst.pkl").write_bytes(pickle.dumps(lst))
-    res = extract_series(base, "u1", "lst.pkl", x_column=None, y_column="unused")
-    assert len(res["y"]) == 4
-    assert res["meta"]["kind"] == "list"
-
-
-def test_extract_series_unsupported_type_raises(tmp_path):
-    base = tmp_path / "data"
-    user = base / "u1"
-    user.mkdir(parents=True)
-    (user / "obj.pkl").write_bytes(pickle.dumps(object()))
-    with pytest.raises(ValueError, match="Unsupported pickle object"):
-        extract_series(base, "u1", "obj.pkl", x_column=None, y_column="x")
 
 
 def test_extract_series_max_points_trim(tmp_path):
@@ -303,30 +247,28 @@ def test_extract_series_max_points_trim(tmp_path):
     user = base / "u1"
     user.mkdir(parents=True)
     df = pd.DataFrame({"val": range(100)})
-    (user / "df.pkl").write_bytes(pickle.dumps(df))
+    df.to_parquet(user / "df.parquet")
     res = extract_series(
-        base, "u1", "df.pkl", x_column=None, y_column="val", max_points=10
+        base, "u1", "df.parquet", x_column=None, y_column="val", max_points=10
     )
     assert len(res["y"]) == 10
 
 
-def test_list_pickles_sorts_by_name(tmp_path):
+def test_list_data_files_sorts_by_name(tmp_path):
     base = tmp_path / "data"
     user = base / "u1"
     user.mkdir(parents=True)
-    for name in ["c.pkl", "a.pkl", "b.pkl"]:
-        df = pd.DataFrame({"x": [1]})
-        df.to_pickle(user / name)
-    result = data_service.list_pickles_for_user(base, "u1")
+    for name in ["c.csv", "a.csv", "b.csv"]:
+        pd.DataFrame({"x": [1]}).to_csv(user / name, index=False)
+    result = data_service.list_data_files_for_user(base, "u1")
     names = [f["filename"] for f in result]
     assert names == sorted(names)
 
 
-def test_list_pickles_includes_pickle_extension(tmp_path):
+def test_list_data_files_includes_parquet(tmp_path):
     base = tmp_path / "data"
     user = base / "u1"
     user.mkdir(parents=True)
-    df = pd.DataFrame({"x": [1]})
-    df.to_pickle(user / "data.pickle")
-    result = data_service.list_pickles_for_user(base, "u1")
-    assert any(f["filename"] == "data.pickle" for f in result)
+    pd.DataFrame({"x": [1]}).to_parquet(user / "data.parquet")
+    result = data_service.list_data_files_for_user(base, "u1")
+    assert any(f["filename"] == "data.parquet" for f in result)

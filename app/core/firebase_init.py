@@ -1,6 +1,8 @@
 import logging
 import os
+import platform
 import threading
+import time
 from pathlib import Path
 from typing import Any, Dict, Optional, Union, cast
 
@@ -15,6 +17,59 @@ _firebase_app: Optional[firebase_admin.App] = None
 _project_id: Optional[str] = None
 _init_lock = threading.Lock()
 _TEST_PROJECT_ID = "test-project"
+
+
+def _validate_credential_path(path: Path) -> None:
+    """Reject symlinks and warn about insecure locations / permissions."""
+    if path.is_symlink():
+        raise RuntimeError(
+            f"Credential path '{path}' is a symlink — refusing to load for security reasons"
+        )
+
+    # Warn if the credential file sits inside the source tree
+    # __file__ is app/core/firebase_init.py → .parent.parent.parent = project root
+    project_root = Path(__file__).resolve().parent.parent.parent
+    try:
+        path.resolve().relative_to(project_root)
+        logger.warning(
+            "Credential file %s is inside the project/source directory — "
+            "consider storing credentials outside the source tree",
+            path,
+        )
+    except ValueError:
+        pass  # Not inside project dir – good
+
+    # Warn about world-readable permissions (Unix only)
+    if platform.system() != "Windows":
+        try:
+            mode = path.stat().st_mode
+            if mode & 0o044:
+                logger.warning(
+                    "Credential file %s has overly permissive permissions (%o) — "
+                    "consider restricting to owner-only (chmod 600)",
+                    path,
+                    mode & 0o777,
+                )
+        except OSError:
+            pass
+
+
+def _check_credential_age(path: Path) -> None:
+    """Log a warning when the credential file is older than the configured threshold."""
+    max_age_days = int(os.getenv("CREDENTIAL_MAX_AGE_DAYS", "90"))
+    try:
+        mtime = path.stat().st_mtime
+        age_days = (time.time() - mtime) / 86400
+        if age_days > max_age_days:
+            logger.warning(
+                "Service-account key file %s is older than %d days (%.0f days) — "
+                "consider rotating the key",
+                path,
+                max_age_days,
+                age_days,
+            )
+    except OSError:
+        logger.debug("Could not stat file %s for age check", path)
 
 
 def is_testing_env() -> bool:
@@ -90,6 +145,8 @@ def get_credential(
         raise RuntimeError(
             "GOOGLE_APPLICATION_CREDENTIALS must point to a readable service account JSON file"
         )
+    _validate_credential_path(Path(cred_path))
+    _check_credential_age(Path(cred_path))
     if not as_dict:
         return credentials.Certificate(str(cred_path))
 

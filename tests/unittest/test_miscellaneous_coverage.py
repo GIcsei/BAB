@@ -1,7 +1,6 @@
 """Additional data_service and router tests for coverage gaps."""
 
 import os
-import pickle
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -31,20 +30,20 @@ def test_validate_file_size_catches_app_file_not_found_error(tmp_path):
             _validate_file_size(tmp_path / "file.pkl")
 
 
-# ── list_pickles_for_user – file stat error (lines 67-68) ─────────────────
+# ── list_data_files – file stat error (lines 67-68) ─────────────────
 
 
-def test_list_pickles_stat_error(tmp_path):
-    """list_pickles_for_user skips files that can't be stat'd."""
+def test_list_data_files_stat_error(tmp_path):
+    """list_data_files_for_user skips files that can't be stat'd."""
     user_dir = tmp_path / "u1"
     user_dir.mkdir()
-    pkl_file = user_dir / "data.pkl"
-    pkl_file.write_bytes(pickle.dumps([1, 2, 3]))
+    csv_file = user_dir / "data.csv"
+    pd.DataFrame({"x": [1]}).to_csv(csv_file, index=False)
 
     original_stat = Path.stat
 
     def failing_stat(self, **kwargs):
-        if self.suffix == ".pkl":
+        if self.suffix == ".csv":
             raise OSError("perm denied")
         return original_stat(self, **kwargs)
 
@@ -67,20 +66,6 @@ def test_list_pickles_iterdir_error(tmp_path):
         result = list_pickles_for_user(tmp_path, "u1")
 
     assert result == []
-
-
-# ── _try_load – joblib success path (lines 93-96) ─────────────────────────
-
-
-def test_try_load_all_fail_raises_deserialization_error(tmp_path):
-    """_try_load raises DeserializationError when all methods fail."""
-    from app.core.exceptions import DeserializationError
-
-    path = tmp_path / "bad.pkl"
-    path.write_bytes(b"not a valid pickle file at all xyz")
-
-    with pytest.raises(DeserializationError):
-        data_service._try_load(path)
 
 
 # ── _to_json_serializable – conv_item exception path (lines 161-162) ─────
@@ -131,10 +116,10 @@ def test_preview_pickle_file_async(tmp_path):
     user = base / "u1"
     user.mkdir(parents=True)
     df = pd.DataFrame({"x": [1, 2, 3]})
-    (user / "df.pkl").write_bytes(pickle.dumps(df))
+    df.to_parquet(user / "df.parquet")
 
     result = asyncio.get_event_loop().run_until_complete(
-        data_service.preview_pickle_file_async(base, "u1", "df.pkl")
+        data_service.preview_pickle_file_async(base, "u1", "df.parquet")
     )
     assert result["type"] == "dataframe"
 
@@ -150,11 +135,11 @@ def test_extract_series_async(tmp_path):
     user = base / "u1"
     user.mkdir(parents=True)
     df = pd.DataFrame({"val": [1.0, 2.0, 3.0]})
-    (user / "df.pkl").write_bytes(pickle.dumps(df))
+    df.to_parquet(user / "df.parquet")
 
     result = asyncio.get_event_loop().run_until_complete(
         data_service.extract_series_async(
-            base, "u1", "df.pkl", x_column=None, y_column="val"
+            base, "u1", "df.parquet", x_column=None, y_column="val"
         )
     )
     assert "y" in result

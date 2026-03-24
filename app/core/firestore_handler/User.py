@@ -4,7 +4,7 @@ from typing import Any, Dict, Optional, cast
 
 import jwt
 import requests
-from Crypto.PublicKey import RSA
+from Crypto.PublicKey import RSA  # nosec B413
 from requests import Session
 
 from app.core.firestore_handler.Utils import raise_detailed_error
