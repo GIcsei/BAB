@@ -1,4 +1,5 @@
 """Functional-test conftest — provides auth override so admin endpoints are accessible."""
+
 import pytest
 from app.core.auth import get_current_user_id
 from app.main import app

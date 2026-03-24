@@ -9,7 +9,6 @@ from app.core.auth import get_current_user_id
 from app.core.config import get_settings
 from app.core.error_mapping import exception_to_http
 from app.core.exceptions import (
-    DeserializationDisabledError,
     DeserializationError,
     FileNotFoundError,
     FileSizeExceededError,
@@ -37,13 +36,13 @@ def _validate_user_id(user_id: str) -> str:
 def _validate_filename(filename: str) -> str:
     """Validate filename to ensure only supported data files are accessed."""
     if not re.match(
-        r"^[a-zA-Z0-9_\-\.]+\.(pkl|pickle|csv|parquet)$", filename, re.IGNORECASE
+        r"^[a-zA-Z0-9_\-\.]+\.(csv|parquet|json)$", filename, re.IGNORECASE
     ):
         from fastapi import HTTPException
 
         raise HTTPException(
             status_code=400,
-            detail="Invalid filename format; only .pkl, .pickle, .csv, and .parquet files are allowed",
+            detail="Invalid filename format; only .csv, .parquet, and .json files are allowed",
         )
     return filename
 
@@ -51,7 +50,7 @@ def _validate_filename(filename: str) -> str:
 @router.get(
     "/list",
     response_model=FileListResponse,
-    summary="List available data files (pickle, CSV, Parquet) for authenticated user",
+    summary="List available data files (CSV, Parquet, JSON) for authenticated user",
 )
 async def list_files(
     offset: int = Query(0, ge=0, description="Pagination offset"),
@@ -74,7 +73,7 @@ async def list_files(
 @router.get(
     "/files/{filename}/preview",
     response_model=PreviewResponse,
-    summary="Preview contents of a pickle file",
+    summary="Preview contents of a data file",
 )
 async def preview_file(
     filename: str,
@@ -93,9 +92,6 @@ async def preview_file(
         raise exception_to_http(exc)
     except FileSizeExceededError as exc:
         logger.warning("File size exceeded for %s/%s", user_id, filename)
-        raise exception_to_http(exc)
-    except DeserializationDisabledError as exc:
-        logger.warning("Deserialization disabled for %s/%s", user_id, filename)
         raise exception_to_http(exc)
     except DeserializationError as exc:
         logger.warning(
@@ -138,9 +134,6 @@ async def get_series(
         raise exception_to_http(exc)
     except FileSizeExceededError as exc:
         logger.warning("File size exceeded for %s/%s", user_id, filename)
-        raise exception_to_http(exc)
-    except DeserializationDisabledError as exc:
-        logger.warning("Deserialization disabled for %s/%s", user_id, filename)
         raise exception_to_http(exc)
     except DeserializationError as exc:
         logger.warning(

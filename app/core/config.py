@@ -34,7 +34,6 @@ class Settings:
     raw_app_user_data_dir: Optional[str]
     app_user_data_dir: Path
     netbank_base_dir: Path
-    allow_unsafe_deserialize: bool
     app_job_hour: int
     app_job_minute: int
     google_application_credentials: Optional[Path]
@@ -85,14 +84,10 @@ def get_settings() -> Settings:
     )
 
     logger.info("Loading other settings...")
-    allow_unsafe_deserialize = _to_bool(
-        os.getenv("APP_ALLOW_UNSAFE_DESERIALIZE"), False
-    )
     app_job_hour = _to_int(os.getenv("APP_JOB_HOUR"), 18)
     app_job_minute = _to_int(os.getenv("APP_JOB_MINUTE"), 0)
     logger.info(
-        "Other settings loaded: allow_unsafe_deserialize=%s, app_job_hour=%d, app_job_minute=%d",
-        allow_unsafe_deserialize,
+        "Other settings loaded: app_job_hour=%d, app_job_minute=%d",
         app_job_hour,
         app_job_minute,
     )
@@ -144,7 +139,6 @@ def get_settings() -> Settings:
         raw_app_user_data_dir=raw_app_user_data_dir,
         app_user_data_dir=app_user_data_dir,
         netbank_base_dir=netbank_base_dir,
-        allow_unsafe_deserialize=allow_unsafe_deserialize,
         app_job_hour=app_job_hour,
         app_job_minute=app_job_minute,
         google_application_credentials=google_application_credentials,

@@ -1,46 +1,9 @@
 """Tests for security hardening measures."""
-import io
+
 import logging
 import os
-import pickle
 
 import pytest
-
-
-class TestRestrictedUnpickler:
-    """Verify RestrictedUnpickler blocks dangerous modules."""
-
-    def test_blocks_os_system(self):
-        from app.services.data_service import RestrictedUnpickler
-
-        # Craft a pickle payload that calls os.system
-        payload = pickle.dumps(os.system)
-        with pytest.raises(pickle.UnpicklingError, match="forbidden"):
-            RestrictedUnpickler(io.BytesIO(payload)).load()
-
-    def test_blocks_subprocess(self):
-        import subprocess
-
-        from app.services.data_service import RestrictedUnpickler
-        payload = pickle.dumps(subprocess.check_output)
-        with pytest.raises(pickle.UnpicklingError, match="forbidden"):
-            RestrictedUnpickler(io.BytesIO(payload)).load()
-
-    def test_allows_safe_types(self):
-        from app.services.data_service import RestrictedUnpickler
-
-        # Safe types should work fine
-        safe_data = {"key": [1, 2, 3]}
-        payload = pickle.dumps(safe_data)
-        result = RestrictedUnpickler(io.BytesIO(payload)).load()
-        assert result == safe_data
-
-    def test_blocks_builtins_eval(self):
-        from app.services.data_service import RestrictedUnpickler
-
-        payload = pickle.dumps(eval)
-        with pytest.raises(pickle.UnpicklingError, match="forbidden"):
-            RestrictedUnpickler(io.BytesIO(payload)).load()
 
 
 class TestSensitiveKeyRedaction:
@@ -51,8 +14,13 @@ class TestSensitiveKeyRedaction:
 
         filt = TokenRedactingFilter()
         record = logging.LogRecord(
-            name="app.test", level=logging.INFO, pathname="",
-            lineno=0, msg="user password=secret123", args=(), exc_info=None,
+            name="app.test",
+            level=logging.INFO,
+            pathname="",
+            lineno=0,
+            msg="user password=secret123",
+            args=(),
+            exc_info=None,
         )
         filt.filter(record)
         assert record.msg == "[REDACTED SENSITIVE DATA]"
@@ -62,8 +30,13 @@ class TestSensitiveKeyRedaction:
 
         filt = TokenRedactingFilter()
         record = logging.LogRecord(
-            name="app.test", level=logging.INFO, pathname="",
-            lineno=0, msg="using api_key=ABCD1234", args=(), exc_info=None,
+            name="app.test",
+            level=logging.INFO,
+            pathname="",
+            lineno=0,
+            msg="using api_key=ABCD1234",
+            args=(),
+            exc_info=None,
         )
         filt.filter(record)
         assert record.msg == "[REDACTED SENSITIVE DATA]"
@@ -73,8 +46,13 @@ class TestSensitiveKeyRedaction:
 
         filt = TokenRedactingFilter()
         record = logging.LogRecord(
-            name="app.test", level=logging.INFO, pathname="",
-            lineno=0, msg="loaded credential from file", args=(), exc_info=None,
+            name="app.test",
+            level=logging.INFO,
+            pathname="",
+            lineno=0,
+            msg="loaded credential from file",
+            args=(),
+            exc_info=None,
         )
         filt.filter(record)
         assert record.msg == "[REDACTED SENSITIVE DATA]"
@@ -84,14 +62,20 @@ class TestSensitiveKeyRedaction:
 
         filt = TokenRedactingFilter()
         record = logging.LogRecord(
-            name="app.test", level=logging.INFO, pathname="",
-            lineno=0, msg="private_key loaded", args=(), exc_info=None,
+            name="app.test",
+            level=logging.INFO,
+            pathname="",
+            lineno=0,
+            msg="private_key loaded",
+            args=(),
+            exc_info=None,
         )
         filt.filter(record)
         assert record.msg == "[REDACTED SENSITIVE DATA]"
 
     def test_backward_compat_token_keys_alias(self):
         from app.core.logging_config import SENSITIVE_KEYS, TOKEN_KEYS
+
         # TOKEN_KEYS should be same reference or equal to SENSITIVE_KEYS
         assert TOKEN_KEYS == SENSITIVE_KEYS
 
@@ -169,6 +153,7 @@ class TestCredentialAgeCheck:
         cred_file.write_text("{}")
         # Set modification time to 200 days ago
         import time
+
         old_time = time.time() - (200 * 86400)
         os.utime(cred_file, (old_time, old_time))
 

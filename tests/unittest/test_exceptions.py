@@ -4,7 +4,6 @@ from app.core.exceptions import (
     AppException,
     AuthException,
     ConfigurationError,
-    DeserializationDisabledError,
     DeserializationError,
     ExternalServiceException,
     FileSizeExceededError,
@@ -132,12 +131,6 @@ def test_deserialization_error_no_filename():
     assert "oops" in exc.message
 
 
-def test_deserialization_disabled_error():
-    exc = DeserializationDisabledError()
-    assert exc.code == "DESERIALIZATION_DISABLED"
-    assert exc.status_code == 403
-
-
 # ── Scheduler exceptions ───────────────────────────────────────────────────
 
 
@@ -248,7 +241,6 @@ def test_storage_exceptions_are_app_exceptions():
     for cls in [
         AppFileNotFoundError,
         FileSizeExceededError,
-        DeserializationDisabledError,
     ]:
         assert isinstance(cls(), AppException)
 

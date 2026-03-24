@@ -9,7 +9,6 @@ import pandas as pd
 import pytest
 from app.core.auth import get_current_user_id
 from app.core.exceptions import (
-    DeserializationDisabledError,
     DeserializationError,
     FileSizeExceededError,
 )
@@ -50,7 +49,7 @@ def test_preview_invalid_filename_extension():
 
 
 def test_preview_filename_path_traversal():
-    r = client.get("/data/files/evil!file.pkl/preview")
+    r = client.get("/data/files/evil!file.csv/preview")
     assert r.status_code == 400
 
 
@@ -67,7 +66,7 @@ def test_list_files_success(tmp_path):
     user_dir = tmp_path / "plot_user"
     user_dir.mkdir(parents=True)
     df = pd.DataFrame({"x": [1, 2]})
-    df.to_pickle(user_dir / "data.pkl")
+    df.to_parquet(user_dir / "data.parquet")
     r = client.get("/data/list")
     assert r.status_code == 200
     assert "files" in r.json()
@@ -88,9 +87,9 @@ def test_preview_file_not_found():
     with patch(
         "app.routers.data_plot.data_service.preview_pickle_file_async",
         new_callable=AsyncMock,
-        side_effect=AppFileNotFoundError("missing.pkl"),
+        side_effect=AppFileNotFoundError("missing.csv"),
     ):
-        r = client.get("/data/files/missing.pkl/preview")
+        r = client.get("/data/files/missing.csv/preview")
     assert r.status_code == 404
 
 
@@ -100,27 +99,17 @@ def test_preview_file_size_exceeded():
         new_callable=AsyncMock,
         side_effect=FileSizeExceededError(600, 500),
     ):
-        r = client.get("/data/files/large.pkl/preview")
+        r = client.get("/data/files/large.csv/preview")
     assert r.status_code == 413
-
-
-def test_preview_deserialization_disabled():
-    with patch(
-        "app.routers.data_plot.data_service.preview_pickle_file_async",
-        new_callable=AsyncMock,
-        side_effect=DeserializationDisabledError(),
-    ):
-        r = client.get("/data/files/secret.pkl/preview")
-    assert r.status_code == 403
 
 
 def test_preview_deserialization_error():
     with patch(
         "app.routers.data_plot.data_service.preview_pickle_file_async",
         new_callable=AsyncMock,
-        side_effect=DeserializationError("broken.pkl", "bad magic"),
+        side_effect=DeserializationError("broken.csv", "bad format"),
     ):
-        r = client.get("/data/files/broken.pkl/preview")
+        r = client.get("/data/files/broken.csv/preview")
     assert r.status_code == 400
 
 
@@ -130,7 +119,7 @@ def test_preview_unexpected_error():
         new_callable=AsyncMock,
         side_effect=RuntimeError("out of memory"),
     ):
-        r = client.get("/data/files/oom.pkl/preview")
+        r = client.get("/data/files/oom.csv/preview")
     assert r.status_code == 500
 
 
@@ -141,9 +130,9 @@ def test_series_file_not_found():
     with patch(
         "app.routers.data_plot.data_service.extract_series_async",
         new_callable=AsyncMock,
-        side_effect=AppFileNotFoundError("missing.pkl"),
+        side_effect=AppFileNotFoundError("missing.csv"),
     ):
-        r = client.get("/data/files/missing.pkl/series", params={"y": "col"})
+        r = client.get("/data/files/missing.csv/series", params={"y": "col"})
     assert r.status_code == 404
 
 
@@ -153,27 +142,17 @@ def test_series_file_size_exceeded():
         new_callable=AsyncMock,
         side_effect=FileSizeExceededError(700, 500),
     ):
-        r = client.get("/data/files/big.pkl/series", params={"y": "val"})
+        r = client.get("/data/files/big.csv/series", params={"y": "val"})
     assert r.status_code == 413
-
-
-def test_series_deserialization_disabled():
-    with patch(
-        "app.routers.data_plot.data_service.extract_series_async",
-        new_callable=AsyncMock,
-        side_effect=DeserializationDisabledError(),
-    ):
-        r = client.get("/data/files/secret.pkl/series", params={"y": "val"})
-    assert r.status_code == 403
 
 
 def test_series_deserialization_error():
     with patch(
         "app.routers.data_plot.data_service.extract_series_async",
         new_callable=AsyncMock,
-        side_effect=DeserializationError("bad.pkl", "corrupt"),
+        side_effect=DeserializationError("bad.csv", "corrupt"),
     ):
-        r = client.get("/data/files/bad.pkl/series", params={"y": "val"})
+        r = client.get("/data/files/bad.csv/series", params={"y": "val"})
     assert r.status_code == 400
 
 
@@ -183,7 +162,7 @@ def test_series_value_error():
         new_callable=AsyncMock,
         side_effect=ValueError("no numeric column"),
     ):
-        r = client.get("/data/files/data.pkl/series", params={"y": "missing"})
+        r = client.get("/data/files/data.csv/series", params={"y": "missing"})
     assert r.status_code == 400
 
 
@@ -193,5 +172,5 @@ def test_series_unexpected_error():
         new_callable=AsyncMock,
         side_effect=RuntimeError("crash"),
     ):
-        r = client.get("/data/files/data.pkl/series", params={"y": "val"})
+        r = client.get("/data/files/data.csv/series", params={"y": "val"})
     assert r.status_code == 500

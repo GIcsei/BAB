@@ -1,7 +1,6 @@
 import asyncio
 import builtins
 import logging
-import pickle
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -9,39 +8,11 @@ from typing import Any, Dict, List, Optional
 import numpy as np
 import pandas as pd
 
-from app.core.config import get_settings
 from app.core.exceptions import (
-    DeserializationDisabledError,
     DeserializationError,
     FileNotFoundError,
     FileSizeExceededError,
 )
-
-_BLOCKED_MODULES = frozenset(
-    {
-        "os",
-        "subprocess",
-        "sys",
-        "builtins",
-        "shutil",
-        "importlib",
-        "nt",
-        "posix",
-        "_io",
-    }
-)
-
-
-class RestrictedUnpickler(pickle.Unpickler):
-    """Unpickler that refuses to import dangerous modules."""
-
-    def find_class(self, module: str, name: str) -> Any:
-        top_module = module.split(".")[0]
-        if top_module in _BLOCKED_MODULES:
-            raise pickle.UnpicklingError(
-                f"Deserialization of '{module}.{name}' is forbidden for security reasons"
-            )
-        return super().find_class(module, name)
 
 logger = logging.getLogger(__name__)
 
@@ -53,10 +24,6 @@ def _get_executor() -> ThreadPoolExecutor:
     if _executor is None:
         _executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="data_service")
     return _executor
-
-
-def _allow_unsafe_deserialize() -> bool:
-    return get_settings().allow_unsafe_deserialize
 
 
 def _safe_basename(filename: str) -> str:
@@ -91,10 +58,9 @@ def list_data_files_for_user(base_data_dir: Path, user_id: str) -> List[Dict[str
     try:
         for p in sorted(user_dir.iterdir(), key=lambda x: x.name):
             if p.is_file() and p.suffix.lower() in {
-                ".pkl",
-                ".pickle",
                 ".csv",
                 ".parquet",
+                ".json",
             }:
                 try:
                     out.append(
@@ -115,46 +81,6 @@ def list_data_files_for_user(base_data_dir: Path, user_id: str) -> List[Dict[str
 list_pickles_for_user = list_data_files_for_user
 
 
-def _try_load(path: Path) -> Any:
-    if not _allow_unsafe_deserialize():
-        raise DeserializationDisabledError(
-            "Unsafe deserialization is disabled. Set APP_ALLOW_UNSAFE_DESERIALIZE=true "
-            "to enable (not recommended)."
-        )
-
-    logger.warning(
-        "Unsafe deserialization enabled for %s — this is a security risk. "
-        "Prefer safe formats (CSV, Parquet, JSON).",
-        path,
-    )
-
-    try:
-        import joblib  # type: ignore
-    except Exception:
-        joblib = None
-
-    last_exc = None
-    if joblib is not None:
-        try:
-            return joblib.load(path)
-        except Exception as exc:
-            last_exc = exc
-            logger.debug("joblib.load failed for %s: %s", path, exc)
-
-    try:
-        return pd.read_pickle(path)
-    except Exception as exc:
-        last_exc = exc
-        logger.debug("pandas.read_pickle failed for %s: %s", path, exc)
-
-    try:
-        with open(path, "rb") as f:
-            return RestrictedUnpickler(f).load()
-    except Exception as exc:
-        logger.exception("All deserialization attempts failed for %s", path)
-        raise DeserializationError(str(path), str(last_exc or exc))
-
-
 def _load_file(path: Path) -> Any:
     """Load a data file based on its extension."""
     suffix = path.suffix.lower()
@@ -162,8 +88,10 @@ def _load_file(path: Path) -> Any:
         return pd.read_csv(path)
     elif suffix == ".parquet":
         return pd.read_parquet(path)
+    elif suffix == ".json":
+        return pd.read_json(path)
     else:
-        return _try_load(path)
+        raise DeserializationError(str(path), f"Unsupported file format: {suffix}")
 
 
 def _to_json_serializable(obj: Any, max_rows: int = 200) -> Dict[str, Any]:
@@ -349,7 +277,7 @@ def extract_series(
                 continue
         raise ValueError("Could not extract numeric series from dict")
 
-    raise ValueError("Unsupported pickle object for series extraction")
+    raise ValueError("Unsupported data object for series extraction")
 
 
 async def extract_series_async(

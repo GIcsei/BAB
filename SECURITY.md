@@ -23,10 +23,8 @@ If you discover a security vulnerability, please report it responsibly:
 
 ## Deserialization Policy
 
-- Pickle / joblib deserialization is **disabled by default**.
-- To enable, set `APP_ALLOW_UNSAFE_DESERIALIZE=true` (not recommended for production).
-- When enabled, a `RestrictedUnpickler` blocks imports from dangerous modules (`os`, `subprocess`, `sys`, `builtins`, `shutil`, `importlib`, `nt`, `posix`, `_io`).
-- Prefer safe formats: CSV, Parquet, or JSON.
+- Pickle / joblib deserialization is **not supported**. Only safe formats are accepted: CSV, Parquet, and JSON.
+- Unsupported file formats are rejected at the API layer with an explicit error.
 
 ## Dependency Audit
 
