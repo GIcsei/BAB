@@ -4,11 +4,12 @@ import logging
 from contextlib import asynccontextmanager
 from typing import Any, AsyncIterator, Awaitable, Callable, Dict, cast
 
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.responses import Response
 
+from app.core.auth import get_current_user_id
 from app.core.config import get_settings
 from app.core.error_mapping import exception_to_http, get_error_response
 from app.core.exceptions import AppException
@@ -217,7 +218,9 @@ app.include_router(data_plot.router)
 
 
 @app.get("/admin/cleanup-metrics")
-async def cleanup_metrics(request: Request) -> JSONResponse:
+async def cleanup_metrics(
+    request: Request, _user_id: str = Depends(get_current_user_id)
+) -> JSONResponse:
     """Return deletion worker metrics."""
     worker = getattr(request.app.state, "deletion_worker", None)
     if worker is None:

@@ -17,6 +17,32 @@ from app.core.exceptions import (
     FileSizeExceededError,
 )
 
+_BLOCKED_MODULES = frozenset(
+    {
+        "os",
+        "subprocess",
+        "sys",
+        "builtins",
+        "shutil",
+        "importlib",
+        "nt",
+        "posix",
+        "_io",
+    }
+)
+
+
+class RestrictedUnpickler(pickle.Unpickler):
+    """Unpickler that refuses to import dangerous modules."""
+
+    def find_class(self, module: str, name: str) -> Any:
+        top_module = module.split(".")[0]
+        if top_module in _BLOCKED_MODULES:
+            raise pickle.UnpicklingError(
+                f"Deserialization of '{module}.{name}' is forbidden for security reasons"
+            )
+        return super().find_class(module, name)
+
 logger = logging.getLogger(__name__)
 
 _executor: ThreadPoolExecutor | None = None
@@ -37,6 +63,14 @@ def _safe_basename(filename: str) -> str:
     return Path(filename).name
 
 
+def _validate_user_path(base_dir: Path, user_id: str) -> Path:
+    """Ensure ``user_id`` resolves inside *base_dir* (prevents symlink / traversal escape)."""
+    user_dir = (base_dir / user_id).resolve()
+    if not str(user_dir).startswith(str(base_dir.resolve())):
+        raise FileNotFoundError(user_id)
+    return user_dir
+
+
 def _validate_file_size(path: Path, max_size_mb: int = 500) -> None:
     """Prevent loading extremely large files that could exhaust memory."""
     try:
@@ -50,6 +84,7 @@ def _validate_file_size(path: Path, max_size_mb: int = 500) -> None:
 
 
 def list_data_files_for_user(base_data_dir: Path, user_id: str) -> List[Dict[str, Any]]:
+    _validate_user_path(base_data_dir, user_id)
     user_dir = base_data_dir / user_id
     out: List[Dict[str, Any]] = []
     if not user_dir.exists() or not user_dir.is_dir():
@@ -88,6 +123,12 @@ def _try_load(path: Path) -> Any:
             "to enable (not recommended)."
         )
 
+    logger.warning(
+        "Unsafe deserialization enabled for %s — this is a security risk. "
+        "Prefer safe formats (CSV, Parquet, JSON).",
+        path,
+    )
+
     try:
         import joblib  # type: ignore
     except Exception:
@@ -109,7 +150,7 @@ def _try_load(path: Path) -> Any:
 
     try:
         with open(path, "rb") as f:
-            return pickle.load(f)
+            return RestrictedUnpickler(f).load()
     except Exception as exc:
         logger.exception("All deserialization attempts failed for %s", path)
         raise DeserializationError(str(path), str(last_exc or exc))
@@ -193,6 +234,7 @@ def _to_json_serializable(obj: Any, max_rows: int = 200) -> Dict[str, Any]:
 def preview_pickle_file(
     base_data_dir: Path, user_id: str, filename: str, max_rows: int = 200
 ) -> Dict[str, Any]:
+    _validate_user_path(base_data_dir, user_id)
     safe_name = _safe_basename(filename)
     path = base_data_dir / user_id / safe_name
     _validate_file_size(path)
@@ -224,6 +266,7 @@ def extract_series(
     y_column: str,
     max_points: int = 10000,
 ) -> Dict[str, Any]:
+    _validate_user_path(base_data_dir, user_id)
     safe_name = _safe_basename(filename)
     path = base_data_dir / user_id / safe_name
     _validate_file_size(path)

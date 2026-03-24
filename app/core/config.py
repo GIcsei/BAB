@@ -135,6 +135,11 @@ def get_settings() -> Settings:
     )
     logger.info("CORS allowed origins: %s", cors_allowed_origins)
 
+    if "*" in cors_allowed_origins and not is_testing:
+        logger.warning(
+            "CORS_ALLOWED_ORIGINS is set to wildcard '*' — restrict in production"
+        )
+
     _SETTINGS = Settings(
         raw_app_user_data_dir=raw_app_user_data_dir,
         app_user_data_dir=app_user_data_dir,

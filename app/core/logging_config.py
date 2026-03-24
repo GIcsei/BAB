@@ -7,6 +7,7 @@ Structured logging configuration with token redaction.
 
 import json
 import logging
+import re
 import sys
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
@@ -14,18 +15,36 @@ from typing import Any, Dict
 
 from app.core.config import get_settings
 
-TOKEN_KEYS = ("token", "idToken", "refreshToken", "authorization")
+SENSITIVE_KEYS = (
+    "token",
+    "idToken",
+    "refreshToken",
+    "authorization",
+    "password",
+    "secret",
+    "credential",
+    "api_key",
+    "private_key",
+    "apikey",
+    "masterkey",
+    "master_key",
+)
+TOKEN_KEYS = SENSITIVE_KEYS  # backward-compatible alias
+
+_SENSITIVE_RE = re.compile(
+    r"\b(?:" + "|".join(re.escape(k) for k in SENSITIVE_KEYS) + r")\b",
+    re.IGNORECASE,
+)
+
 LOGGER_CONFIGURED = False
 
 
 class TokenRedactingFilter(logging.Filter):
     def filter(self, record: logging.LogRecord) -> bool:
         msg = str(record.getMessage())
-        for key in TOKEN_KEYS:
-            if key.lower() in msg.lower():
-                record.msg = "[REDACTED SENSITIVE DATA]"
-                record.args = None
-                break
+        if _SENSITIVE_RE.search(msg):
+            record.msg = "[REDACTED SENSITIVE DATA]"
+            record.args = None
         return True
 
 
