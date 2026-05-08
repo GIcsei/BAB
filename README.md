@@ -244,3 +244,5 @@ The GitHub Actions workflow runs:
 - Do not commit Firebase credentials or master keys.
 - Pickle/joblib deserialization is unsafe for untrusted inputs.
 - Store secrets outside the repo and mount them at runtime.
+
+---
