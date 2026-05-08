@@ -10,5 +10,7 @@ Testing requirements:
 - Ensure deterministic behavior.
 - Avoid reliance on global state between tests.
 - Mock infrastructure boundaries only.
+- Prefer focused `pytest` targets before broad suite runs.
+- Keep fixtures small and scoped to the behavior under test.
 
 If a change introduces new edge cases, add corresponding tests.

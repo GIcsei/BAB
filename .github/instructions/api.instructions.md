@@ -2,14 +2,13 @@
 applyTo: "app/routers/**/*.py"
 ---
 
-FastAPI requirements:
+FastAPI router requirements:
 
-- Always use response models if defined.
-- Use correct status codes.
-- Validate request bodies strictly.
-- Do not return raw dicts when models exist.
-- Avoid broad exception catching.
-- Map domain exceptions to HTTP exceptions clearly.
+- Keep handlers thin: parse, validate, delegate, map errors.
+- Use explicit response models when models exist.
+- Use intentional status codes and auth dependencies.
+- Avoid broad exception catching inside routers.
+- Map domain exceptions to HTTP behavior clearly and consistently.
+- Keep request validation close to the route boundary.
 
-Routers must delegate to services.
-Routers must not contain business logic.
+Routers must delegate to services and must not contain business logic.

@@ -1,0 +1,13 @@
+# Environment setup for the GitHub Copilot coding agent.
+# These steps run in a sandboxed environment before the agent begins work.
+# See: https://docs.github.com/en/copilot/how-tos/use-copilot-agents/coding-agent/create-custom-agents
+
+steps:
+  - name: "Install Python tooling"
+    run: python -m pip install --upgrade pip uv
+
+  - name: "Sync project dependencies"
+    run: uv sync --group dev
+
+  - name: "Run backend sanity test"
+    run: uv run pytest tests/unittest/test_health.py -q

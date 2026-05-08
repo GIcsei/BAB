@@ -1,5 +1,5 @@
 ---
-applyTo: "app/infrastructure/**/*.py,app/core/**/*.py"
+applyTo: "app/infrastructure/firebase/**/*.py,app/core/firebase_init.py,app/core/firestore_handler/**/*.py"
 ---
 
 Firebase access must:

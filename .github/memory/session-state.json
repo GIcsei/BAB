@@ -1,0 +1,18 @@
+{
+  "activeRequest": "Maintain and use a backend-only BAB multi-agent system in .github",
+  "currentStage": "ready",
+  "currentOwner": "scrum-master",
+  "nextHandoff": "none",
+  "agentQueue": [],
+  "blockers": [],
+  "locks": {
+    "memory": null
+  },
+  "lastUpdated": "2026-05-08T00:00:00Z",
+  "notes": [
+    "Frontend-specific orchestration artifacts were removed or replaced.",
+    "Backend specialists now map to API surface, services, infrastructure/runtime, security, testing, QA, and docs.",
+    "Agent activity summaries are expected in .github/memory/agent-activity.md.",
+    "The next recommended action is a pilot backend task through the refreshed workflow."
+  ]
+}
