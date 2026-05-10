@@ -1,17 +1,16 @@
 # ACTIVE CONTEXT
 
 ## Current Focus
-Execute Release Stability Sprint — Phase 3 secure parquet streaming and file exposure.
+Execute Release Stability Sprint — complete.
 
 ## Current Phase
-Release Stability Sprint (Phase 3 in progress)
+Release Stability Sprint (complete)
 
 ## Current Owner
-qa-engineer
+scrum-master
 
 ## Next Handoff
-scrum-master after QA review.  
-Queued (not started): Phase 4 platform-infrastructure.
+none
 
 ## Blockers
 - Residual risk: privileged Windows symlink branch remains skipped in non-elevated environments.
@@ -40,6 +39,9 @@ Queued (not started): Phase 4 platform-infrastructure.
 - **2026-05-10: Phase 3 routed to `api-surface` for secure parquet streaming and file exposure hardening.**
 - **2026-05-10: Phase 3 implementation landed and focused validation passed; awaiting tester review.**
 - **2026-05-10: Phase 3 tester peer review passed; awaiting QA readiness review.**
+- **2026-05-10: Phase 4 routed to `platform-infrastructure` for release workflow gating.**
+- **2026-05-10: Phase 4 implementation landed and release workflow now waits for Docker publish before creating the GitHub release.**
+- **2026-05-10: Phase 4 QA passed and the release workflow gate is accepted.**
 - **2026-05-10: Tech-lead sequenced 7 open issues into Release Stability Sprint — 4 phases spanning backend, API, and infrastructure.**
 - **7 issues grouped into 4 phases; Phase 1 unblocks Phase 2+3; Phase 4 runs independently.**
 - **2026-05-10: Phase 1 completed by backend-implementer. Firestore user block/unblock writes consolidated into `FirestoreService.set_user_block_state` and login-service callers switched to that single surface with focused unit tests passing (42 passed).**

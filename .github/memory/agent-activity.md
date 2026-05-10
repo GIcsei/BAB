@@ -271,3 +271,17 @@ Use this file as the durable summary surface for delegated work.
 - Outcome: Routed `/data/files/{filename}/stream` through a parquet-only service resolver, preserved auth and user-boundary checks, and added focused coverage for the stream 404 path plus the parquet-only resolver rejection.
 - Evidence: Updated `app/routers/data_plot.py`, `app/services/data_service.py`, `tests/functionaltest/test_data_plot_router.py`, and `tests/unittest/test_data_service.py`; ran `pytest -q tests/functionaltest/test_data_plot_router.py tests/unittest/test_data_service.py` (24 passed).
 - Next handoff: `tester` for optional broader regression.
+
+### 2026-05-10 | platform-infrastructure
+
+- Scope: Phase 4 release workflow gating in `.github/workflows/release.yml`.
+- Outcome: Added a hard dependency so GitHub release publication waits for Docker image publishing.
+- Evidence: Updated `.github/workflows/release.yml`; validated with YAML parse check confirming `release.needs == ['validate', 'docker']`.
+- Next handoff: `qa-engineer` for release-readiness review.
+
+### 2026-05-10 | qa-engineer
+
+- Scope: Final Phase 4 release workflow readiness review.
+- Outcome: Approved the release gate change; no blocking workflow-order defect remains.
+- Evidence: Reviewed `.github/workflows/release.yml`, `docker/Dockerfile`, and the YAML parse check result; accepted the `release.needs == ['validate', 'docker']` gate.
+- Next handoff: `scrum-master` to close the sprint and promote release when ready.

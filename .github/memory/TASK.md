@@ -1,22 +1,22 @@
 # ACTIVE TASK
 
-- Task ID: BAB-RELEASE-STABILITY-PHASE3-2026-05-10
-- Request: Implement Release Stability Sprint Phase 3 (T-09 / issues #5, #6): secure parquet streaming and file access controls.
-- Owner: api-surface
-- Stage: qa-review
+- Task ID: BAB-RELEASE-STABILITY-PHASE4-2026-05-10
+- Request: Implement Release Stability Sprint Phase 4 (T-10 / issue #4): fix release Docker and CI/CD workflow.
+- Owner: platform-infrastructure
+- Stage: done
 - Priority: high
 - Started: 2026-05-10
 
 ## Acceptance Criteria
 
-- [x] Inspect parquet access control and streaming validation surfaces.
-- [x] Implement minimal API-surface hardening without contract drift.
-- [x] Add/update focused tests for boundary and validation behavior.
-- [x] Run targeted pytest validation.
+- [x] Inspect release workflow gating and Docker publish ordering.
+- [x] Implement minimal workflow hardening without contract drift.
+- [x] Validate the workflow file syntax and release dependency shape.
+- [x] Run targeted validation.
 - [x] Sync required orchestration memory and backlog artifacts.
 
 ## Evidence
 
-- Phase 3 api-surface implementation completed with parquet-only listing, parquet filename enforcement, and secure stream endpoint.
-- Focused validation command passed: `python -m pytest -q tests/functionaltest/test_data_plot_router.py tests/unittest/test_data_service.py` (24 passed).
-- Tester peer review passed for Phase 3 parquet-only stream and file exposure changes.
+- Phase 4 platform-infrastructure implementation completed with release job gated behind Docker publish in `.github/workflows/release.yml`.
+- Validation command passed: `python -c "from pathlib import Path; import yaml; data=yaml.safe_load(Path('.github/workflows/release.yml').read_text(encoding='utf-8')); assert data['jobs']['release']['needs']==['validate','docker']; print('YAML OK')"`.
+- QA approved Phase 4 release gating.

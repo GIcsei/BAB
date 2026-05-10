@@ -20,7 +20,7 @@
 - Post-T-08 scheduler hotfix: Completed. Same-user duplicate immediate triggers are deduped in-flight to prevent overlapping runs.
 - Post-T-08 tester gate: Passed (`tests/unittest/test_scheduler_extended.py`, `tests/unittest/test_scheduler.py`, `tests/unittest/test_scheduler_worker.py`, `tests/unittest/test_scheduler_coverage.py` -> 51 passed).
 - T-09 Phase 3 parquet streaming and access controls: implementation complete; QA review pending.
-- T-10 Phase 4 Docker/CI release hardening: not-started.
+- T-10 Phase 4 Docker/CI release hardening: completed.
 - Focused validation for T-07: `tests/unittest/test_firestore_service.py`, `tests/unittest/test_registration_service.py`, `tests/unittest/test_login_service.py`, `tests/unittest/test_login_service_extended.py` -> 42 passed.
 - Focused validation for T-08: `tests/integrationtest/test_query_handler_extended.py`, `tests/unittest/test_scheduler_extended.py`, `tests/functionaltest/test_main_startup.py` -> 27 passed.
 - Adjacent compatibility validation for T-08: `tests/unittest/test_coverage_gaps_extended.py`, `tests/integrationtest/test_query_handler_coverage.py` -> 17 passed, 1 warning.
@@ -59,7 +59,7 @@
 - Track 2 (api-surface): Completed.
 - Track 3 (platform-infrastructure): Completed.
 - Track 4 (security tail): Completed.
-- Phase 3 secure parquet streaming follow-up: QA review pending.
+- Phase 4 Docker/CI release follow-up: completed.
 
 ### Closure
 
