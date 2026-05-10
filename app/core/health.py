@@ -4,8 +4,11 @@ Tracks startup completion and dependency health.
 
 import importlib.metadata
 import logging
+import os
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
+from urllib import error, request
+from urllib.parse import urlparse, urlunparse
 
 logger = logging.getLogger(__name__)
 
@@ -21,12 +24,13 @@ class HealthStatus:
             "firebase": {"ready": False, "error": None},
             "scheduler": {"ready": False, "error": None},
             "tokens": {"ready": False, "error": None},
+            "selenium": {"ready": False, "error": None},
         }
 
     def mark_startup_complete(self) -> None:
         """Mark startup phase as complete."""
         self.is_ready = True
-        self.startup_complete_time = datetime.now()
+        self.startup_complete_time = datetime.now(timezone.utc)
         logger.info("Application startup complete and ready to serve requests")
 
     def mark_component_ready(self, component: str, error: Optional[str] = None) -> None:
@@ -66,3 +70,85 @@ _health = HealthStatus()
 def get_health() -> HealthStatus:
     """Retrieve the global health tracker."""
     return _health
+
+
+def _build_status_urls(remote_url: str) -> list[str]:
+    parsed = urlparse(remote_url)
+    base_path = parsed.path.rstrip("/")
+
+    candidates: list[str] = []
+    if base_path.endswith("/status"):
+        candidates.append(remote_url)
+    else:
+        status_path = f"{base_path}/status" if base_path else "/status"
+        candidates.append(
+            urlunparse(
+                (
+                    parsed.scheme,
+                    parsed.netloc,
+                    status_path,
+                    "",
+                    "",
+                    "",
+                )
+            )
+        )
+        if base_path in {"", "/"}:
+            candidates.append(
+                urlunparse(
+                    (
+                        parsed.scheme,
+                        parsed.netloc,
+                        "/wd/hub/status",
+                        "",
+                        "",
+                        "",
+                    )
+                )
+            )
+    return candidates
+
+
+def probe_selenium_readiness() -> Optional[str]:
+    """Return None when Selenium is reachable and ready; otherwise an error code."""
+    remote_url = os.getenv("SELENIUM_REMOTE_URL", "http://selenium:4444")
+    timeout_raw = os.getenv("SELENIUM_PROBE_TIMEOUT_SECONDS", "1.0")
+    try:
+        timeout_seconds = max(0.1, min(float(timeout_raw), 5.0))
+    except ValueError:
+        timeout_seconds = 1.0
+
+    for status_url in _build_status_urls(remote_url):
+        try:
+            with request.urlopen(status_url, timeout=timeout_seconds) as response:
+                if response.status >= 400:
+                    continue
+                payload = response.read().decode("utf-8", errors="ignore")
+                if not payload:
+                    return None
+                try:
+                    import json
+
+                    data = json.loads(payload)
+                except json.JSONDecodeError:
+                    return None
+
+                value = data.get("value") if isinstance(data, dict) else None
+                ready_value = None
+                if isinstance(value, dict):
+                    ready_value = value.get("ready")
+                elif isinstance(data, dict):
+                    ready_value = data.get("ready")
+
+                if ready_value is False:
+                    return "not_ready"
+                return None
+        except error.HTTPError:
+            continue
+        except error.URLError:
+            continue
+        except TimeoutError:
+            continue
+        except Exception:
+            continue
+    return "unreachable"
