@@ -320,3 +320,24 @@ Use this file as the durable summary surface for delegated work.
 - Outcome: Pass with low residual risk note.
 - Evidence: Reviewed `app/core/netbank/getReport.py` exception-path fix and accepted tester gate evidence for pytest, bandit, and mypy.
 - Next handoff: `scrum-master` for closure.
+
+### 2026-05-10 | api-surface
+
+- Scope: Add BAB version readout to `GET /health` without changing existing readiness/status behavior.
+- Outcome: Updated not-ready health payload to include `version`, making the response contract consistent across ready and not-ready states.
+- Evidence: Updated `app/main.py`, `tests/functionaltest/test_main.py`, and `tests/functionaltest/test_feature_enhancements.py`; ran `uv run pytest tests/functionaltest/test_main.py -k health tests/functionaltest/test_feature_enhancements.py -k health tests/unittest/test_health.py` (16 passed).
+- Next handoff: `tester` for independent gate.
+
+### 2026-05-10 | tester
+
+- Scope: Independent focused validation for `/health` version-readout change.
+- Outcome: Pass; verified `version` appears in both ready and not-ready `/health` responses while status behavior remains unchanged.
+- Evidence: Ran `uv run pytest tests/functionaltest/test_main.py::test_health_not_ready_returns_503 tests/functionaltest/test_feature_enhancements.py::TestHealthEndpoint::test_health_ready_includes_version_and_uptime tests/functionaltest/test_feature_enhancements.py::TestHealthEndpoint::test_health_not_ready_includes_version_and_omits_uptime` (3 passed) and `uv run pytest tests/unittest/test_health.py` (10 passed).
+- Next handoff: `documentation-writer` for user-visible contract note.
+
+### 2026-05-10 | documentation-writer
+
+- Scope: Document `/health` version-readout contract.
+- Outcome: Updated API docs to state that both 200 and 503 health responses include `version`, and clarified uptime is only present when ready.
+- Evidence: Updated `docs/api.md` (health response examples and operational note).
+- Next handoff: `scrum-master` to close task.

@@ -35,7 +35,7 @@ services:
       retries: 3
 
   selenium:
-    image: selenium/standalone-edge:144.0-20260202
+    image: selenium/standalone-edge:146.0-20260404
     restart: unless-stopped
     shm_size: "2g"
     ports:

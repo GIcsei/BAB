@@ -286,6 +286,7 @@ async def health_check() -> JSONResponse:
                 "status": "not_ready",
                 "ready": False,
                 "components": status["components"],
+                "version": status["version"],
             },
         )
 

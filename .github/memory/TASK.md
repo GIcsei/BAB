@@ -1,7 +1,7 @@
 # ACTIVE TASK
 
-- Task ID: BAB-CI-RECOVERY-2026-05-10
-- Request: Perform full code review verification by running full pytest, bandit, and mypy; recover failing CI/CD gates.
+- Task ID: BAB-HEALTH-VERSION-2026-05-10
+- Request: Add BAB version readout possibility to `/health`.
 - Owner: scrum-master
 - Stage: done
 - Priority: high
@@ -9,21 +9,16 @@
 
 ## Acceptance Criteria
 
-- [x] Run CI-equivalent full pytest command and capture first concrete failure.
-- [x] Run bandit and capture blocking findings.
-- [x] Run mypy and capture blocking findings.
-- [x] Implement minimal behavior-preserving fixes for all blockers.
-- [x] Re-run pytest, bandit, and mypy until all three gates pass.
-- [x] Complete tester and QA review handoffs for closure.
+- [x] `/health` includes a `version` field in ready responses.
+- [x] `/health` includes a `version` field in not-ready responses.
+- [x] Existing health status behavior remains unchanged.
+- [x] Focused tester validation passes.
+- [x] API documentation reflects the new response detail.
 
 ## Evidence
 
-- Tester verification run: `uv run pytest -v --maxfail=1 --cov=app --cov-fail-under=70 --cov-report=xml:coverage.xml --cov-report=term-missing --cov-report=html:htmlcov --html=reports/pytest-report.html --self-contained-html` -> failed at `tests/functionaltest/test_feature_enhancements.py` (expected 200, got 400).
-- Bandit run: `uv run bandit -r app -ll` -> failed with B310 medium finding in `app/core/health.py`.
-- Mypy run: `uv run mypy app` -> failed with `no-untyped-call` in `app/core/firestore_handler/Utils.py`.
-- Implemented fix: `app/core/netbank/getReport.py` updated to return `False` on exception in `_handle_already_logged_in_Selenium`.
-- Full tests passed: `uv run pytest -q` -> `625 passed, 2 skipped, 1 warning`.
-- CI-style pytest passed: `uv run pytest -v --maxfail=1 --cov=app --cov-fail-under=70 --cov-report=xml:coverage.xml --cov-report=term-missing --cov-report=html:htmlcov --html=reports/pytest-report.html --self-contained-html` -> `625 passed, 2 skipped, 1 warning`.
-- Bandit passed: `uv run bandit -r app -ll` -> no issues identified.
-- Mypy passed: `uv run mypy app` -> success in 41 source files.
-- Tester gate passed and QA review passed for closure.
+- Implementation change: `app/main.py` now includes `version` in the 503 not-ready `/health` response payload while preserving existing status semantics.
+- Test updates: `tests/functionaltest/test_main.py` and `tests/functionaltest/test_feature_enhancements.py` assert `version` presence for not-ready responses.
+- Tester gate: `uv run pytest tests/functionaltest/test_main.py::test_health_not_ready_returns_503 tests/functionaltest/test_feature_enhancements.py::TestHealthEndpoint::test_health_ready_includes_version_and_uptime tests/functionaltest/test_feature_enhancements.py::TestHealthEndpoint::test_health_not_ready_includes_version_and_omits_uptime` -> 3 passed.
+- Additional health unit validation: `uv run pytest tests/unittest/test_health.py` -> 10 passed.
+- Documentation sync: `docs/api.md` updated to note `version` in both 200 and 503 `/health` responses.
