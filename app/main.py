@@ -8,6 +8,7 @@ from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.responses import Response
+from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from app.core.auth import get_current_user_id
 from app.core.config import get_settings
@@ -19,11 +20,72 @@ from app.core.firebase_init import (
     is_testing_env,
 )
 from app.core.firestore_handler.QueryHandler import initialize_app
-from app.core.health import get_health
+from app.core.health import get_health, probe_selenium_readiness
 from app.core.logging_config import configure_logging
 from app.routers import data_plot, login, netbank_credentials
 from app.services.scheduler import create_scheduler
 from app.services.user_deletion_service import DeletionWorker
+
+MAX_REQUEST_BODY_SIZE_BYTES = 1_048_576
+
+
+class RequestBodyTooLargeError(Exception):
+    """Raised when an incoming request body exceeds the configured size limit."""
+
+
+class RequestBodySizeLimitMiddleware:
+    """ASGI middleware that enforces a maximum HTTP request body size."""
+
+    def __init__(self, app: ASGIApp, max_body_size_bytes: int) -> None:
+        self.app = app
+        self.max_body_size_bytes = max_body_size_bytes
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope.get("type") != "http":
+            await self.app(scope, receive, send)
+            return
+
+        method = str(scope.get("method", "")).upper()
+        if method not in {"POST", "PUT", "PATCH"}:
+            await self.app(scope, receive, send)
+            return
+
+        headers = {
+            key.decode("latin-1").lower(): value.decode("latin-1")
+            for key, value in scope.get("headers", [])
+        }
+        content_length = headers.get("content-length")
+        if content_length is not None:
+            try:
+                if int(content_length) > self.max_body_size_bytes:
+                    response = JSONResponse(
+                        status_code=413,
+                        content={"detail": "Request body too large"},
+                    )
+                    await response(scope, receive, send)
+                    return
+            except ValueError:
+                pass
+
+        bytes_seen = 0
+
+        async def limited_receive() -> Message:
+            nonlocal bytes_seen
+            message = await receive()
+            if message.get("type") == "http.request":
+                bytes_seen += len(message.get("body", b""))
+                if bytes_seen > self.max_body_size_bytes:
+                    raise RequestBodyTooLargeError
+            return message
+
+        try:
+            await self.app(scope, limited_receive, send)
+        except RequestBodyTooLargeError:
+            response = JSONResponse(
+                status_code=413,
+                content={"detail": "Request body too large"},
+            )
+            await response(scope, receive, send)
 
 
 async def stop_scheduler_on_shutdown(app: FastAPI) -> None:
@@ -62,6 +124,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         health.mark_component_ready("scheduler", "skipped_in_tests")
         health.mark_component_ready("tokens", "skipped_in_tests")
         health.mark_component_ready("firebase", "skipped_in_tests")
+        health.mark_component_ready("selenium", "skipped_in_tests")
         health.mark_startup_complete()
         yield
         return
@@ -121,6 +184,17 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
                     fallback_exc,
                 )
 
+        selenium_probe_error = probe_selenium_readiness()
+        if selenium_probe_error is None:
+            health.mark_component_ready("selenium")
+            logger.info("Selenium readiness probe succeeded")
+        else:
+            health.mark_component_ready("selenium", selenium_probe_error)
+            logger.warning(
+                "Selenium readiness probe degraded startup health component: %s",
+                selenium_probe_error,
+            )
+
         health.mark_component_ready("firebase")
         health.mark_startup_complete()
 
@@ -143,10 +217,14 @@ app.state.deletion_worker = None
 
 settings = get_settings()
 app.add_middleware(
+    RequestBodySizeLimitMiddleware,
+    max_body_size_bytes=MAX_REQUEST_BODY_SIZE_BYTES,
+)
+app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
     allow_headers=["*"],
 )
 
