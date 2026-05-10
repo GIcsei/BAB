@@ -63,6 +63,25 @@ See [`.github/memory/RELEASE_PLAN.md`](.github/memory/RELEASE_PLAN.md) for full 
 10. Post-phase hotfix: added scheduler per-user in-flight dedupe to prevent overlapping immediate `/user/collect_automatically` runs for the same user while preserving existing schedule dedupe.
 11. Hotfix validation: focused scheduler regression suite passed with 51 passed and 0 failed.
 
+## CI Recovery Sequence (2026-05-10)
+
+1. Tester executes CI-equivalent `pytest`, `bandit`, and `mypy` to capture concrete blockers.
+2. Backend-implementer applies minimal behavior-preserving fixes for each blocker.
+3. Tester re-runs full verification commands to confirm all gates green.
+4. QA-engineer performs readiness review for residual risk and closure decision.
+
+Current blockers from tester triage:
+
+- Bandit B310 at `app/core/health.py`.
+- Mypy `no-untyped-call` at `app/core/firestore_handler/Utils.py`.
+- Pytest status mismatch at `tests/functionaltest/test_feature_enhancements.py` (expected 200, got 400).
+
+CI recovery result:
+
+- Root failing gate in this branch was `tests/unittest/test_getreport_security.py::test_handle_already_logged_in_exception_does_not_mask_failure`.
+- Minimal fix applied in `app/core/netbank/getReport.py` (`_handle_already_logged_in_Selenium` now returns `False` in exception path).
+- Full verification complete: pytest full suite + CI-style pytest + bandit + mypy all passing.
+
 ## Progress Snapshot
 
 1. Completed: first platform-infrastructure blocker slice C-2.

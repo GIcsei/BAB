@@ -27,7 +27,7 @@ def test_list_data_files_for_user_filters_extensions(tmp_path: Path):
     df = pd.DataFrame({"x": [1, 2, 3]})
     df.to_parquet(user / "sample.parquet")
     result = data_service.list_data_files_for_user(base, "user1")
-    assert [f["filename"] for f in result] == ["sample.parquet"]
+    assert [f["filename"] for f in result] == ["b.csv", "c.json", "sample.parquet"]
 
 
 def test_resolve_user_parquet_file_path_rejects_non_parquet(tmp_path: Path):

@@ -258,6 +258,13 @@ Use this file as the durable summary surface for delegated work.
 - Evidence: Updated `app/routers/data_plot.py`, `app/services/data_service.py`, `tests/functionaltest/test_data_plot_router.py`, and `tests/unittest/test_data_service.py`; ran `python -m pytest -q tests/functionaltest/test_data_plot_router.py tests/unittest/test_data_service.py` (24 passed).
 - Next handoff: `tester` for broader regression review.
 
+### 2026-05-10 | backend-implementer
+
+- Scope: Implement minimal, behavior-preserving fixes for three verified CI blockers (Bandit B310 in health probe, mypy no-untyped-call in firestore Utils, and functional regression for CSV/JSON data endpoints).
+- Outcome: Replaced unsafe urllib probe with timeout-bound requests call, resolved typed-context mypy blocker on redirect auth stripping call, restored CSV/JSON support for preview/series/list while keeping parquet-only stream contract.
+- Evidence: Updated `app/core/health.py`, `app/core/firestore_handler/Utils.py`, `app/routers/data_plot.py`, `app/services/data_service.py`, `tests/unittest/test_data_service.py`; ran `uv run pytest tests/functionaltest/test_feature_enhancements.py -q` (28 passed), `uv run bandit -q -r app/core/health.py` (B310 cleared; only B112 low remains), `uv run mypy app/core/firestore_handler/Utils.py` (clean), plus focused and CI-style checks (`test_data_plot_router.py`, `test_data_service.py`, `ruff`, `black --check`, `mypy app`) all passing.
+- Next handoff: `tester` for optional broader regression gate if full-suite rerun is required.
+
 ### 2026-05-10 | tester
 
 - Scope: Peer-review regression pass for Phase 3 parquet-only file exposure and stream route.
@@ -285,3 +292,24 @@ Use this file as the durable summary surface for delegated work.
 - Outcome: Approved the release gate change; no blocking workflow-order defect remains.
 - Evidence: Reviewed `.github/workflows/release.yml`, `docker/Dockerfile`, and the YAML parse check result; accepted the `release.needs == ['validate', 'docker']` gate.
 - Next handoff: `scrum-master` to close the sprint and promote release when ready.
+
+### 2026-05-10 | tester
+
+- Scope: Execute full CI-equivalent verification for user-reported CI/CD failure using pytest, bandit, and mypy with no code edits.
+- Outcome: Found three blocking failures across all required gates.
+- Evidence: Ran `uv run pytest -v --maxfail=1 --cov=app --cov-fail-under=70 --cov-report=xml:coverage.xml --cov-report=term-missing --cov-report=html:htmlcov --html=reports/pytest-report.html --self-contained-html` (failed at `tests/functionaltest/test_feature_enhancements.py`, expected 200 got 400), `uv run bandit -r app -ll` (failed with B310 at `app/core/health.py`), and `uv run mypy app` (failed with `no-untyped-call` at `app/core/firestore_handler/Utils.py`).
+- Next handoff: `backend-implementer` to remediate CI blockers, then `tester` for full re-run.
+
+### 2026-05-10 | tester
+
+- Scope: Post-fix CI verification gate for user-requested full review run.
+- Outcome: Passed all requested gates.
+- Evidence: Ran `uv run pytest -q` (625 passed, 2 skipped, 1 warning), CI-style pytest command with coverage (`625 passed, 2 skipped, 1 warning`, coverage above threshold), `uv run bandit -r app -ll` (no issues identified), and `uv run mypy app` (success in 41 files).
+- Next handoff: `qa-engineer` for readiness review.
+
+### 2026-05-10 | qa-engineer
+
+- Scope: Readiness review for CI recovery fix scope.
+- Outcome: Pass with low residual risk note.
+- Evidence: Reviewed `app/core/netbank/getReport.py` exception-path fix and accepted tester gate evidence for pytest, bandit, and mypy.
+- Next handoff: `scrum-master` for closure.

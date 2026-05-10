@@ -53,11 +53,12 @@ def _validate_file_size(path: Path, max_size_mb: int = 500) -> None:
 def list_data_files_for_user(base_data_dir: Path, user_id: str) -> List[Dict[str, Any]]:
     user_dir = _validate_user_path(base_data_dir, user_id)
     out: List[Dict[str, Any]] = []
+    supported_suffixes = {".csv", ".parquet", ".json"}
     if not user_dir.exists() or not user_dir.is_dir():
         return out
     try:
         for p in sorted(user_dir.iterdir(), key=lambda x: x.name):
-            if p.is_file() and p.suffix.lower() == ".parquet":
+            if p.is_file() and p.suffix.lower() in supported_suffixes:
                 try:
                     out.append(
                         {

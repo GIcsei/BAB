@@ -25,6 +25,8 @@ from fastapi.testclient import TestClient
 @pytest.fixture(autouse=True)
 def _setup(monkeypatch):
     """Reset health, override deps, and clean up after each test."""
+    app.dependency_overrides.clear()
+    app.dependency_overrides[get_current_user_id] = lambda: "test_admin"
     monkeypatch.setenv("PYTEST_RUNNING", "1")
 
     h = health_mod._health

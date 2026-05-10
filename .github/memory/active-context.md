@@ -1,10 +1,10 @@
 # ACTIVE CONTEXT
 
 ## Current Focus
-Execute Release Stability Sprint — complete.
+CI/CD recovery verification and review completed.
 
 ## Current Phase
-Release Stability Sprint (complete)
+CI gate recovery (complete)
 
 ## Current Owner
 scrum-master
@@ -18,6 +18,11 @@ none
 - Residual risk: non-`fcntl` scheduler leadership now defaults to follower safety unless explicit env opt-in (`APP_SCHEDULER_NO_FCNTL_ASSUME_LEADER`) is configured for deterministic single-leader deployment.
 
 ## Notes
+- **2026-05-10: Implemented CI recovery fix in `app/core/netbank/getReport.py` by returning `False` on exceptions in `_handle_already_logged_in_Selenium`, resolving failing unit test path.**
+- **2026-05-10: Tester post-fix gate passed (`625 passed, 2 skipped, 1 warning`) for both full and CI-style pytest commands, plus bandit and mypy.**
+- **2026-05-10: QA review passed for CI recovery scope with low residual risk note on mocked Selenium-path coverage.**
+- **2026-05-10: Tester executed CI-equivalent verification and found three hard gate failures: Bandit B310 (`app/core/health.py`), mypy no-untyped-call (`app/core/firestore_handler/Utils.py`), and pytest status mismatch (`tests/functionaltest/test_feature_enhancements.py`).**
+- **2026-05-10: Next implementation handoff is `backend-implementer` to remediate CI blockers, followed by `tester` re-run and `qa-engineer` review.**
 - Product-owner clarified that open points include orchestration queue T-01..T-06 and unresolved findings in `.github/memory/TODO.md`.
 - C-2 completed and config-verified: `FIREBASE_API_KEY` added to TrueNAS env template and compose environment.
 - Web verification of package freshness completed; dependency minimums and lockfile were updated in a security-owned slice.

@@ -36,6 +36,20 @@ def _validate_user_id(user_id: str) -> str:
 
 def _validate_filename(filename: str) -> str:
     """Validate filename to ensure only supported data files are accessed."""
+    if not re.match(
+        r"^[a-zA-Z0-9_\-\.]+\.(csv|parquet|json)$", filename, re.IGNORECASE
+    ):
+        from fastapi import HTTPException
+
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid filename format; only .csv, .parquet, and .json files are allowed",
+        )
+    return filename
+
+
+def _validate_parquet_filename(filename: str) -> str:
+    """Validate filename for parquet-only download streaming endpoint."""
     if not re.match(r"^[a-zA-Z0-9_\-\.]+\.parquet$", filename, re.IGNORECASE):
         from fastapi import HTTPException
 
@@ -49,7 +63,7 @@ def _validate_filename(filename: str) -> str:
 @router.get(
     "/list",
     response_model=FileListResponse,
-    summary="List available parquet data files for authenticated user",
+    summary="List available data files for authenticated user",
 )
 async def list_files(
     offset: int = Query(0, ge=0, description="Pagination offset"),
@@ -112,7 +126,7 @@ async def stream_file(
     current_user_id: str = Depends(get_current_user_id),
 ) -> FileResponse:
     user_id = _validate_user_id(current_user_id)
-    filename = _validate_filename(filename)
+    filename = _validate_parquet_filename(filename)
     try:
         file_path = data_service.resolve_user_parquet_file_path(
             _base_dir(), user_id, filename

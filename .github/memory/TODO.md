@@ -1,5 +1,16 @@
 ## TODO — Security & Bug Findings (Audit 2026-05-08)
 
+### CI/CD Recovery Snapshot (2026-05-10)
+
+- User-requested full verification run executed by `tester` using CI-equivalent commands.
+- Pytest gate: failed early at `tests/functionaltest/test_feature_enhancements.py` (`expected 200, got 400`).
+- Bandit gate: failed with medium B310 at `app/core/health.py`.
+- Mypy gate: failed with `no-untyped-call` at `app/core/firestore_handler/Utils.py`.
+- Next handoff: `backend-implementer` for minimal CI blocker remediation, then `tester` re-run.
+- Status: Completed.
+- Implemented fix: `app/core/netbank/getReport.py` exception path in `_handle_already_logged_in_Selenium` no longer masks failures.
+- Final verification: `uv run pytest -q` (`625 passed, 2 skipped, 1 warning`), CI-style pytest (`625 passed, 2 skipped, 1 warning`), `uv run bandit -r app -ll` (pass), `uv run mypy app` (pass).
+
 ### Execution Status Snapshot (2026-05-08)
 
 - Overall program status: In Progress (delegated sequencing underway).
