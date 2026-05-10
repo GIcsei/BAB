@@ -291,15 +291,11 @@ def _block_user_in_firestore(
     try:
         db = firebase.database()
         token = firebase.get_user_token(user_id)
-        db.set_document(
-            f"users/{user_id}",
-            {
-                "fields": {
-                    "blocked": {"booleanValue": True},
-                    "deletion_at_ms": {"integerValue": str(deletion_at_ms)},
-                }
-            },
-            token,
+        db.set_user_block_state(
+            user_id=user_id,
+            blocked=True,
+            token=token,
+            deletion_at_ms=deletion_at_ms,
         )
         logger.info("Marked user %s as blocked in Firestore", user_id)
     except Exception:
@@ -313,14 +309,10 @@ def _unblock_user_in_firestore(firebase: Firebase, user_id: str) -> None:
     try:
         db = firebase.database()
         token = firebase.get_user_token(user_id)
-        db.set_document(
-            f"users/{user_id}",
-            {
-                "fields": {
-                    "blocked": {"booleanValue": False},
-                }
-            },
-            token,
+        db.set_user_block_state(
+            user_id=user_id,
+            blocked=False,
+            token=token,
         )
         logger.info("Unblocked user %s in Firestore", user_id)
     except Exception:

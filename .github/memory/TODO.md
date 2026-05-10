@@ -7,6 +7,16 @@
 - Next handoff: tech-lead (define smallest-first implementation sequence).
 - Dependency freshness/web vulnerability verification: Pending and required before dependency changes.
 
+### Release Stability Sprint Snapshot (2026-05-10)
+
+- T-07 Phase 1 Firestore consolidation: Completed (owner: backend-implementer).
+- T-07 tester gate: Passed in focused scope (25 passed, 0 failed, 0 skipped).
+- T-07 QA gate: Conditional pass with residual field-preservation risk noted for populated `users/{user_id}` documents.
+- T-08 Phase 2 logging/auth/scheduler reliability: not-started.
+- T-09 Phase 3 parquet streaming and access controls: not-started.
+- T-10 Phase 4 Docker/CI release hardening: not-started.
+- Focused validation for T-07: `tests/unittest/test_firestore_service.py`, `tests/unittest/test_registration_service.py`, `tests/unittest/test_login_service.py`, `tests/unittest/test_login_service_extended.py` -> 42 passed.
+
 ### Track 1 Status
 
 - C-2 FIREBASE_API_KEY TrueNAS wiring: Completed (owner: platform-infrastructure).

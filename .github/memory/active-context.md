@@ -1,19 +1,21 @@
 # ACTIVE CONTEXT
 
 ## Current Focus
-Implement all currently open memory/TODO points through staged specialist ownership, including dependency security freshness checks and focused validation gates.
+Execute Release Stability Sprint — 4-phase phased consolidation and hardening of core services, API surface, and CI/CD infrastructure.
 
 ## Current Phase
-done
+Release Stability Sprint (Phase 1 implemented and validated with conditional QA pass)
 
 ## Current Owner
 scrum-master
 
 ## Next Handoff
-none
+Awaiting user direction.  
+Queued (not started): Phase 2 backend-implementer, Phase 3 api-surface, Phase 4 platform-infrastructure.
 
 ## Blockers
-Residual risk only: privileged Windows symlink branch remains skipped in non-elevated environments.
+- Residual risk: privileged Windows symlink branch remains skipped in non-elevated environments.
+- Residual risk: `set_user_block_state` currently uses full-document write semantics and may overwrite non-blocking fields in `users/{user_id}` when populated documents exist.
 
 ## Notes
 - Product-owner clarified that open points include orchestration queue T-01..T-06 and unresolved findings in `.github/memory/TODO.md`.
@@ -34,3 +36,8 @@ Residual risk only: privileged Windows symlink branch remains skipped in non-ele
 - QA final acceptance: conditional pass for Linux/TrueNAS with residual risks documented.
 - Documentation synchronization completed across README and docs surfaces.
 - Delegation remains single-specialist per handoff with immediate memory synchronization.
+- **2026-05-10: Tech-lead sequenced 7 open issues into Release Stability Sprint — 4 phases spanning backend, API, and infrastructure.**
+- **7 issues grouped into 4 phases; Phase 1 unblocks Phase 2+3; Phase 4 runs independently.**
+- **2026-05-10: Phase 1 completed by backend-implementer. Firestore user block/unblock writes consolidated into `FirestoreService.set_user_block_state` and login-service callers switched to that single surface with focused unit tests passing (42 passed).**
+- **2026-05-10: Tester gate for Phase 1 passed in focused scope (`25 passed, 0 failed`) across Firestore service and registration service tests.**
+- **2026-05-10: QA returned conditional pass for Phase 1 with follow-up recommendation to verify field-preservation semantics for populated `users/{user_id}` documents.**

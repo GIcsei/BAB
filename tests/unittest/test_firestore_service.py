@@ -135,3 +135,32 @@ def test_run_query_returns_collection():
     svc = FirestoreService(fb)
     result = svc.run_query("col", "status == 'active'")
     assert isinstance(result, Collection)
+
+
+def test_set_user_block_state_blocked_with_deletion():
+    fb = _make_firebase()
+    fb.requests.put.return_value = _ok_response({"status": "ok"})
+    svc = FirestoreService(fb)
+
+    result = svc.set_user_block_state(
+        "u1", blocked=True, token={"idToken": "tok"}, deletion_at_ms=123
+    )
+
+    assert result == {"status": "ok"}
+    fb.requests.put.assert_called_once()
+    call_args = fb.requests.put.call_args.kwargs
+    assert "users/u1" in fb.requests.put.call_args.args[0]
+    assert '"blocked": {"booleanValue": true}' in call_args["data"]
+    assert '"deletion_at_ms": {"integerValue": "123"}' in call_args["data"]
+
+
+def test_set_user_block_state_unblocked_without_deletion():
+    fb = _make_firebase()
+    fb.requests.put.return_value = _ok_response({"status": "ok"})
+    svc = FirestoreService(fb)
+
+    svc.set_user_block_state("u2", blocked=False)
+
+    call_args = fb.requests.put.call_args.kwargs
+    assert '"blocked": {"booleanValue": false}' in call_args["data"]
+    assert "deletion_at_ms" not in call_args["data"]

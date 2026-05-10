@@ -1,17 +1,27 @@
 {
-  "activeRequest": "Implement every open point from memory/TODO with staged specialist handoffs, dependency-security updates, and validation",
-  "currentStage": "done",
+  "activeRequest": "Release Stability Sprint Phase 1 (T-07): consolidate Firestore services and remove duplication",
+  "currentStage": "phase-1-complete",
   "currentOwner": "scrum-master",
-  "nextHandoff": "none",
-  "agentQueue": [],
+  "nextHandoff": "none (Phase 2/3/4 queued; awaiting user direction)",
+  "agentQueue": [
+    "backend-implementer",
+    "api-surface",
+    "platform-infrastructure"
+  ],
   "blockers": [
-    "Residual risk: symlink privileged branch remains skipped on non-elevated Windows test runs."
+    "Residual risk: symlink privileged branch remains skipped on non-elevated Windows test runs.",
+    "Residual risk: Firestore user block-state writes use full-document semantics and may overwrite non-block fields on populated users/{user_id} docs."
   ],
   "locks": {
     "memory": null
   },
-  "lastUpdated": "2026-05-08T14:10:00Z",
+  "lastUpdated": "2026-05-10T00:00:00Z",
   "notes": [
+    "Release Stability Sprint Phase 1 completed: Firestore user block/unblock writes consolidated in FirestoreService and callers updated.",
+    "Focused Phase 1 validation passed: 42 tests passed, 0 failed.",
+    "Tester gate for Phase 1 passed in focused scope: 25 passed, 0 failed, 0 skipped.",
+    "QA gate returned conditional pass for Phase 1 with follow-up recommendation for field-preservation verification.",
+    "T-07 marked completed in .github/TODO.md.",
     "Track 1 runtime bundle completed for C-1, C-3 short-term, H-1, M-7, and L-3 with focused validation.",
     "Dependency freshness/web vulnerability check completed with direct dependency minimum bumps and lock refresh.",
     "Security hardening bundle completed with focused test evidence and no diagnostics errors.",

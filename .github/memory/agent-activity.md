@@ -173,3 +173,24 @@ Use this file as the durable summary surface for delegated work.
 - Outcome: Marked execution cycle complete with all planned tracks done and durable memory/TODO closure updates applied.
 - Evidence: Updated `.github/memory/session-state.json`, `.github/memory/active-context.md`, `.github/memory/TASK.md`, `.github/memory/plan.md`, `.github/memory/TODO.md`, and `.github/TODO.md`.
 - Next handoff: none.
+
+### 2026-05-10 | backend-implementer
+
+- Scope: Release Stability Sprint Phase 1 (T-07 / issue #3) to consolidate Firestore write operations and remove service-layer duplication.
+- Outcome: Added consolidated Firestore user block-state method and updated login/registration callers to use the single Firestore service surface.
+- Evidence: Updated `app/core/firestore_handler/FirestoreService.py`, `app/services/login_service.py`, `tests/unittest/test_firestore_service.py`, `tests/unittest/test_registration_service.py`; ran `python -m pytest -q tests/unittest/test_firestore_service.py tests/unittest/test_registration_service.py tests/unittest/test_login_service.py tests/unittest/test_login_service_extended.py` (42 passed).
+- Next handoff: `backend-implementer` for T-08 and `api-surface` for T-09.
+
+### 2026-05-10 | tester
+
+- Scope: Execute focused Phase 1 regression gate for Firestore consolidation and affected auth caller tests only.
+- Outcome: Approved Phase 1 tester gate with no test-file changes required.
+- Evidence: Ran `python -m pytest -q tests/unittest/test_firestore_service.py tests/unittest/test_registration_service.py` (25 passed, 0 failed, 0 skipped); verified call sites in `app/services/login_service.py` use `set_user_block_state`.
+- Next handoff: `qa-engineer` for readiness assessment on residual semantics risk.
+
+### 2026-05-10 | qa-engineer
+
+- Scope: Assess Phase 1 release readiness based on implementation and focused tester evidence.
+- Outcome: Conditional pass for Phase 1; residual risk recorded regarding potential overwrite semantics on populated `users/{user_id}` documents.
+- Evidence: Reviewed `app/core/firestore_handler/FirestoreService.py`, `app/services/login_service.py`, and focused pytest evidence (42 passed + 25 passed).
+- Next handoff: `scrum-master` to keep later phases queued and track field-preservation follow-up before release promotion.

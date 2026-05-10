@@ -36,6 +36,27 @@ Deliver a backend-specific `.github` customization layer that keeps one user-fac
 6. QA-engineer performs readiness review on residual risk.
 7. Documentation-writer synchronizes docs/TODO/memory after verified behavior.
 
+## Stable Release Execution (2026-05-10)
+
+Tech-lead sequenced 7 open issues into 4 distinct phases:
+
+- **Phase 1** (`feature/consolidate-firestore-services`): Backend-implementer eliminates Firestore service duplication (#3).
+- **Phase 2** (`feature/improve-logging-auth-scheduler`): Backend-implementer hardens logging, token refresh, and scheduler (#2, #1, #7).
+- **Phase 3** (`feature/secure-parquet-streaming`): API-surface secures file access and streaming (#5, #6).
+- **Phase 4** (`infra/fix-release-docker`): Platform-infrastructure fixes Docker and CI/CD (#4).
+
+Execution: Phase 1 unblocks Phases 2+3 (parallel). Phase 4 runs independently.
+
+See [`.github/memory/RELEASE_PLAN.md`](.github/memory/RELEASE_PLAN.md) for full details.
+
+## Release Sprint Progress (2026-05-10)
+
+1. Completed: Phase 1 (T-07 / issue #3) by consolidating Firestore user block/unblock writes into a single Firestore service method and updating login/registration callers.
+2. Validation: focused unit test command passed with 42 passed and 0 failed.
+3. Tester gate: focused Phase 1 regression tests passed with 25 passed and 0 failed.
+4. QA gate: conditional pass for Phase 1 with residual recommendation to verify field-preservation semantics on populated `users/{user_id}` documents.
+5. Next: Phase 2 (`backend-implementer`) and Phase 3 (`api-surface`) are queued in parallel readiness; Phase 4 remains independent and queued.
+
 ## Progress Snapshot
 
 1. Completed: first platform-infrastructure blocker slice C-2.
