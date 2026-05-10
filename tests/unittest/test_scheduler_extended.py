@@ -1,3 +1,5 @@
+import threading
+import time
 from types import ModuleType
 from unittest.mock import MagicMock, patch
 
@@ -92,6 +94,67 @@ def test_spawn_job_thread_starts_thread(tmp_path):
 
     time.sleep(0.05)
     job._perform_task.assert_called_once()
+    sched.stop_all()
+
+
+def test_spawn_job_thread_skips_duplicate_while_inflight(tmp_path):
+    sched = Scheduler(firebase_provider=lambda: MagicMock())
+
+    started = threading.Event()
+    release = threading.Event()
+    run_count = [0]
+
+    def blocking_task():
+        run_count[0] += 1
+        started.set()
+        release.wait(timeout=1.0)
+
+    job = _Job("u1", tmp_path, firebase_provider=lambda: MagicMock())
+    job._perform_task = blocking_task
+
+    assert sched._spawn_job_thread(job) is True
+    assert started.wait(timeout=0.5)
+    assert sched._spawn_job_thread(job) is True
+    time.sleep(0.05)
+    assert run_count[0] == 1
+
+    release.set()
+    time.sleep(0.1)
+
+    assert sched._spawn_job_thread(job) is True
+    time.sleep(0.1)
+    assert run_count[0] == 2
+    sched.stop_all()
+
+
+def test_trigger_run_for_user_duplicate_while_inflight_is_noop(tmp_path):
+    sched = Scheduler(firebase_provider=lambda: MagicMock())
+
+    started = threading.Event()
+    release = threading.Event()
+    run_count = [0]
+
+    def blocking_task():
+        run_count[0] += 1
+        started.set()
+        release.wait(timeout=1.0)
+
+    job = _Job("u1", tmp_path / "u1", firebase_provider=lambda: MagicMock())
+    job._perform_task = blocking_task
+    sched._jobs["u1"] = job
+
+    assert sched.trigger_run_for_user("u1") is True
+    assert started.wait(timeout=0.5)
+    assert sched.trigger_run_for_user("u1") is True
+    time.sleep(0.05)
+    assert run_count[0] == 1
+
+    release.set()
+    time.sleep(0.1)
+
+    assert sched.trigger_run_for_user("u1") is True
+    time.sleep(0.1)
+    assert run_count[0] == 2
     sched.stop_all()
 
 

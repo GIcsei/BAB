@@ -4,7 +4,7 @@
 Execute Release Stability Sprint — 4-phase phased consolidation and hardening of core services, API surface, and CI/CD infrastructure.
 
 ## Current Phase
-Release Stability Sprint (Phase 2 completed with second-run peer-review gates)
+Release Stability Sprint (Phase 2 completed with post-phase scheduler trigger hotfix)
 
 ## Current Owner
 scrum-master
@@ -49,3 +49,5 @@ Queued (not started): Phase 3 api-surface, Phase 4 platform-infrastructure.
 - **2026-05-10: Tester second-run peer review passed after hardening (`16 passed` focused + `78 passed` broader targeted regression, `0 failed`).**
 - **2026-05-10: Security follow-up review confirmed legacy relative-expiry ambiguity closure and reduced non-`fcntl` multi-leader risk; conditional on deployment guardrail enforcement for `APP_SCHEDULER_NO_FCNTL_ASSUME_LEADER`.**
 - **2026-05-10: QA final decision for Phase 2 is conditional pass; phase is complete for sprint execution with mandatory release-time guardrails for non-`fcntl` override governance.**
+- **2026-05-10: Backend hotfix added per-user in-flight dedupe for immediate scheduler triggers so repeated `/user/collect_automatically` calls for the same user become safe no-op while a run is active, without creating duplicate schedules.**
+- **2026-05-10: Tester validated hotfix scope with scheduler-focused regression suite (`51 passed, 0 failed`).**

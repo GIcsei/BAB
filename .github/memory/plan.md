@@ -60,6 +60,8 @@ See [`.github/memory/RELEASE_PLAN.md`](.github/memory/RELEASE_PLAN.md) for full 
 7. Completed: second-run hardening for Phase 2 residual risks (legacy relative-expiry ambiguity and non-`fcntl` leader behavior) with focused follow-up tests passing (16 passed).
 8. Peer-review gates: tester revalidation passed (focused 16 + broader targeted 78, 0 failed); security follow-up conditional pass; QA final conditional pass with release guardrails for non-`fcntl` override governance.
 9. Next: Phase 3 (`api-surface`) and Phase 4 (`platform-infrastructure`) remain queued.
+10. Post-phase hotfix: added scheduler per-user in-flight dedupe to prevent overlapping immediate `/user/collect_automatically` runs for the same user while preserving existing schedule dedupe.
+11. Hotfix validation: focused scheduler regression suite passed with 51 passed and 0 failed.
 
 ## Progress Snapshot
 

@@ -169,6 +169,7 @@ class Scheduler:
         self._worker: Optional[threading.Thread] = None
         self._running = False
         self._lock = threading.Lock()
+        self._inflight_users: set[str] = set()
         self._firebase_provider = firebase_provider
 
         self._base_dir = (
@@ -427,14 +428,36 @@ class Scheduler:
                         )
                         self._cond.notify()
 
-    def _spawn_job_thread(self, job: _Job) -> None:
-        thread = threading.Thread(target=job._perform_task, daemon=True)
-        thread.start()
-        logger.info(
-            "Spawned background thread for user %s (thread=%s)",
-            job.user_id,
-            thread.name,
-        )
+    def _spawn_job_thread(self, job: _Job) -> bool:
+        with self._lock:
+            if job.user_id in self._inflight_users:
+                logger.info(
+                    "Run already in-flight for user %s; skipping duplicate spawn",
+                    job.user_id,
+                )
+                return True
+            self._inflight_users.add(job.user_id)
+
+        def _run_and_release() -> None:
+            try:
+                job._perform_task()
+            finally:
+                with self._lock:
+                    self._inflight_users.discard(job.user_id)
+
+        try:
+            thread = threading.Thread(target=_run_and_release, daemon=True)
+            thread.start()
+            logger.info(
+                "Spawned background thread for user %s (thread=%s)",
+                job.user_id,
+                thread.name,
+            )
+            return True
+        except Exception:
+            with self._lock:
+                self._inflight_users.discard(job.user_id)
+            raise
 
     def start_job_for_user(
         self,
@@ -564,6 +587,7 @@ class Scheduler:
                 except Exception:
                     logger.debug("Failed to mark job stopped")
             self._jobs.clear()
+            self._inflight_users.clear()
 
         with self._cond:
             self._running = False

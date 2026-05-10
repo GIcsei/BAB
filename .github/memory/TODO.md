@@ -17,6 +17,8 @@
 - T-08 tester second-run peer review: Passed (focused 16 passed + broader targeted 78 passed, 0 failed).
 - T-08 security follow-up: Conditional pass; relative-expiry ambiguity closed and non-`fcntl` risk reduced with explicit env override guardrail.
 - T-08 QA final decision: Conditional pass; release-time guardrails required for non-`fcntl` override governance.
+- Post-T-08 scheduler hotfix: Completed. Same-user duplicate immediate triggers are deduped in-flight to prevent overlapping runs.
+- Post-T-08 tester gate: Passed (`tests/unittest/test_scheduler_extended.py`, `tests/unittest/test_scheduler.py`, `tests/unittest/test_scheduler_worker.py`, `tests/unittest/test_scheduler_coverage.py` -> 51 passed).
 - T-09 Phase 3 parquet streaming and access controls: not-started.
 - T-10 Phase 4 Docker/CI release hardening: not-started.
 - Focused validation for T-07: `tests/unittest/test_firestore_service.py`, `tests/unittest/test_registration_service.py`, `tests/unittest/test_login_service.py`, `tests/unittest/test_login_service_extended.py` -> 42 passed.

@@ -229,3 +229,17 @@ Use this file as the durable summary surface for delegated work.
 - Outcome: Conditional pass; Phase 2 complete for sprint execution with mandatory release-time guardrails on non-`fcntl` override governance.
 - Evidence: Accepted tester and security follow-up evidence (focused 16 passed + broader targeted 78 passed, 0 failed; security conditional pass).
 - Next handoff: `scrum-master` to retain Phase 3 and Phase 4 queue order and carry guardrails into release governance.
+
+### 2026-05-10 | backend-implementer
+
+- Scope: Hotfix scheduler behavior for repeated same-user immediate trigger requests (`/user/collect_automatically`) to prevent overlapping runs.
+- Outcome: Added in-flight per-user dedupe in scheduler spawn path; duplicate immediate triggers for active user runs now return success as no-op and do not spawn concurrent duplicates.
+- Evidence: Updated `app/infrastructure/sched/scheduler.py` and `tests/unittest/test_scheduler_extended.py`; focused scheduler validation run reported 51 passed.
+- Next handoff: `tester` for independent confirmation.
+
+### 2026-05-10 | tester
+
+- Scope: Independent focused regression validation for scheduler duplicate-trigger hotfix behavior.
+- Outcome: Approved hotfix scope; same-user duplicate immediate trigger overlap prevented while allowing subsequent run after prior completion.
+- Evidence: Ran `pytest -q -ra tests/unittest/test_scheduler_extended.py tests/unittest/test_scheduler.py tests/unittest/test_scheduler_worker.py tests/unittest/test_scheduler_coverage.py` (51 passed, 0 failed).
+- Next handoff: `scrum-master` to report outcome and keep Phase 3/4 queue unchanged.

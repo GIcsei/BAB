@@ -28,3 +28,5 @@
 - Tester second-run peer review passed: focused hardening set (16 passed) and broader targeted Phase 2 set (78 passed), 0 failed.
 - Security follow-up review: conditional pass, with legacy relative-expiry ambiguity closed and non-`fcntl` risk reduced via follower-safe default plus explicit env override.
 - QA final decision: conditional pass; Phase 2 complete in sprint execution terms with release-time guardrails required for non-`fcntl` override governance.
+- Post-phase reliability hotfix: scheduler now dedupes same-user in-flight immediate triggers to prevent overlapping `/user/collect_automatically` runs while preserving per-user daily schedule dedupe.
+- Hotfix-focused tester validation passed: `pytest -q -ra tests/unittest/test_scheduler_extended.py tests/unittest/test_scheduler.py tests/unittest/test_scheduler_worker.py tests/unittest/test_scheduler_coverage.py` (51 passed).

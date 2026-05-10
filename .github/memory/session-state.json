@@ -1,6 +1,6 @@
 {
-  "activeRequest": "Release Stability Sprint Phase 2 (T-08): improve logging consistency/observability, token refresh reliability, and scheduler startup reliability",
-  "currentStage": "phase-2-complete",
+  "activeRequest": "Post-Phase2 reliability hotfix: prevent overlapping same-user immediate collect triggers",
+  "currentStage": "phase-2-hotfix-complete",
   "currentOwner": "scrum-master",
   "nextHandoff": "none (Phase 3/4 queued; awaiting user direction)",
   "agentQueue": [
@@ -17,6 +17,9 @@
   },
   "lastUpdated": "2026-05-10T00:00:00Z",
   "notes": [
+    "Post-Phase2 scheduler hotfix completed: in-flight same-user run dedupe added to prevent overlapping immediate trigger executions.",
+    "Hotfix behavior preserves existing daily schedule dedupe and treats duplicate immediate triggers as safe no-op while run is active.",
+    "Focused scheduler regression suite passed for hotfix scope: 51 passed, 0 failed.",
     "Release Stability Sprint Phase 2 completed: logging consistency updates in app startup path, token refresh normalization with expiration-aware handling, and scheduler leadership bootstrap on startup.",
     "Focused Phase 2 validation passed: 27 tests passed across main startup, scheduler, and token refresh integration paths.",
     "Adjacent token-service compatibility validation passed: 17 tests passed with one existing deprecation warning in async event-loop test helper.",
