@@ -54,7 +54,7 @@ def get_all_files_from_folder(folder: Optional[str], extension: str) -> List[str
 class reportFormatter:
     """Class to load, format, and save netbank report data from Excel files."""
 
-    FOLDER = r"D:\Erste"
+    FOLDER = ""
     fileName = r"Riport.xlsx"
     COLUMNS = (
         "Instrumentum",
@@ -77,7 +77,11 @@ class reportFormatter:
 
     def __init__(self, fileName: Optional[str] = None, fileLoc: Optional[str] = None):
         if fileLoc is not None:
+            if not str(fileLoc).strip():
+                raise ValueError("fileLoc must be a non-empty path when provided")
             self.FOLDER = fileLoc
+        if not str(self.FOLDER).strip():
+            raise ValueError("fileLoc is required when no default report folder is set")
         if fileName is not None:
             self.fileName = fileName
             extracted = extract_date_from_filename(self.fileName)
