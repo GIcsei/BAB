@@ -1,4 +1,5 @@
 import logging
+import os
 from typing import Any, Dict, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -13,6 +14,7 @@ from app.core.exceptions import (
     RegistrationFailedError,
 )
 from app.core.firestore_handler.QueryHandler import Firebase
+from app.core.rate_limit import enforce_auth_rate_limit
 from app.infrastructure.sched.scheduler import Scheduler
 from app.schemas.login import (
     JobStatusResponse,
@@ -38,12 +40,44 @@ from app.services.user_deletion_service import get_pending_deletion
 router = APIRouter(prefix="/user", tags=["Authentication"])
 logger = logging.getLogger(__name__)
 
+_AUTH_RATE_LIMIT_MAX_REQUESTS = int(os.getenv("APP_AUTH_RATE_LIMIT_MAX_REQUESTS", "10"))
+_AUTH_RATE_LIMIT_WINDOW_SECONDS = int(
+    os.getenv("APP_AUTH_RATE_LIMIT_WINDOW_SECONDS", "60")
+)
+
 
 def get_scheduler_dep(request: Request) -> Scheduler:
     scheduler = cast(Scheduler, getattr(request.app.state, "scheduler", None))
     if scheduler is None:
         raise HTTPException(status_code=503, detail="Scheduler unavailable")
     return scheduler
+
+
+def _rate_limit_register(request: Request) -> None:
+    enforce_auth_rate_limit(
+        request=request,
+        endpoint_name="register",
+        max_requests=_AUTH_RATE_LIMIT_MAX_REQUESTS,
+        window_seconds=_AUTH_RATE_LIMIT_WINDOW_SECONDS,
+    )
+
+
+def _rate_limit_login(request: Request) -> None:
+    enforce_auth_rate_limit(
+        request=request,
+        endpoint_name="login",
+        max_requests=_AUTH_RATE_LIMIT_MAX_REQUESTS,
+        window_seconds=_AUTH_RATE_LIMIT_WINDOW_SECONDS,
+    )
+
+
+def _rate_limit_password_reset(request: Request) -> None:
+    enforce_auth_rate_limit(
+        request=request,
+        endpoint_name="password-reset",
+        max_requests=_AUTH_RATE_LIMIT_MAX_REQUESTS,
+        window_seconds=_AUTH_RATE_LIMIT_WINDOW_SECONDS,
+    )
 
 
 @router.post(
@@ -54,6 +88,7 @@ def get_scheduler_dep(request: Request) -> Scheduler:
 )
 def register(
     data: RegisterRequest,
+    _rate_limit: None = Depends(_rate_limit_register),
     scheduler: Scheduler = Depends(get_scheduler_dep),
     firebase: Firebase = Depends(get_firebase_dep),
 ) -> RegisterResponse:
@@ -62,11 +97,11 @@ def register(
     except RegistrationFailedError as exc:
         logger.warning("Registration failed for email: %s", data.email)
         raise exception_to_http(exc)
-    except Exception as exc:
+    except Exception:
         logger.exception(
             "Unexpected error during registration for email: %s", data.email
         )
-        raise exception_to_http(RegistrationFailedError(str(exc)))
+        raise exception_to_http(RegistrationFailedError())
 
 
 @router.post(
@@ -76,6 +111,7 @@ def register(
 )
 def login(
     data: LoginRequest,
+    _rate_limit: None = Depends(_rate_limit_login),
     scheduler: Scheduler = Depends(get_scheduler_dep),
     firebase: Firebase = Depends(get_firebase_dep),
 ) -> LoginResponse:
@@ -84,9 +120,9 @@ def login(
     except LoginFailedError as exc:
         logger.warning("Login failed for email: %s", data.email)
         raise exception_to_http(exc)
-    except Exception as exc:
+    except Exception:
         logger.exception("Unexpected error during login for email: %s", data.email)
-        raise exception_to_http(LoginFailedError(str(exc)))
+        raise exception_to_http(LoginFailedError())
 
 
 @router.get(
@@ -240,6 +276,7 @@ def next_run_get(
 )
 def password_reset(
     data: PasswordResetRequest,
+    _rate_limit: None = Depends(_rate_limit_password_reset),
     firebase: Firebase = Depends(get_firebase_dep),
 ) -> PasswordResetResponse:
     try:
