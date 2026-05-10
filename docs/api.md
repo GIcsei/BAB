@@ -33,7 +33,8 @@ Liveness and readiness probe.
   "components": {
     "firebase": {"ready": true, "error": null},
     "scheduler": {"ready": true, "error": null},
-    "tokens": {"ready": true, "error": null}
+    "tokens": {"ready": true, "error": null},
+    "selenium": {"ready": true, "error": null}
   },
   "version": "0.10.4",
   "uptime_seconds": 123.45
@@ -48,6 +49,13 @@ Liveness and readiness probe.
   "components": { ... }
 }
 ```
+
+Operational note: after startup, `GET /health` returns `200` and exposes degraded dependencies via `components.<name>.ready=false` and `components.<name>.error`.
+
+### Request and CORS Guards
+
+- Request body size is capped at `1,048,576` bytes (`1 MiB`) for `POST`, `PUT`, and `PATCH`; oversized payloads return `413` with `{"detail":"Request body too large"}`.
+- CORS method allowlist is explicit: `GET`, `POST`, `PUT`, `DELETE`.
 
 #### `GET /`
 

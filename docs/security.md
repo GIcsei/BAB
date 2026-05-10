@@ -27,7 +27,7 @@ BAB follows defence-in-depth practices. This page documents the key security dec
 ## Input Validation
 
 - `user_id` and `filename` path parameters are validated against restrictive allow-list regexes to prevent path traversal attacks.
-- Request body sizes are bounded by FastAPI/Starlette defaults and service-layer file-size guards.
+- Request body size is capped at `1,048,576` bytes (`1 MiB`) for `POST`, `PUT`, and `PATCH`; service-layer file-size guards remain in place for file processing paths.
 
 ## Logging & PII Redaction
 

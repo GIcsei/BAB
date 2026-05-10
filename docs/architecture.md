@@ -2,7 +2,7 @@
 
 ## System Design
 
-BAB (Bank Analysis Backend) is a FastAPI-based backend service designed for authenticated data ingestion, processing, and visualization. It runs in a containerized environment (Docker/TrueNAS) with multi-worker support.
+BAB (Bank Analysis Backend) is a FastAPI-based backend service designed for authenticated data ingestion, processing, and visualization. It runs in a containerized environment (Docker/TrueNAS) with a single-worker runtime pin for state consistency.
 
 ## Layer Architecture
 
@@ -76,7 +76,7 @@ app/
 
 ### Stateless Workers
 
-The application runs with multiple workers (`--workers 4`). All state is persisted externally:
+The application runtime is pinned to one worker (`--workers 1`) for consistent in-memory auth/token state. Core persisted state remains external:
 
 - **User tokens**: Stored in JSON files under `APP_USER_DATA_DIR/<user_id>/credentials.json`
 - **Scheduler**: Uses file-based locks (`fcntl.flock`) to ensure only one worker runs the scheduler

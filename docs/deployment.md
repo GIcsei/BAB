@@ -29,13 +29,13 @@ docker compose -f docker/docker-compose.yml -f docker/docker-compose.truenas.yml
 ## Production Startup Command
 
 ```bash
-gunicorn -k uvicorn.workers.UvicornWorker -w 4 app.main:app --bind 0.0.0.0:8000
+gunicorn -k uvicorn.workers.UvicornWorker -w 1 app.main:app --bind 0.0.0.0:8000
 ```
 
 Or with uvicorn directly:
 
 ```bash
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1
 ```
 
 ## Container Environment
@@ -62,8 +62,8 @@ curl -fsS http://localhost:8000/health
 - Retries: 3
 
 The `/health` endpoint returns:
-- `200` when all components are ready
-- `503` during startup or if components are unhealthy
+- `503` only during startup before readiness is marked complete
+- `200` after startup, with per-component readiness in `components` (including `selenium`)
 
 ### User Permissions
 
@@ -76,14 +76,9 @@ The container runs as `appuser` with configurable UID/GID:
 
 The entrypoint script dynamically remaps UID/GID for compatibility with host volume permissions.
 
-## Multi-Worker Considerations
+## Worker Model
 
-When running with multiple workers:
-
-1. **Scheduler**: Only one worker acquires the file-based scheduler lock. Other workers skip scheduler initialization.
-2. **Firebase Admin**: Each worker initializes its own Firebase Admin SDK instance.
-3. **Token Registry**: Each worker maintains its own in-memory token registry, populated from disk on startup.
-4. **File Locks**: The scheduler uses `fcntl.flock()` for process-safe file locking.
+Runtime is pinned to one worker (`--workers 1`) in image and compose runtime commands for consistency of in-memory auth/token state across requests.
 
 ## Monitoring
 
@@ -92,6 +87,7 @@ When running with multiple workers:
 - Default: stdout (Docker-friendly)
 - Optional file: Set `LOG_FILE=/var/app/app.log`
 - JSON format: Set `LOG_JSON=true`
+- Rotation: `LOG_ROTATION_MAX_BYTES` (default `10485760`) and `LOG_ROTATION_BACKUP_COUNT` (default `5`)
 - Sensitive data (tokens, passwords) is automatically redacted
 
 ### Health Endpoint
@@ -106,7 +102,8 @@ Monitor component health via `GET /health`:
   "components": {
     "firebase": {"ready": true, "error": null},
     "scheduler": {"ready": true, "error": null},
-    "tokens": {"ready": true, "error": null}
+    "tokens": {"ready": true, "error": null},
+    "selenium": {"ready": true, "error": null}
   }
 }
 ```
