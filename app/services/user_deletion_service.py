@@ -2,6 +2,7 @@
 
 import json
 import logging
+import os
 import shutil
 import threading
 import time
@@ -32,6 +33,10 @@ def schedule_user_deletion(user_dir: Path, user_id: str, days: int) -> Dict[str,
     pending_path = user_dir / _DELETION_PENDING_FILENAME
     with open(pending_path, "w", encoding="utf-8") as fh:
         json.dump(record, fh)
+    try:
+        os.chmod(pending_path, 0o600)
+    except Exception:
+        logger.debug("chmod not supported for %s", pending_path)
 
     logger.info(
         "Deletion scheduled for user %s in %d days (deletion_at_ms=%d)",
