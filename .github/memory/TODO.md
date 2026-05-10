@@ -1,5 +1,14 @@
 ## TODO — Security & Bug Findings (Audit 2026-05-08)
 
+### Health Version Readout Snapshot (2026-05-10)
+
+- User request: add BAB version readout possibility to `/health`.
+- Implementation owner: `api-surface`.
+- Contract delta: `/health` now includes `version` in both `200` and `503` responses.
+- Tester gate: passed (`3` focused endpoint tests + `10` health unit tests).
+- Documentation sync: completed in `docs/api.md`.
+- Status: Completed.
+
 ### CI/CD Recovery Snapshot (2026-05-10)
 
 - User-requested full verification run executed by `tester` using CI-equivalent commands.

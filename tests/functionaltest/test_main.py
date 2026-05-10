@@ -33,6 +33,8 @@ def test_health_not_ready_returns_503():
     body = r.json()
     assert body["ready"] is False
     assert body["status"] == "not_ready"
+    assert "version" in body
+    assert isinstance(body["version"], str)
 
 
 def test_health_ready_returns_200():

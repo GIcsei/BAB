@@ -1,10 +1,10 @@
 # ACTIVE CONTEXT
 
 ## Current Focus
-CI/CD recovery verification and review completed.
+Add BAB version readout to `/health` and validate contract/docs.
 
 ## Current Phase
-CI gate recovery (complete)
+/health version readout (complete)
 
 ## Current Owner
 scrum-master
@@ -18,6 +18,9 @@ none
 - Residual risk: non-`fcntl` scheduler leadership now defaults to follower safety unless explicit env opt-in (`APP_SCHEDULER_NO_FCNTL_ASSUME_LEADER`) is configured for deterministic single-leader deployment.
 
 ## Notes
+- **2026-05-10: `/health` now includes `version` in both ready (200) and not-ready (503) responses via api-surface implementation in `app/main.py`.**
+- **2026-05-10: Tester gate passed for the health-version scope (`3 passed` endpoint tests + `10 passed` unit health tests).**
+- **2026-05-10: Documentation updated in `docs/api.md` to reflect `version` presence for both 200 and 503 health responses.**
 - **2026-05-10: Implemented CI recovery fix in `app/core/netbank/getReport.py` by returning `False` on exceptions in `_handle_already_logged_in_Selenium`, resolving failing unit test path.**
 - **2026-05-10: Tester post-fix gate passed (`625 passed, 2 skipped, 1 warning`) for both full and CI-style pytest commands, plus bandit and mypy.**
 - **2026-05-10: QA review passed for CI recovery scope with low residual risk note on mocked Selenium-path coverage.**

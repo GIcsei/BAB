@@ -1,11 +1,12 @@
 {
-  "activeRequest": "CI/CD failure triage and gate recovery completed",
-  "currentStage": "qa-pass-complete",
+  "activeRequest": "Add BAB version readout to /health",
+  "currentStage": "documentation-sync-complete",
   "currentOwner": "scrum-master",
   "nextHandoff": "none",
   "agentQueue": [
+    "api-surface",
     "tester",
-    "qa-engineer"
+    "documentation-writer"
   ],
   "blockers": [
     "Residual risk: symlink privileged branch remains skipped on non-elevated Windows test runs.",
@@ -15,8 +16,11 @@
   "locks": {
     "memory": null
   },
-  "lastUpdated": "2026-05-10T19:15:00Z",
+  "lastUpdated": "2026-05-10T21:10:00Z",
   "notes": [
+    "2026-05-10: /health endpoint enhanced to always expose version in both ready and not-ready responses.",
+    "2026-05-10: Tester validated /health version contract with focused endpoint+unit tests (13 passed total).",
+    "2026-05-10: API docs updated to note version presence for 200 and 503 /health responses.",
     "2026-05-10: CI recovery fix applied in app/core/netbank/getReport.py for already-logged-in Selenium exception path.",
     "2026-05-10: Post-fix verification passed for full pytest, CI-style pytest with coverage, bandit, and mypy.",
     "2026-05-10: QA review returned pass for scoped fix with low residual risk note.",

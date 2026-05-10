@@ -40,6 +40,7 @@ Link to detailed plan: [`.github/memory/RELEASE_PLAN.md`](.github/memory/RELEASE
 | T-09 | Phase 3: Secure parquet streaming and file access controls | api-surface | P0 | in-progress |
 | T-10 | Phase 4: Fix Docker release builds and CI/CD workflow | platform-infrastructure | P0 | not-started |
 | T-11 | CI gate recovery: fix pytest, bandit, and mypy blockers from full verification run | backend-implementer | P0 | completed |
+| T-12 | Add BAB version readout to `/health` with validation and docs sync | api-surface | P1 | completed |
 
 ## Workflow Rules
 

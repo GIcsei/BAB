@@ -84,13 +84,14 @@ class TestHealthEndpoint:
         assert isinstance(body["uptime_seconds"], (int, float))
         assert body["uptime_seconds"] >= 0
 
-    def test_health_not_ready_omits_version_and_uptime(self):
+    def test_health_not_ready_includes_version_and_omits_uptime(self):
         r = client.get("/health")
         assert r.status_code == 503
         body = r.json()
         assert body["status"] == "not_ready"
-        # 503 response does not include version/uptime
-        assert "version" not in body
+        # 503 response includes version but does not include uptime
+        assert "version" in body
+        assert isinstance(body["version"], str)
         assert "uptime_seconds" not in body
 
     def test_health_status_get_status_has_version_and_uptime(self):

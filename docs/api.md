@@ -46,11 +46,12 @@ Liveness and readiness probe.
 {
   "status": "not_ready",
   "ready": false,
-  "components": { ... }
+  "components": { ... },
+  "version": "0.10.4"
 }
 ```
 
-Operational note: after startup, `GET /health` returns `200` and exposes degraded dependencies via `components.<name>.ready=false` and `components.<name>.error`.
+Operational note: both `200` and `503` responses include `version`; `uptime_seconds` is returned only when the service is ready. After startup, `GET /health` returns `200` and exposes degraded dependencies via `components.<name>.ready=false` and `components.<name>.error`.
 
 ### Request and CORS Guards
 
