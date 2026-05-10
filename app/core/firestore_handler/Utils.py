@@ -4,7 +4,7 @@ import socket
 import threading
 import time
 from random import uniform
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict, Optional, cast
 
 from requests import Response, Session
 from requests.exceptions import HTTPError
@@ -50,7 +50,14 @@ class KeepAuthSession(Session):
 
         original_url = response.request.url
         redirected_url = prepared_request.url
-        if self.should_strip_auth(original_url, redirected_url):
+        if not isinstance(original_url, str) or not isinstance(redirected_url, str):
+            return
+
+        should_strip_auth = cast(
+            Callable[[str, str], bool],
+            self.should_strip_auth,
+        )
+        if should_strip_auth(original_url, redirected_url):
             del headers["Authorization"]
 
 

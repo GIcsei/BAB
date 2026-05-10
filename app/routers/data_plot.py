@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends, Query
+from fastapi.responses import FileResponse
 
 from app.core.auth import get_current_user_id
 from app.core.config import get_settings
@@ -47,10 +48,22 @@ def _validate_filename(filename: str) -> str:
     return filename
 
 
+def _validate_parquet_filename(filename: str) -> str:
+    """Validate filename for parquet-only download streaming endpoint."""
+    if not re.match(r"^[a-zA-Z0-9_\-\.]+\.parquet$", filename, re.IGNORECASE):
+        from fastapi import HTTPException
+
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid filename format; only .parquet files are allowed",
+        )
+    return filename
+
+
 @router.get(
     "/list",
     response_model=FileListResponse,
-    summary="List available data files (CSV, Parquet, JSON) for authenticated user",
+    summary="List available data files for authenticated user",
 )
 async def list_files(
     offset: int = Query(0, ge=0, description="Pagination offset"),
@@ -100,6 +113,30 @@ async def preview_file(
         raise exception_to_http(exc)
     except Exception as exc:
         logger.exception("Unexpected error previewing file %s/%s", user_id, filename)
+        raise exception_to_http(exc)
+
+
+@router.get(
+    "/files/{filename}/stream",
+    response_class=FileResponse,
+    summary="Stream a parquet file for download or large dataset access",
+)
+async def stream_file(
+    filename: str,
+    current_user_id: str = Depends(get_current_user_id),
+) -> FileResponse:
+    user_id = _validate_user_id(current_user_id)
+    filename = _validate_parquet_filename(filename)
+    try:
+        file_path = data_service.resolve_user_parquet_file_path(
+            _base_dir(), user_id, filename
+        )
+        return FileResponse(path=file_path, filename=filename)
+    except FileNotFoundError as exc:
+        logger.warning("File not found: %s/%s", user_id, filename)
+        raise exception_to_http(exc)
+    except Exception as exc:
+        logger.exception("Unexpected error streaming file %s/%s", user_id, filename)
         raise exception_to_http(exc)
 
 

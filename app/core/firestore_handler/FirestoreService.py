@@ -91,6 +91,20 @@ class FirestoreService:
         raise_detailed_error(response)
         return cast(Dict[str, Any], response.json())
 
+    def set_user_block_state(
+        self,
+        user_id: str,
+        blocked: bool,
+        token: Optional[Dict[str, Any]] = None,
+        deletion_at_ms: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        fields: Dict[str, Dict[str, Union[bool, str]]] = {
+            "blocked": {"booleanValue": blocked}
+        }
+        if deletion_at_ms is not None:
+            fields["deletion_at_ms"] = {"integerValue": str(deletion_at_ms)}
+        return self.set_document(f"users/{user_id}", {"fields": fields}, token)
+
     def update_document(
         self, path: str, data: Dict[str, Any], token: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:

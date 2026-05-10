@@ -1,6 +1,6 @@
 # BAB - Multi-Agent Backlog
 
-Updated: 2026-05-08
+Updated: 2026-05-10
 
 ## Program Goal
 
@@ -16,6 +16,7 @@ Use one user-facing orchestrator (`scrum-master`) plus narrow backend specialist
 | E4 | Auth, credential, and secret-handling hardening | security-engineer | Active |
 | E5 | Pytest regression coverage and targeted verification discipline | tester | Active |
 | E6 | Review readiness, memory hygiene, and docs accuracy | qa-engineer / documentation-writer | Active |
+| E7 | Release Stability Sprint — 4-phase consolidation and hardening | multi-specialist | Active |
 
 ## Immediate Task Queue
 
@@ -27,6 +28,18 @@ Use one user-facing orchestrator (`scrum-master`) plus narrow backend specialist
 | T-04 | Re-check scheduler restore and file-lock behavior for multi-worker startup | platform-infrastructure | P1 | Completed |
 | T-05 | Re-run focused auth and credential lifecycle review with current tests | security-engineer | P1 | Completed |
 | T-06 | Map high-risk backend slices to focused pytest commands | tester | P2 | Completed |
+
+## Release Stability Sprint Tasks (E7)
+
+Link to detailed plan: [`.github/memory/RELEASE_PLAN.md`](.github/memory/RELEASE_PLAN.md)
+
+| ID | Task | Delegate | Priority | Status |
+|---|---|---|---|---|
+| T-07 | Phase 1: Consolidate Firestore services — eliminate duplication | backend-implementer | P0 | Completed |
+| T-08 | Phase 2: Improve logging, auth token refresh, scheduler reliability | backend-implementer | P0 | Completed |
+| T-09 | Phase 3: Secure parquet streaming and file access controls | api-surface | P0 | in-progress |
+| T-10 | Phase 4: Fix Docker release builds and CI/CD workflow | platform-infrastructure | P0 | not-started |
+| T-11 | CI gate recovery: fix pytest, bandit, and mypy blockers from full verification run | backend-implementer | P0 | completed |
 
 ## Workflow Rules
 

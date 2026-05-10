@@ -36,6 +36,52 @@ Deliver a backend-specific `.github` customization layer that keeps one user-fac
 6. QA-engineer performs readiness review on residual risk.
 7. Documentation-writer synchronizes docs/TODO/memory after verified behavior.
 
+## Stable Release Execution (2026-05-10)
+
+Tech-lead sequenced 7 open issues into 4 distinct phases:
+
+- **Phase 1** (`feature/consolidate-firestore-services`): Backend-implementer eliminates Firestore service duplication (#3).
+- **Phase 2** (`feature/improve-logging-auth-scheduler`): Backend-implementer hardens logging, token refresh, and scheduler (#2, #1, #7).
+- **Phase 3** (`feature/secure-parquet-streaming`): API-surface secures file access and streaming (#5, #6).
+- **Phase 4** (`infra/fix-release-docker`): Platform-infrastructure fixes Docker and CI/CD (#4).
+
+Execution: Phase 1 unblocks Phases 2+3 (parallel). Phase 4 runs independently.
+
+See [`.github/memory/RELEASE_PLAN.md`](.github/memory/RELEASE_PLAN.md) for full details.
+
+## Release Sprint Progress (2026-05-10)
+
+1. Completed: Phase 1 (T-07 / issue #3) by consolidating Firestore user block/unblock writes into a single Firestore service method and updating login/registration callers.
+2. Validation: focused unit test command passed with 42 passed and 0 failed.
+3. Tester gate: focused Phase 1 regression tests passed with 25 passed and 0 failed.
+4. QA gate: conditional pass for Phase 1 with residual recommendation to verify field-preservation semantics on populated `users/{user_id}` documents.
+5. Completed: Phase 2 (T-08 / issues #2, #1, #7) by improving startup logging consistency, adding expiration-aware token normalization and safer refresh fallback handling, and reducing scheduler startup restore race via leadership bootstrap.
+6. Validation: focused Phase 2 command passed with 27 passed and 0 failed; adjacent compatibility command passed with 17 passed and 0 failed (1 warning).
+7. Completed: second-run hardening for Phase 2 residual risks (legacy relative-expiry ambiguity and non-`fcntl` leader behavior) with focused follow-up tests passing (16 passed).
+8. Peer-review gates: tester revalidation passed (focused 16 + broader targeted 78, 0 failed); security follow-up conditional pass; QA final conditional pass with release guardrails for non-`fcntl` override governance.
+9. Next: Release Stability Sprint complete; Phase 4 QA approved and release promotion is unblocked.
+10. Post-phase hotfix: added scheduler per-user in-flight dedupe to prevent overlapping immediate `/user/collect_automatically` runs for the same user while preserving existing schedule dedupe.
+11. Hotfix validation: focused scheduler regression suite passed with 51 passed and 0 failed.
+
+## CI Recovery Sequence (2026-05-10)
+
+1. Tester executes CI-equivalent `pytest`, `bandit`, and `mypy` to capture concrete blockers.
+2. Backend-implementer applies minimal behavior-preserving fixes for each blocker.
+3. Tester re-runs full verification commands to confirm all gates green.
+4. QA-engineer performs readiness review for residual risk and closure decision.
+
+Current blockers from tester triage:
+
+- Bandit B310 at `app/core/health.py`.
+- Mypy `no-untyped-call` at `app/core/firestore_handler/Utils.py`.
+- Pytest status mismatch at `tests/functionaltest/test_feature_enhancements.py` (expected 200, got 400).
+
+CI recovery result:
+
+- Root failing gate in this branch was `tests/unittest/test_getreport_security.py::test_handle_already_logged_in_exception_does_not_mask_failure`.
+- Minimal fix applied in `app/core/netbank/getReport.py` (`_handle_already_logged_in_Selenium` now returns `False` in exception path).
+- Full verification complete: pytest full suite + CI-style pytest + bandit + mypy all passing.
+
 ## Progress Snapshot
 
 1. Completed: first platform-infrastructure blocker slice C-2.
@@ -54,3 +100,8 @@ Deliver a backend-specific `.github` customization layer that keeps one user-fac
 14. Completed: final tester gate.
 15. Completed: final QA acceptance.
 16. Completed: documentation synchronization and closure.
+17. Started: Phase 3 api-surface handoff for secure parquet streaming and file exposure.
+18. Completed: Phase 3 api-surface implementation with parquet-only listing and secure stream endpoint; focused validation passed (24 passed).
+19. Completed: Phase 3 tester peer review passed with no concrete defect found.
+20. Completed: Phase 4 platform-infrastructure implementation with release workflow gated behind Docker publish; YAML validation passed.
+21. Completed: Phase 4 QA approval and sprint completion.

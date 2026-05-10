@@ -1,6 +1,7 @@
 """Tests for uncovered branches in token_service and main lifespan."""
 
 import os
+import time
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -48,6 +49,26 @@ def test_token_service_auth_falls_back_on_refresh_error(tmp_path: Path):
         auth_client, token = svc.auth(token_file)
 
     assert token == existing
+
+
+def test_token_service_relative_only_expiry_is_treated_as_expired():
+    """Persisted relative-only expiry metadata must not be treated as fresh repeatedly."""
+    token = {"idToken": "abc123", "expiresIn": "3600"}
+    assert TokenService._is_token_expired(token) is True
+
+
+def test_token_service_normalize_sets_absolute_expiry_from_refresh_relative():
+    """Fresh refresh payloads with expiresIn are normalized to absolute expiresAt."""
+    svc = TokenService(api_key="test-key", requests_session=MagicMock())
+    before = int(time.time())
+    normalized = svc._normalize_token(
+        {"idToken": "new", "refreshToken": "r", "expiresIn": "120"},
+        {"idToken": "old", "refreshToken": "r"},
+        user_id="u1",
+    )
+    assert "expiresAt" in normalized
+    assert isinstance(normalized["expiresAt"], int)
+    assert normalized["expiresAt"] >= before + 90
 
 
 # ── TokenService.clear_token: exception on unlink ─────────────────────────

@@ -173,3 +173,143 @@ Use this file as the durable summary surface for delegated work.
 - Outcome: Marked execution cycle complete with all planned tracks done and durable memory/TODO closure updates applied.
 - Evidence: Updated `.github/memory/session-state.json`, `.github/memory/active-context.md`, `.github/memory/TASK.md`, `.github/memory/plan.md`, `.github/memory/TODO.md`, and `.github/TODO.md`.
 - Next handoff: none.
+
+### 2026-05-10 | backend-implementer
+
+- Scope: Release Stability Sprint Phase 1 (T-07 / issue #3) to consolidate Firestore write operations and remove service-layer duplication.
+- Outcome: Added consolidated Firestore user block-state method and updated login/registration callers to use the single Firestore service surface.
+- Evidence: Updated `app/core/firestore_handler/FirestoreService.py`, `app/services/login_service.py`, `tests/unittest/test_firestore_service.py`, `tests/unittest/test_registration_service.py`; ran `python -m pytest -q tests/unittest/test_firestore_service.py tests/unittest/test_registration_service.py tests/unittest/test_login_service.py tests/unittest/test_login_service_extended.py` (42 passed).
+- Next handoff: `backend-implementer` for T-08 and `api-surface` for T-09.
+
+### 2026-05-10 | tester
+
+- Scope: Execute focused Phase 1 regression gate for Firestore consolidation and affected auth caller tests only.
+- Outcome: Approved Phase 1 tester gate with no test-file changes required.
+- Evidence: Ran `python -m pytest -q tests/unittest/test_firestore_service.py tests/unittest/test_registration_service.py` (25 passed, 0 failed, 0 skipped); verified call sites in `app/services/login_service.py` use `set_user_block_state`.
+- Next handoff: `qa-engineer` for readiness assessment on residual semantics risk.
+
+### 2026-05-10 | qa-engineer
+
+- Scope: Assess Phase 1 release readiness based on implementation and focused tester evidence.
+- Outcome: Conditional pass for Phase 1; residual risk recorded regarding potential overwrite semantics on populated `users/{user_id}` documents.
+- Evidence: Reviewed `app/core/firestore_handler/FirestoreService.py`, `app/services/login_service.py`, and focused pytest evidence (42 passed + 25 passed).
+- Next handoff: `scrum-master` to keep later phases queued and track field-preservation follow-up before release promotion.
+
+### 2026-05-10 | backend-implementer
+
+- Scope: Release Stability Sprint Phase 2 (T-08 / issues #2, #1, #7) for logging consistency/observability, token refresh reliability with expiration handling, and scheduler startup reliability.
+- Outcome: Implemented module-level startup logger consistency in `app/main.py`, expiration-aware token normalization/fallback safeguards in `app/application/services/token_service.py`, and scheduler startup leadership bootstrap in `app/infrastructure/sched/scheduler.py` to reduce restore race windows.
+- Evidence: Updated `app/main.py`, `app/application/services/token_service.py`, `app/infrastructure/sched/scheduler.py`, `tests/integrationtest/test_query_handler_extended.py`, `tests/unittest/test_scheduler_extended.py`, `tests/functionaltest/test_main_startup.py`; ran `python -m pytest -q tests/integrationtest/test_query_handler_extended.py tests/unittest/test_scheduler_extended.py tests/functionaltest/test_main_startup.py` (27 passed) and `python -m pytest -q tests/unittest/test_coverage_gaps_extended.py tests/integrationtest/test_query_handler_coverage.py` (17 passed, 1 warning).
+- Next handoff: `tester` for focused regression gate confirmation on Phase 2 scope.
+
+### 2026-05-10 | backend-implementer
+
+- Scope: Phase 2 follow-up hardening only for token-freshness ambiguity on legacy persisted relative-expiry tokens and non-`fcntl` scheduler leadership safety.
+- Outcome: Hardened token expiry evaluation to treat relative-only persisted metadata as expired while still normalizing fresh refresh responses to absolute expiry; hardened non-`fcntl` scheduler path to safe follower mode by default with explicit opt-in leader fallback and exposed `is_leader` probe for deterministic startup behavior.
+- Evidence: Updated `app/application/services/token_service.py`, `app/infrastructure/sched/scheduler.py`, `tests/unittest/test_coverage_gaps_extended.py`, `tests/unittest/test_scheduler_extended.py`; ran `(.venv activated) pytest -q tests/unittest/test_coverage_gaps_extended.py tests/unittest/test_scheduler_extended.py` (16 passed).
+- Next handoff: `tester` for focused regression confirmation on Phase 2 residual-risk closure.
+
+### 2026-05-10 | tester
+
+- Scope: Independent second-run peer review for Phase 2 hardening and broader targeted regression confidence.
+- Outcome: Passed focused and broader targeted Phase 2 reruns with no failures.
+- Evidence: Ran `pytest -q -ra tests/unittest/test_coverage_gaps_extended.py tests/unittest/test_scheduler_extended.py` (16 passed) and broader targeted set (`tests/unittest/test_scheduler.py`, `tests/unittest/test_scheduler_coverage.py`, `tests/unittest/test_scheduler_worker.py`, `tests/unittest/test_token_registry.py`, `tests/integrationtest/test_remaining_coverage.py`) for 78 passed.
+- Next handoff: `security-engineer` for follow-up risk closure review.
+
+### 2026-05-10 | security-engineer
+
+- Scope: Follow-up security review of Phase 2 hardening changes for token expiry handling and non-`fcntl` leader behavior.
+- Outcome: Conditional pass; legacy relative-expiry ambiguity closed and non-`fcntl` risk reduced with explicit override guardrail retained.
+- Evidence: Reviewed `app/application/services/token_service.py` and `app/infrastructure/sched/scheduler.py`; ran `pytest -q -ra tests/unittest/test_coverage_gaps_extended.py tests/unittest/test_scheduler_extended.py tests/unittest/test_token_registry.py` (33 passed).
+- Next handoff: `qa-engineer` for final readiness adjudication.
+
+### 2026-05-10 | qa-engineer
+
+- Scope: Final Phase 2 readiness adjudication after second-run implementation and peer-review gates.
+- Outcome: Conditional pass; Phase 2 complete for sprint execution with mandatory release-time guardrails on non-`fcntl` override governance.
+- Evidence: Accepted tester and security follow-up evidence (focused 16 passed + broader targeted 78 passed, 0 failed; security conditional pass).
+- Next handoff: `scrum-master` to retain Phase 3 and Phase 4 queue order and carry guardrails into release governance.
+
+### 2026-05-10 | backend-implementer
+
+- Scope: Hotfix scheduler behavior for repeated same-user immediate trigger requests (`/user/collect_automatically`) to prevent overlapping runs.
+- Outcome: Added in-flight per-user dedupe in scheduler spawn path; duplicate immediate triggers for active user runs now return success as no-op and do not spawn concurrent duplicates.
+- Evidence: Updated `app/infrastructure/sched/scheduler.py` and `tests/unittest/test_scheduler_extended.py`; focused scheduler validation run reported 51 passed.
+- Next handoff: `tester` for independent confirmation.
+
+### 2026-05-10 | tester
+
+- Scope: Independent focused regression validation for scheduler duplicate-trigger hotfix behavior.
+- Outcome: Approved hotfix scope; same-user duplicate immediate trigger overlap prevented while allowing subsequent run after prior completion.
+- Evidence: Ran `pytest -q -ra tests/unittest/test_scheduler_extended.py tests/unittest/test_scheduler.py tests/unittest/test_scheduler_worker.py tests/unittest/test_scheduler_coverage.py` (51 passed, 0 failed).
+- Next handoff: `scrum-master` to report outcome and keep Phase 3/4 queue unchanged.
+
+### 2026-05-10 | scrum-master
+
+- Scope: Start Release Stability Sprint Phase 3 handoff for secure parquet streaming and file exposure.
+- Outcome: Routed the api-surface slice after checking the current `/data` router and service boundary plus current FastAPI/OWASP file-handling guidance; Phase 3 is now owned by api-surface.
+- Evidence: Reviewed `.github/memory/RELEASE_PLAN.md`, `.github/memory/TODO.md`, `.github/memory/active-context.md`, `app/routers/data_plot.py`, `app/services/data_service.py`, `tests/functionaltest/test_data_plot_router.py`; web-checked FastAPI custom response docs and OWASP path traversal guidance.
+- Next handoff: `api-surface` implementation.
+
+### 2026-05-10 | api-surface
+
+- Scope: Implement Phase 3 parquet-only file exposure and secure stream route.
+- Outcome: Added parquet-only file listing and filename validation, a shared safe resolved file-path helper, and a validated stream endpoint for authenticated parquet downloads.
+- Evidence: Updated `app/routers/data_plot.py`, `app/services/data_service.py`, `tests/functionaltest/test_data_plot_router.py`, and `tests/unittest/test_data_service.py`; ran `python -m pytest -q tests/functionaltest/test_data_plot_router.py tests/unittest/test_data_service.py` (24 passed).
+- Next handoff: `tester` for broader regression review.
+
+### 2026-05-10 | backend-implementer
+
+- Scope: Implement minimal, behavior-preserving fixes for three verified CI blockers (Bandit B310 in health probe, mypy no-untyped-call in firestore Utils, and functional regression for CSV/JSON data endpoints).
+- Outcome: Replaced unsafe urllib probe with timeout-bound requests call, resolved typed-context mypy blocker on redirect auth stripping call, restored CSV/JSON support for preview/series/list while keeping parquet-only stream contract.
+- Evidence: Updated `app/core/health.py`, `app/core/firestore_handler/Utils.py`, `app/routers/data_plot.py`, `app/services/data_service.py`, `tests/unittest/test_data_service.py`; ran `uv run pytest tests/functionaltest/test_feature_enhancements.py -q` (28 passed), `uv run bandit -q -r app/core/health.py` (B310 cleared; only B112 low remains), `uv run mypy app/core/firestore_handler/Utils.py` (clean), plus focused and CI-style checks (`test_data_plot_router.py`, `test_data_service.py`, `ruff`, `black --check`, `mypy app`) all passing.
+- Next handoff: `tester` for optional broader regression gate if full-suite rerun is required.
+
+### 2026-05-10 | tester
+
+- Scope: Peer-review regression pass for Phase 3 parquet-only file exposure and stream route.
+- Outcome: Passed; no concrete defect found and the router/service boundary stayed internally consistent.
+- Evidence: Reviewed `app/routers/data_plot.py` and `app/services/data_service.py`; reran `python -m pytest -q tests/functionaltest/test_data_plot_router.py tests/unittest/test_data_service.py` (24 passed).
+- Next handoff: `qa-engineer` for release readiness review.
+
+### 2026-05-10 | api-surface
+
+- Scope: Phase 3 parquet streaming and file exposure hardening in `app/routers/data_plot.py` and `app/services/data_service.py`.
+- Outcome: Routed `/data/files/{filename}/stream` through a parquet-only service resolver, preserved auth and user-boundary checks, and added focused coverage for the stream 404 path plus the parquet-only resolver rejection.
+- Evidence: Updated `app/routers/data_plot.py`, `app/services/data_service.py`, `tests/functionaltest/test_data_plot_router.py`, and `tests/unittest/test_data_service.py`; ran `pytest -q tests/functionaltest/test_data_plot_router.py tests/unittest/test_data_service.py` (24 passed).
+- Next handoff: `tester` for optional broader regression.
+
+### 2026-05-10 | platform-infrastructure
+
+- Scope: Phase 4 release workflow gating in `.github/workflows/release.yml`.
+- Outcome: Added a hard dependency so GitHub release publication waits for Docker image publishing.
+- Evidence: Updated `.github/workflows/release.yml`; validated with YAML parse check confirming `release.needs == ['validate', 'docker']`.
+- Next handoff: `qa-engineer` for release-readiness review.
+
+### 2026-05-10 | qa-engineer
+
+- Scope: Final Phase 4 release workflow readiness review.
+- Outcome: Approved the release gate change; no blocking workflow-order defect remains.
+- Evidence: Reviewed `.github/workflows/release.yml`, `docker/Dockerfile`, and the YAML parse check result; accepted the `release.needs == ['validate', 'docker']` gate.
+- Next handoff: `scrum-master` to close the sprint and promote release when ready.
+
+### 2026-05-10 | tester
+
+- Scope: Execute full CI-equivalent verification for user-reported CI/CD failure using pytest, bandit, and mypy with no code edits.
+- Outcome: Found three blocking failures across all required gates.
+- Evidence: Ran `uv run pytest -v --maxfail=1 --cov=app --cov-fail-under=70 --cov-report=xml:coverage.xml --cov-report=term-missing --cov-report=html:htmlcov --html=reports/pytest-report.html --self-contained-html` (failed at `tests/functionaltest/test_feature_enhancements.py`, expected 200 got 400), `uv run bandit -r app -ll` (failed with B310 at `app/core/health.py`), and `uv run mypy app` (failed with `no-untyped-call` at `app/core/firestore_handler/Utils.py`).
+- Next handoff: `backend-implementer` to remediate CI blockers, then `tester` for full re-run.
+
+### 2026-05-10 | tester
+
+- Scope: Post-fix CI verification gate for user-requested full review run.
+- Outcome: Passed all requested gates.
+- Evidence: Ran `uv run pytest -q` (625 passed, 2 skipped, 1 warning), CI-style pytest command with coverage (`625 passed, 2 skipped, 1 warning`, coverage above threshold), `uv run bandit -r app -ll` (no issues identified), and `uv run mypy app` (success in 41 files).
+- Next handoff: `qa-engineer` for readiness review.
+
+### 2026-05-10 | qa-engineer
+
+- Scope: Readiness review for CI recovery fix scope.
+- Outcome: Pass with low residual risk note.
+- Evidence: Reviewed `app/core/netbank/getReport.py` exception-path fix and accepted tester gate evidence for pytest, bandit, and mypy.
+- Next handoff: `scrum-master` for closure.

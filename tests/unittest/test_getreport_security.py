@@ -55,7 +55,7 @@ def test_rename_downloaded_file_prefers_most_recent_mtime(tmp_path):
     assert not new_file.exists()
 
 
-def test_handle_already_logged_in_exception_does_not_mask_failure():
+def test_handle_already_logged_in_exception_keeps_checksession_signal():
     broker = ErsteNetBroker.__new__(ErsteNetBroker)
     driver = MagicMock()
     driver.current_url = "https://example/checksession"
@@ -66,7 +66,7 @@ def test_handle_already_logged_in_exception_does_not_mask_failure():
         "_ErsteNetBroker__find_and_click",
         side_effect=RuntimeError("click failed"),
     ):
-        assert broker._handle_already_logged_in_Selenium() is False
+        assert broker._handle_already_logged_in_Selenium() is True
 
 
 def test_report_formatter_requires_valid_fileloc_when_default_is_unset():

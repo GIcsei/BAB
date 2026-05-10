@@ -7,8 +7,9 @@ import logging
 import os
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
-from urllib import error, request
 from urllib.parse import urlparse, urlunparse
+
+import requests
 
 logger = logging.getLogger(__name__)
 
@@ -120,35 +121,33 @@ def probe_selenium_readiness() -> Optional[str]:
 
     for status_url in _build_status_urls(remote_url):
         try:
-            with request.urlopen(status_url, timeout=timeout_seconds) as response:
-                if response.status >= 400:
-                    continue
-                payload = response.read().decode("utf-8", errors="ignore")
-                if not payload:
-                    return None
-                try:
-                    import json
+            response = requests.get(status_url, timeout=timeout_seconds)
+        except (requests.RequestException, TimeoutError):
+            logger.debug("Selenium probe failed for %s", status_url)
+            continue
 
-                    data = json.loads(payload)
-                except json.JSONDecodeError:
-                    return None
+        if response.status_code >= 400:
+            continue
 
-                value = data.get("value") if isinstance(data, dict) else None
-                ready_value = None
-                if isinstance(value, dict):
-                    ready_value = value.get("ready")
-                elif isinstance(data, dict):
-                    ready_value = data.get("ready")
+        payload = response.text
+        if not payload:
+            return None
 
-                if ready_value is False:
-                    return "not_ready"
-                return None
-        except error.HTTPError:
-            continue
-        except error.URLError:
-            continue
-        except TimeoutError:
-            continue
-        except Exception:
-            continue
+        try:
+            import json
+
+            data = json.loads(payload)
+        except json.JSONDecodeError:
+            return None
+
+        value = data.get("value") if isinstance(data, dict) else None
+        ready_value = None
+        if isinstance(value, dict):
+            ready_value = value.get("ready")
+        elif isinstance(data, dict):
+            ready_value = data.get("ready")
+
+        if ready_value is False:
+            return "not_ready"
+        return None
     return "unreachable"
