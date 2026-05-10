@@ -1,11 +1,40 @@
 ## TODO — Security & Bug Findings (Audit 2026-05-08)
 
+### CI/CD Recovery Snapshot (2026-05-10)
+
+- User-requested full verification run executed by `tester` using CI-equivalent commands.
+- Pytest gate: failed early at `tests/functionaltest/test_feature_enhancements.py` (`expected 200, got 400`).
+- Bandit gate: failed with medium B310 at `app/core/health.py`.
+- Mypy gate: failed with `no-untyped-call` at `app/core/firestore_handler/Utils.py`.
+- Next handoff: `backend-implementer` for minimal CI blocker remediation, then `tester` re-run.
+- Status: Completed.
+- Implemented fix: `app/core/netbank/getReport.py` exception path in `_handle_already_logged_in_Selenium` no longer masks failures.
+- Final verification: `uv run pytest -q` (`625 passed, 2 skipped, 1 warning`), CI-style pytest (`625 passed, 2 skipped, 1 warning`), `uv run bandit -r app -ll` (pass), `uv run mypy app` (pass).
+
 ### Execution Status Snapshot (2026-05-08)
 
 - Overall program status: In Progress (delegated sequencing underway).
 - Current owner: scrum-master.
 - Next handoff: tech-lead (define smallest-first implementation sequence).
 - Dependency freshness/web vulnerability verification: Pending and required before dependency changes.
+
+### Release Stability Sprint Snapshot (2026-05-10)
+
+- T-07 Phase 1 Firestore consolidation: Completed (owner: backend-implementer).
+- T-07 tester gate: Passed in focused scope (25 passed, 0 failed, 0 skipped).
+- T-07 QA gate: Conditional pass with residual field-preservation risk noted for populated `users/{user_id}` documents.
+- T-08 Phase 2 logging/auth/scheduler reliability: Completed (owner: backend-implementer).
+- T-08 Phase 2 hardening follow-up: Completed (owner: backend-implementer).
+- T-08 tester second-run peer review: Passed (focused 16 passed + broader targeted 78 passed, 0 failed).
+- T-08 security follow-up: Conditional pass; relative-expiry ambiguity closed and non-`fcntl` risk reduced with explicit env override guardrail.
+- T-08 QA final decision: Conditional pass; release-time guardrails required for non-`fcntl` override governance.
+- Post-T-08 scheduler hotfix: Completed. Same-user duplicate immediate triggers are deduped in-flight to prevent overlapping runs.
+- Post-T-08 tester gate: Passed (`tests/unittest/test_scheduler_extended.py`, `tests/unittest/test_scheduler.py`, `tests/unittest/test_scheduler_worker.py`, `tests/unittest/test_scheduler_coverage.py` -> 51 passed).
+- T-09 Phase 3 parquet streaming and access controls: implementation complete; QA review pending.
+- T-10 Phase 4 Docker/CI release hardening: completed.
+- Focused validation for T-07: `tests/unittest/test_firestore_service.py`, `tests/unittest/test_registration_service.py`, `tests/unittest/test_login_service.py`, `tests/unittest/test_login_service_extended.py` -> 42 passed.
+- Focused validation for T-08: `tests/integrationtest/test_query_handler_extended.py`, `tests/unittest/test_scheduler_extended.py`, `tests/functionaltest/test_main_startup.py` -> 27 passed.
+- Adjacent compatibility validation for T-08: `tests/unittest/test_coverage_gaps_extended.py`, `tests/integrationtest/test_query_handler_coverage.py` -> 17 passed, 1 warning.
 
 ### Track 1 Status
 
@@ -41,6 +70,7 @@
 - Track 2 (api-surface): Completed.
 - Track 3 (platform-infrastructure): Completed.
 - Track 4 (security tail): Completed.
+- Phase 4 Docker/CI release follow-up: completed.
 
 ### Closure
 

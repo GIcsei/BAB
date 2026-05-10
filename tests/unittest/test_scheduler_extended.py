@@ -1,3 +1,5 @@
+import threading
+import time
 from types import ModuleType
 from unittest.mock import MagicMock, patch
 
@@ -95,6 +97,67 @@ def test_spawn_job_thread_starts_thread(tmp_path):
     sched.stop_all()
 
 
+def test_spawn_job_thread_skips_duplicate_while_inflight(tmp_path):
+    sched = Scheduler(firebase_provider=lambda: MagicMock())
+
+    started = threading.Event()
+    release = threading.Event()
+    run_count = [0]
+
+    def blocking_task():
+        run_count[0] += 1
+        started.set()
+        release.wait(timeout=1.0)
+
+    job = _Job("u1", tmp_path, firebase_provider=lambda: MagicMock())
+    job._perform_task = blocking_task
+
+    assert sched._spawn_job_thread(job) is True
+    assert started.wait(timeout=0.5)
+    assert sched._spawn_job_thread(job) is True
+    time.sleep(0.05)
+    assert run_count[0] == 1
+
+    release.set()
+    time.sleep(0.1)
+
+    assert sched._spawn_job_thread(job) is True
+    time.sleep(0.1)
+    assert run_count[0] == 2
+    sched.stop_all()
+
+
+def test_trigger_run_for_user_duplicate_while_inflight_is_noop(tmp_path):
+    sched = Scheduler(firebase_provider=lambda: MagicMock())
+
+    started = threading.Event()
+    release = threading.Event()
+    run_count = [0]
+
+    def blocking_task():
+        run_count[0] += 1
+        started.set()
+        release.wait(timeout=1.0)
+
+    job = _Job("u1", tmp_path / "u1", firebase_provider=lambda: MagicMock())
+    job._perform_task = blocking_task
+    sched._jobs["u1"] = job
+
+    assert sched.trigger_run_for_user("u1") is True
+    assert started.wait(timeout=0.5)
+    assert sched.trigger_run_for_user("u1") is True
+    time.sleep(0.05)
+    assert run_count[0] == 1
+
+    release.set()
+    time.sleep(0.1)
+
+    assert sched.trigger_run_for_user("u1") is True
+    time.sleep(0.1)
+    assert run_count[0] == 2
+    sched.stop_all()
+
+
 def test_stop_all_stops_running_jobs(tmp_path):
     sched = Scheduler(firebase_provider=lambda: MagicMock())
 
@@ -105,3 +168,42 @@ def test_stop_all_stops_running_jobs(tmp_path):
     sched.stop_all()
     assert sched._jobs == {}
     assert sched._running is False
+
+
+def test_start_bootstraps_leadership_before_monitor_loop(tmp_path):
+    sched = Scheduler(
+        firebase_provider=lambda: MagicMock(),
+        base_dir=tmp_path,
+        target_hour=7,
+        target_minute=45,
+    )
+
+    with (
+        patch.object(sched, "_try_acquire_leadership", return_value=True) as acquire,
+        patch.object(sched, "_on_became_leader") as became,
+        patch.object(sched, "_reconcile_jobs_from_dir") as reconcile,
+    ):
+        sched.start()
+        sched.stop_all()
+
+    assert acquire.call_count >= 1
+    assert became.call_count >= 1
+    reconcile.assert_any_call(tmp_path, 7, 45)
+
+
+def test_try_acquire_leadership_non_fcntl_defaults_to_follower(monkeypatch, tmp_path):
+    sched = Scheduler(base_dir=tmp_path, acquire_lock=True)
+    monkeypatch.delenv("APP_SCHEDULER_NO_FCNTL_ASSUME_LEADER", raising=False)
+
+    with patch("app.infrastructure.sched.scheduler.fcntl", None):
+        assert sched._try_acquire_leadership() is False
+        assert sched.is_leader() is False
+
+
+def test_try_acquire_leadership_non_fcntl_env_opt_in(monkeypatch, tmp_path):
+    sched = Scheduler(base_dir=tmp_path, acquire_lock=True)
+    monkeypatch.setenv("APP_SCHEDULER_NO_FCNTL_ASSUME_LEADER", "true")
+
+    with patch("app.infrastructure.sched.scheduler.fcntl", None):
+        assert sched._try_acquire_leadership() is True
+        assert sched.is_leader() is True

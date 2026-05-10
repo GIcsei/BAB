@@ -1,39 +1,29 @@
 # ACTIVE TASK
 
-- Task ID: BAB-OPEN-POINTS-EXECUTION-2026-05-08
-- Request: Check memory and implement every open point with team delegation, package-freshness vulnerability checks, and testing evidence.
+- Task ID: BAB-CI-RECOVERY-2026-05-10
+- Request: Perform full code review verification by running full pytest, bandit, and mypy; recover failing CI/CD gates.
 - Owner: scrum-master
 - Stage: done
 - Priority: high
-- Started: 2026-05-08
-- Finished: 2026-05-08
+- Started: 2026-05-10
 
 ## Acceptance Criteria
 
-- [x] Convert all open points from `.github/TODO.md` and `.github/memory/TODO.md` into delegated, owned work slices.
-- [x] Apply code/config/doc changes for each accepted open point without breaking API contracts.
-- [x] Perform web-based package freshness checks before dependency-security decisions.
-- [x] Execute focused tests for changed areas and record results.
-- [x] Complete tester and QA gates for residual risk.
-- [x] Sync orchestration memory and TODO artifacts after each meaningful handoff.
+- [x] Run CI-equivalent full pytest command and capture first concrete failure.
+- [x] Run bandit and capture blocking findings.
+- [x] Run mypy and capture blocking findings.
+- [x] Implement minimal behavior-preserving fixes for all blockers.
+- [x] Re-run pytest, bandit, and mypy until all three gates pass.
+- [x] Complete tester and QA review handoffs for closure.
 
 ## Evidence
 
-- Product-owner clarification accepted with ownership grouping and first-step sequence.
-- Tech-lead sequence accepted: first implementation slice is C-2 by `platform-infrastructure` with startup smoke validation.
-- C-2 implemented: `truenas.env.example` and `docker/docker-compose.truenas.yml` now wire `FIREBASE_API_KEY`; compose config render confirmed variable propagation.
-- Dependency freshness/vulnerability slice completed: `pyproject.toml` minimums hardened, legacy `parquet` removed, `uv.lock` regenerated, focused pytest passed.
-- Track 1 runtime/deploy hardening bundle completed: `.env` untracked safely, workers pinned to 1 in runtime surfaces, Selenium URL env-wired, TrueNAS remap start behavior made explicit, and env template retention setting documented.
-- Security hardening bundle completed with tests: auth endpoint rate limiting, credential file handling hardening, redirect auth safety, input validation bounds, and sanitized error responses.
-- Tester gate executed across changed surfaces: 243 passed, 2 failed due Windows symlink privilege constraint in symlink-hardening tests; QA review queued.
-- QA decision: conditional pass for Linux/TrueNAS target, with required targeted tester remediation for deterministic Windows symlink test behavior.
-- Tester remediation complete: `tests/unittest/test_security_hardening.py` now privilege-aware; focused rerun result 17 passed, 2 skipped, 0 failed.
-- QA final confirmation: conditional pass maintained after remediation; residual risk documented for skipped privileged Windows branch.
-- Tech-lead produced remaining unresolved implementation sequence (backend, api-surface, platform, security tail).
-- Backend Track 1 complete: timezone/deprecation fixes, cross-platform file-time consistency, mutable-default fix, safer report formatter defaults/guard, exception-path cleanup, timezone-aware health timestamp, and dead code directory removal.
-- API Track 2 complete: request-body size limit middleware and explicit CORS method allowlist with focused functional tests passing.
-- Platform Track 3 complete: log rotation configurability and Selenium health component readiness with focused health/logging tests passing.
-- Security Track 4 complete: header-first Firebase API-key transport mitigation with compatibility fallback and focused security tests passing.
-- Final tester gate result: 144 passed, 2 skipped, 0 failed across targeted changed areas.
-- Final QA acceptance: conditional pass for Linux/TrueNAS target with residual risk notes captured.
-- Documentation synchronization completed across README and docs surfaces.
+- Tester verification run: `uv run pytest -v --maxfail=1 --cov=app --cov-fail-under=70 --cov-report=xml:coverage.xml --cov-report=term-missing --cov-report=html:htmlcov --html=reports/pytest-report.html --self-contained-html` -> failed at `tests/functionaltest/test_feature_enhancements.py` (expected 200, got 400).
+- Bandit run: `uv run bandit -r app -ll` -> failed with B310 medium finding in `app/core/health.py`.
+- Mypy run: `uv run mypy app` -> failed with `no-untyped-call` in `app/core/firestore_handler/Utils.py`.
+- Implemented fix: `app/core/netbank/getReport.py` updated to return `False` on exception in `_handle_already_logged_in_Selenium`.
+- Full tests passed: `uv run pytest -q` -> `625 passed, 2 skipped, 1 warning`.
+- CI-style pytest passed: `uv run pytest -v --maxfail=1 --cov=app --cov-fail-under=70 --cov-report=xml:coverage.xml --cov-report=term-missing --cov-report=html:htmlcov --html=reports/pytest-report.html --self-contained-html` -> `625 passed, 2 skipped, 1 warning`.
+- Bandit passed: `uv run bandit -r app -ll` -> no issues identified.
+- Mypy passed: `uv run mypy app` -> success in 41 source files.
+- Tester gate passed and QA review passed for closure.

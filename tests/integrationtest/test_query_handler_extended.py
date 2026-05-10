@@ -70,6 +70,21 @@ def test_auth_refresh_failure_returns_old_token(tmp_path):
     assert token["idToken"] == "old_tok"
 
 
+def test_auth_refresh_missing_id_token_falls_back_to_stored(tmp_path):
+    """If refresh omits idToken, auth should keep the stored token."""
+    fb = _make_fb_with_api_key()
+    token_path = tmp_path / "tok.json"
+    stored = {"idToken": "stored_tok", "refreshToken": "stored_ref"}
+    token_path.write_text(json.dumps(stored))
+
+    mock_auth_client = MagicMock()
+    mock_auth_client.refresh.return_value = {"refreshToken": "new_ref"}
+    fb.token_service._auth_client = mock_auth_client
+
+    _, token = fb.auth(token_path)
+    assert token["idToken"] == "stored_tok"
+
+
 # ── Firebase.refresh_token ────────────────────────────────────────────────
 
 
@@ -77,6 +92,13 @@ def test_refresh_token_no_user_raises():
     fb = _make_fb_with_api_key()
     with pytest.raises(ValueError, match="No token found"):
         fb.refresh_token("nonexistent_user")
+
+
+def test_refresh_token_missing_refresh_token_raises():
+    fb = _make_fb_with_api_key()
+    fb.token_service._registry.register("u_missing", {"idToken": "old"})
+    with pytest.raises(ValueError, match="No refresh token found"):
+        fb.refresh_token("u_missing")
 
 
 def test_refresh_token_success(tmp_path, monkeypatch):

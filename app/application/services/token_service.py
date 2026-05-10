@@ -12,6 +12,7 @@ import json
 import logging
 import os
 import threading
+import time
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
@@ -20,6 +21,8 @@ from app.core.firestore_handler.User import Auth
 from requests import Session
 
 logger = logging.getLogger(__name__)
+
+_TOKEN_EXPIRY_SKEW_SECONDS = 30
 
 
 class TokenPersistence:
@@ -121,6 +124,84 @@ class TokenService:
                 self._auth_client = Auth(self._api_key, self._requests)
             return self._auth_client
 
+    @staticmethod
+    def _extract_expiry_epoch(token_data: Optional[Dict[str, Any]]) -> Optional[int]:
+        if not token_data:
+            return None
+
+        expires_at = token_data.get("expiresAt") or token_data.get("expires_at")
+        if isinstance(expires_at, (int, float)):
+            return int(expires_at)
+        if isinstance(expires_at, str):
+            try:
+                return int(float(expires_at))
+            except ValueError:
+                return None
+
+        return None
+
+    @staticmethod
+    def _extract_relative_expiry_epoch(
+        token_data: Optional[Dict[str, Any]],
+    ) -> Optional[int]:
+        if not token_data:
+            return None
+
+        expires_in = token_data.get("expiresIn") or token_data.get("expires_in")
+        if isinstance(expires_in, (int, float)):
+            return int(time.time() + float(expires_in))
+        if isinstance(expires_in, str):
+            try:
+                return int(time.time() + float(expires_in))
+            except ValueError:
+                return None
+
+        return None
+
+    @classmethod
+    def _is_token_expired(cls, token_data: Optional[Dict[str, Any]]) -> bool:
+        expiry_epoch = cls._extract_expiry_epoch(token_data)
+        if expiry_epoch is None:
+            if token_data and (
+                token_data.get("expiresIn") is not None
+                or token_data.get("expires_in") is not None
+            ):
+                return True
+            return False
+        return int(time.time()) >= (expiry_epoch - _TOKEN_EXPIRY_SKEW_SECONDS)
+
+    def _normalize_token(
+        self,
+        refreshed: Dict[str, Any],
+        fallback: Optional[Dict[str, Any]] = None,
+        *,
+        user_id: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        fallback_data = fallback or {}
+        normalized: Dict[str, Any] = {
+            "userId": refreshed.get("userId")
+            or refreshed.get("user_id")
+            or fallback_data.get("userId")
+            or user_id,
+            "idToken": refreshed.get("idToken")
+            or refreshed.get("id_token")
+            or fallback_data.get("idToken"),
+            "refreshToken": refreshed.get("refreshToken")
+            or refreshed.get("refresh_token")
+            or fallback_data.get("refreshToken"),
+            "email": fallback_data.get("email"),
+        }
+
+        expiry_epoch = (
+            self._extract_expiry_epoch(refreshed)
+            or self._extract_relative_expiry_epoch(refreshed)
+            or self._extract_expiry_epoch(fallback_data)
+        )
+        if expiry_epoch is not None:
+            normalized["expiresAt"] = expiry_epoch
+
+        return normalized
+
     def auth(self, token_json: Path) -> Tuple[Auth, Optional[Dict[str, Any]]]:
         auth_client = self._ensure_auth_client()
         self._token_file = token_json
@@ -129,10 +210,20 @@ class TokenService:
         if existing:
             try:
                 refresh_token = existing.get("refreshToken")
-                if isinstance(refresh_token, str):
-                    token = auth_client.refresh(refresh_token)
+                if isinstance(refresh_token, str) and refresh_token:
+                    refreshed = auth_client.refresh(refresh_token)
+                    token = self._normalize_token(refreshed, existing)
+                    if not token.get("idToken"):
+                        logger.warning(
+                            "Refreshed login token missing idToken; falling back to stored token"
+                        )
+                        token = existing
                 else:
                     token = existing
+                    if self._is_token_expired(existing):
+                        logger.warning(
+                            "Stored login token appears expired and has no usable refreshToken"
+                        )
             except Exception:
                 logger.exception(
                     "Failed to refresh token from file; using stored token"
@@ -197,23 +288,32 @@ class TokenService:
             if refresh and stored.get("refreshToken"):
                 try:
                     refreshed = auth_client.refresh(stored["refreshToken"])
-                    normalized = {
-                        "userId": refreshed.get("userId")
-                        or refreshed.get("user_id")
-                        or stored.get("userId"),
-                        "idToken": refreshed.get("idToken")
-                        or refreshed.get("id_token"),
-                        "refreshToken": refreshed.get("refreshToken")
-                        or refreshed.get("refresh_token"),
-                        "email": stored.get("email"),
-                    }
-                    stored = normalized
-                    try:
-                        self._persistence.write_json(cred_path, stored)
-                    except Exception:
-                        logger.debug("Failed to write refreshed token for %s", user_id)
+                    normalized = self._normalize_token(
+                        refreshed,
+                        stored,
+                        user_id=user_id,
+                    )
+                    if normalized.get("idToken"):
+                        stored = normalized
+                        try:
+                            self._persistence.write_json(cred_path, stored)
+                        except Exception:
+                            logger.debug(
+                                "Failed to write refreshed token for %s", user_id
+                            )
+                    else:
+                        logger.warning(
+                            "Refresh response for %s had no usable idToken; keeping stored token",
+                            user_id,
+                        )
                 except Exception:
                     logger.exception("Failed to refresh token for user %s", user_id)
+
+            if self._is_token_expired(stored):
+                logger.info(
+                    "Loaded token for user %s is expired or near expiry; refresh will be retried on demand",
+                    user_id,
+                )
 
             self._registry.register(user_id, stored)
 
@@ -222,17 +322,15 @@ class TokenService:
         if not token:
             raise ValueError(f"No token found for user {user_id} to refresh")
 
+        refresh_token = token.get("refreshToken")
+        if not isinstance(refresh_token, str) or not refresh_token:
+            raise ValueError(f"No refresh token found for user {user_id}")
+
         auth_client = self._ensure_auth_client()
-        refreshed = auth_client.refresh(token["refreshToken"])
-        normalized = {
-            "userId": refreshed.get("userId")
-            or refreshed.get("user_id")
-            or token.get("userId"),
-            "idToken": refreshed.get("idToken") or refreshed.get("id_token"),
-            "refreshToken": refreshed.get("refreshToken")
-            or refreshed.get("refresh_token"),
-            "email": token.get("email"),
-        }
+        refreshed = auth_client.refresh(refresh_token)
+        normalized = self._normalize_token(refreshed, token, user_id=user_id)
+        if not normalized.get("idToken"):
+            raise ValueError(f"Refreshed token missing idToken for user {user_id}")
 
         self._registry.register(user_id, normalized)
 

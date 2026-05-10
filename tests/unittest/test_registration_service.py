@@ -150,6 +150,7 @@ def test_unregister_user_stops_job_and_schedules_deletion(tmp_path):
     mock_scheduler = MagicMock()
     mock_fb = MagicMock()
     mock_fb.get_user_token.return_value = None
+    mock_fb.database.return_value = MagicMock()
     mock_settings = _make_mock_settings(tmp_path)
 
     uid = "user_unreg"
@@ -169,6 +170,7 @@ def test_unregister_user_stops_job_and_schedules_deletion(tmp_path):
     assert (user_dir / "deletion_pending.json").exists()
     # token cleared
     mock_fb.clear_user.assert_called_once_with(uid)
+    mock_fb.database.return_value.set_user_block_state.assert_called_once()
     # response
     assert "unregistered" in response.message.lower()
     assert "60" in response.message
@@ -233,6 +235,7 @@ def test_login_cancels_pending_deletion(tmp_path):
     }
     mock_fb.auth.return_value = (auth_client, None)
     mock_fb.get_user_token.return_value = None
+    mock_fb.database.return_value = MagicMock()
 
     mock_settings = _make_mock_settings(tmp_path)
 
@@ -245,3 +248,8 @@ def test_login_cancels_pending_deletion(tmp_path):
 
     assert result.access_token == "tok"
     assert not (user_dir / "deletion_pending.json").exists()
+    mock_fb.database.return_value.set_user_block_state.assert_called_once_with(
+        user_id=uid,
+        blocked=False,
+        token=None,
+    )
