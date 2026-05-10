@@ -27,6 +27,7 @@ from app.services.scheduler import create_scheduler
 from app.services.user_deletion_service import DeletionWorker
 
 MAX_REQUEST_BODY_SIZE_BYTES = 1_048_576
+logger = logging.getLogger(__name__)
 
 
 class RequestBodyTooLargeError(Exception):
@@ -92,20 +93,17 @@ async def stop_scheduler_on_shutdown(app: FastAPI) -> None:
     scheduler = getattr(app.state, "scheduler", None)
     if scheduler:
         scheduler.stop_all()
-        logger = logging.getLogger(__name__)
         logger.info("Scheduler stopped on application shutdown")
 
     deletion_worker = getattr(app.state, "deletion_worker", None)
     if deletion_worker:
         deletion_worker.stop()
-        logger = logging.getLogger(__name__)
         logger.info("DeletionWorker stopped on application shutdown")
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     configure_logging()  # Basic logging configuration before initializing components
-    logger = logging.getLogger(__name__)
     health = get_health()
     settings = get_settings()
     configure_logging(
@@ -148,9 +146,26 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         logger.debug("Daily job scheduled at %02d:%02d", target_hour, target_minute)
 
         if scheduler is not None:
-            scheduler.restore_jobs_from_dir(base_data_dir, target_hour, target_minute)
+            is_leader = True
+            leader_probe = getattr(scheduler, "is_leader", None)
+            if callable(leader_probe):
+                try:
+                    is_leader = bool(leader_probe())
+                except Exception:
+                    logger.debug("Failed to determine scheduler leadership at startup")
+
+            if is_leader:
+                scheduler.restore_jobs_from_dir(
+                    base_data_dir,
+                    target_hour,
+                    target_minute,
+                )
+                logger.info("Scheduler restore request completed during startup")
+            else:
+                logger.info(
+                    "Scheduler initialized in follower mode; restore will be handled by elected leader"
+                )
             health.mark_component_ready("scheduler")
-            logger.info("Scheduler jobs restored successfully")
         else:
             logger.warning(
                 "Scheduler lock not acquired; skipping scheduler restore in this process"
@@ -237,12 +252,10 @@ async def error_handling_middleware(
     try:
         return await call_next(request)
     except AppException as exc:
-        logger = logging.getLogger(__name__)
         logger.exception("Handled application exception")
         http_exc = exception_to_http(exc)
         return JSONResponse(status_code=http_exc.status_code, content=http_exc.detail)
     except Exception as exc:
-        logger = logging.getLogger(__name__)
         logger.exception("Unhandled exception in request")
         return JSONResponse(
             status_code=500,
@@ -252,7 +265,6 @@ async def error_handling_middleware(
 
 @app.get("/")
 async def root() -> Dict[str, str]:
-    logger = logging.getLogger(__name__)
     logger.debug("Root endpoint invoked")
     return {"message": "Bank Analysis Backend"}
 

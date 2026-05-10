@@ -4,18 +4,19 @@
 Execute Release Stability Sprint — 4-phase phased consolidation and hardening of core services, API surface, and CI/CD infrastructure.
 
 ## Current Phase
-Release Stability Sprint (Phase 1 implemented and validated with conditional QA pass)
+Release Stability Sprint (Phase 2 completed with second-run peer-review gates)
 
 ## Current Owner
 scrum-master
 
 ## Next Handoff
 Awaiting user direction.  
-Queued (not started): Phase 2 backend-implementer, Phase 3 api-surface, Phase 4 platform-infrastructure.
+Queued (not started): Phase 3 api-surface, Phase 4 platform-infrastructure.
 
 ## Blockers
 - Residual risk: privileged Windows symlink branch remains skipped in non-elevated environments.
 - Residual risk: `set_user_block_state` currently uses full-document write semantics and may overwrite non-blocking fields in `users/{user_id}` when populated documents exist.
+- Residual risk: non-`fcntl` scheduler leadership now defaults to follower safety unless explicit env opt-in (`APP_SCHEDULER_NO_FCNTL_ASSUME_LEADER`) is configured for deterministic single-leader deployment.
 
 ## Notes
 - Product-owner clarified that open points include orchestration queue T-01..T-06 and unresolved findings in `.github/memory/TODO.md`.
@@ -41,3 +42,10 @@ Queued (not started): Phase 2 backend-implementer, Phase 3 api-surface, Phase 4 
 - **2026-05-10: Phase 1 completed by backend-implementer. Firestore user block/unblock writes consolidated into `FirestoreService.set_user_block_state` and login-service callers switched to that single surface with focused unit tests passing (42 passed).**
 - **2026-05-10: Tester gate for Phase 1 passed in focused scope (`25 passed, 0 failed`) across Firestore service and registration service tests.**
 - **2026-05-10: QA returned conditional pass for Phase 1 with follow-up recommendation to verify field-preservation semantics for populated `users/{user_id}` documents.**
+- **2026-05-10: Phase 2 (T-08) implemented by backend-implementer for logging consistency/observability, token refresh reliability with expiration-aware normalization, and scheduler startup leadership bootstrap to reduce restore race conditions.**
+- **2026-05-10: Focused Phase 2 validation passed: `27 passed` (`tests/integrationtest/test_query_handler_extended.py`, `tests/unittest/test_scheduler_extended.py`, `tests/functionaltest/test_main_startup.py`) plus adjacent compatibility checks `17 passed` (`tests/unittest/test_coverage_gaps_extended.py`, `tests/integrationtest/test_query_handler_coverage.py`).**
+- **2026-05-10: Phase 2 follow-up hardening completed by backend-implementer for two residual risks: legacy relative-only token expiry ambiguity and non-`fcntl` multi-leader scheduling risk.**
+- **2026-05-10: Follow-up focused validation passed: `16 passed` (`tests/unittest/test_coverage_gaps_extended.py`, `tests/unittest/test_scheduler_extended.py`).**
+- **2026-05-10: Tester second-run peer review passed after hardening (`16 passed` focused + `78 passed` broader targeted regression, `0 failed`).**
+- **2026-05-10: Security follow-up review confirmed legacy relative-expiry ambiguity closure and reduced non-`fcntl` multi-leader risk; conditional on deployment guardrail enforcement for `APP_SCHEDULER_NO_FCNTL_ASSUME_LEADER`.**
+- **2026-05-10: QA final decision for Phase 2 is conditional pass; phase is complete for sprint execution with mandatory release-time guardrails for non-`fcntl` override governance.**

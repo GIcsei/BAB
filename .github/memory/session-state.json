@@ -1,22 +1,30 @@
 {
-  "activeRequest": "Release Stability Sprint Phase 1 (T-07): consolidate Firestore services and remove duplication",
-  "currentStage": "phase-1-complete",
+  "activeRequest": "Release Stability Sprint Phase 2 (T-08): improve logging consistency/observability, token refresh reliability, and scheduler startup reliability",
+  "currentStage": "phase-2-complete",
   "currentOwner": "scrum-master",
-  "nextHandoff": "none (Phase 2/3/4 queued; awaiting user direction)",
+  "nextHandoff": "none (Phase 3/4 queued; awaiting user direction)",
   "agentQueue": [
-    "backend-implementer",
     "api-surface",
     "platform-infrastructure"
   ],
   "blockers": [
     "Residual risk: symlink privileged branch remains skipped on non-elevated Windows test runs.",
-    "Residual risk: Firestore user block-state writes use full-document semantics and may overwrite non-block fields on populated users/{user_id} docs."
+    "Residual risk: Firestore user block-state writes use full-document semantics and may overwrite non-block fields on populated users/{user_id} docs.",
+    "Residual release risk: non-fcntl scheduler leader override can re-enable multi-leader execution if APP_SCHEDULER_NO_FCNTL_ASSUME_LEADER is misconfigured across multiple nodes."
   ],
   "locks": {
     "memory": null
   },
   "lastUpdated": "2026-05-10T00:00:00Z",
   "notes": [
+    "Release Stability Sprint Phase 2 completed: logging consistency updates in app startup path, token refresh normalization with expiration-aware handling, and scheduler leadership bootstrap on startup.",
+    "Focused Phase 2 validation passed: 27 tests passed across main startup, scheduler, and token refresh integration paths.",
+    "Adjacent token-service compatibility validation passed: 17 tests passed with one existing deprecation warning in async event-loop test helper.",
+    "Phase 2 hardening follow-up completed: relative-only persisted expiry now fail-closed and non-fcntl scheduler leadership now defaults to follower-safe mode unless explicit env opt-in is set.",
+    "Tester second-run peer review passed: focused 16 passed plus broader targeted 78 passed, with 0 failed.",
+    "Security follow-up returned conditional pass: expiry ambiguity closed and non-fcntl risk reduced with explicit deployment guardrails required.",
+    "QA final Phase 2 decision: conditional pass; phase complete for sprint execution with release-time guardrails.",
+    "T-08 marked completed in .github/TODO.md.",
     "Release Stability Sprint Phase 1 completed: Firestore user block/unblock writes consolidated in FirestoreService and callers updated.",
     "Focused Phase 1 validation passed: 42 tests passed, 0 failed.",
     "Tester gate for Phase 1 passed in focused scope: 25 passed, 0 failed, 0 skipped.",

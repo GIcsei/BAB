@@ -55,7 +55,11 @@ See [`.github/memory/RELEASE_PLAN.md`](.github/memory/RELEASE_PLAN.md) for full 
 2. Validation: focused unit test command passed with 42 passed and 0 failed.
 3. Tester gate: focused Phase 1 regression tests passed with 25 passed and 0 failed.
 4. QA gate: conditional pass for Phase 1 with residual recommendation to verify field-preservation semantics on populated `users/{user_id}` documents.
-5. Next: Phase 2 (`backend-implementer`) and Phase 3 (`api-surface`) are queued in parallel readiness; Phase 4 remains independent and queued.
+5. Completed: Phase 2 (T-08 / issues #2, #1, #7) by improving startup logging consistency, adding expiration-aware token normalization and safer refresh fallback handling, and reducing scheduler startup restore race via leadership bootstrap.
+6. Validation: focused Phase 2 command passed with 27 passed and 0 failed; adjacent compatibility command passed with 17 passed and 0 failed (1 warning).
+7. Completed: second-run hardening for Phase 2 residual risks (legacy relative-expiry ambiguity and non-`fcntl` leader behavior) with focused follow-up tests passing (16 passed).
+8. Peer-review gates: tester revalidation passed (focused 16 + broader targeted 78, 0 failed); security follow-up conditional pass; QA final conditional pass with release guardrails for non-`fcntl` override governance.
+9. Next: Phase 3 (`api-surface`) and Phase 4 (`platform-infrastructure`) remain queued.
 
 ## Progress Snapshot
 

@@ -112,6 +112,33 @@ def test_lifespan_scheduler_none(tmp_path, monkeypatch):
     assert h.is_ready is True
 
 
+def test_lifespan_scheduler_follower_skips_restore(tmp_path, monkeypatch):
+    """Startup should skip direct restore when scheduler is not leader yet."""
+    monkeypatch.setenv("APP_USER_DATA_DIR", str(tmp_path))
+
+    h = HealthStatus()
+    mock_firebase = MagicMock()
+    mock_firebase.load_tokens_from_dir = MagicMock()
+    mock_scheduler = MagicMock()
+    mock_scheduler.is_leader.return_value = False
+
+    with (
+        patch("app.main.get_health", return_value=h),
+        patch("app.main.is_testing_env", return_value=False),
+        patch("app.main.initialize_firebase_admin"),
+        patch("app.main.get_credential", return_value={"project_id": "test-project"}),
+        patch("app.main.initialize_app", return_value=mock_firebase),
+        patch("app.main.create_scheduler", return_value=mock_scheduler),
+        patch("app.main.probe_selenium_readiness", return_value=None),
+    ):
+        client = TestClient(app)
+        with client:
+            pass
+
+    assert h.is_ready is True
+    mock_scheduler.restore_jobs_from_dir.assert_not_called()
+
+
 def test_lifespan_token_load_failure_continues_startup(tmp_path, monkeypatch):
     """If load_tokens_from_dir raises, startup should continue with degraded health."""
     monkeypatch.setenv("APP_USER_DATA_DIR", str(tmp_path))

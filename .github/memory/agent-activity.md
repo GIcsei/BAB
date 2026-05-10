@@ -194,3 +194,38 @@ Use this file as the durable summary surface for delegated work.
 - Outcome: Conditional pass for Phase 1; residual risk recorded regarding potential overwrite semantics on populated `users/{user_id}` documents.
 - Evidence: Reviewed `app/core/firestore_handler/FirestoreService.py`, `app/services/login_service.py`, and focused pytest evidence (42 passed + 25 passed).
 - Next handoff: `scrum-master` to keep later phases queued and track field-preservation follow-up before release promotion.
+
+### 2026-05-10 | backend-implementer
+
+- Scope: Release Stability Sprint Phase 2 (T-08 / issues #2, #1, #7) for logging consistency/observability, token refresh reliability with expiration handling, and scheduler startup reliability.
+- Outcome: Implemented module-level startup logger consistency in `app/main.py`, expiration-aware token normalization/fallback safeguards in `app/application/services/token_service.py`, and scheduler startup leadership bootstrap in `app/infrastructure/sched/scheduler.py` to reduce restore race windows.
+- Evidence: Updated `app/main.py`, `app/application/services/token_service.py`, `app/infrastructure/sched/scheduler.py`, `tests/integrationtest/test_query_handler_extended.py`, `tests/unittest/test_scheduler_extended.py`, `tests/functionaltest/test_main_startup.py`; ran `python -m pytest -q tests/integrationtest/test_query_handler_extended.py tests/unittest/test_scheduler_extended.py tests/functionaltest/test_main_startup.py` (27 passed) and `python -m pytest -q tests/unittest/test_coverage_gaps_extended.py tests/integrationtest/test_query_handler_coverage.py` (17 passed, 1 warning).
+- Next handoff: `tester` for focused regression gate confirmation on Phase 2 scope.
+
+### 2026-05-10 | backend-implementer
+
+- Scope: Phase 2 follow-up hardening only for token-freshness ambiguity on legacy persisted relative-expiry tokens and non-`fcntl` scheduler leadership safety.
+- Outcome: Hardened token expiry evaluation to treat relative-only persisted metadata as expired while still normalizing fresh refresh responses to absolute expiry; hardened non-`fcntl` scheduler path to safe follower mode by default with explicit opt-in leader fallback and exposed `is_leader` probe for deterministic startup behavior.
+- Evidence: Updated `app/application/services/token_service.py`, `app/infrastructure/sched/scheduler.py`, `tests/unittest/test_coverage_gaps_extended.py`, `tests/unittest/test_scheduler_extended.py`; ran `(.venv activated) pytest -q tests/unittest/test_coverage_gaps_extended.py tests/unittest/test_scheduler_extended.py` (16 passed).
+- Next handoff: `tester` for focused regression confirmation on Phase 2 residual-risk closure.
+
+### 2026-05-10 | tester
+
+- Scope: Independent second-run peer review for Phase 2 hardening and broader targeted regression confidence.
+- Outcome: Passed focused and broader targeted Phase 2 reruns with no failures.
+- Evidence: Ran `pytest -q -ra tests/unittest/test_coverage_gaps_extended.py tests/unittest/test_scheduler_extended.py` (16 passed) and broader targeted set (`tests/unittest/test_scheduler.py`, `tests/unittest/test_scheduler_coverage.py`, `tests/unittest/test_scheduler_worker.py`, `tests/unittest/test_token_registry.py`, `tests/integrationtest/test_remaining_coverage.py`) for 78 passed.
+- Next handoff: `security-engineer` for follow-up risk closure review.
+
+### 2026-05-10 | security-engineer
+
+- Scope: Follow-up security review of Phase 2 hardening changes for token expiry handling and non-`fcntl` leader behavior.
+- Outcome: Conditional pass; legacy relative-expiry ambiguity closed and non-`fcntl` risk reduced with explicit override guardrail retained.
+- Evidence: Reviewed `app/application/services/token_service.py` and `app/infrastructure/sched/scheduler.py`; ran `pytest -q -ra tests/unittest/test_coverage_gaps_extended.py tests/unittest/test_scheduler_extended.py tests/unittest/test_token_registry.py` (33 passed).
+- Next handoff: `qa-engineer` for final readiness adjudication.
+
+### 2026-05-10 | qa-engineer
+
+- Scope: Final Phase 2 readiness adjudication after second-run implementation and peer-review gates.
+- Outcome: Conditional pass; Phase 2 complete for sprint execution with mandatory release-time guardrails on non-`fcntl` override governance.
+- Evidence: Accepted tester and security follow-up evidence (focused 16 passed + broader targeted 78 passed, 0 failed; security conditional pass).
+- Next handoff: `scrum-master` to retain Phase 3 and Phase 4 queue order and carry guardrails into release governance.

@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 
 _SCHED_LOCK_PATH = "/tmp/bab_scheduler.lock"  # nosec B108
 _DEFAULT_LEADER_POLL_SECONDS = 5.0
+_NO_FCNTL_LEADER_ENV = "APP_SCHEDULER_NO_FCNTL_ASSUME_LEADER"
 
 
 class _Job:
@@ -183,6 +184,7 @@ class Scheduler:
         self._leader_stop_event = threading.Event()
         self._leader_lock_fd: Optional[int] = None
         self._is_leader = False
+        self._no_fcntl_mode_warned = False
 
         logger.debug(
             "Scheduler initialized base_dir=%s target=%02d:%02d acquire_lock=%s",
@@ -193,11 +195,32 @@ class Scheduler:
         )
 
     def start(self) -> None:
+        should_bootstrap = False
         with self._lock:
             if self._leader_running:
                 return
             self._leader_running = True
             self._leader_stop_event.clear()
+            should_bootstrap = True
+
+        if should_bootstrap:
+            try:
+                if self._try_acquire_leadership():
+                    self._on_became_leader()
+                    self._reconcile_jobs_from_dir(
+                        self._base_dir,
+                        self._target_hour,
+                        self._target_minute,
+                    )
+                    logger.info("Scheduler startup leadership bootstrap completed")
+                else:
+                    logger.debug(
+                        "Scheduler startup did not acquire leadership; leader monitor will retry"
+                    )
+            except Exception:
+                logger.exception("Scheduler startup leadership bootstrap failed")
+
+        with self._lock:
             self._leader_thread = threading.Thread(
                 target=self._leader_loop,
                 daemon=True,
@@ -230,11 +253,26 @@ class Scheduler:
             return True
 
         if fcntl is None:
-            logger.warning(
-                "fcntl not available; scheduler leadership lock disabled for this platform"
-            )
-            self._is_leader = True
-            return True
+            assume_leader_raw = os.getenv(_NO_FCNTL_LEADER_ENV, "").strip().lower()
+            assume_leader = assume_leader_raw in {"1", "true", "yes", "on"}
+            if assume_leader:
+                if not self._no_fcntl_mode_warned:
+                    logger.warning(
+                        "fcntl not available; assuming scheduler leadership due to %s=%s",
+                        _NO_FCNTL_LEADER_ENV,
+                        assume_leader_raw or "",
+                    )
+                    self._no_fcntl_mode_warned = True
+                self._is_leader = True
+                return True
+
+            if not self._no_fcntl_mode_warned:
+                logger.warning(
+                    "fcntl not available and %s is not enabled; this process will stay in follower mode to avoid multi-leader scheduling",
+                    _NO_FCNTL_LEADER_ENV,
+                )
+                self._no_fcntl_mode_warned = True
+            return False
 
         fcntl_mod = cast(Any, fcntl)
         try:
@@ -253,6 +291,9 @@ class Scheduler:
             return True
         except OSError:
             return False
+
+    def is_leader(self) -> bool:
+        return self._is_leader
 
     def _release_leadership(self) -> None:
         if not self._is_leader:

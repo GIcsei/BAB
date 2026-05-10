@@ -36,7 +36,7 @@ Link to detailed plan: [`.github/memory/RELEASE_PLAN.md`](.github/memory/RELEASE
 | ID | Task | Delegate | Priority | Status |
 |---|---|---|---|---|
 | T-07 | Phase 1: Consolidate Firestore services — eliminate duplication | backend-implementer | P0 | Completed |
-| T-08 | Phase 2: Improve logging, auth token refresh, scheduler reliability | backend-implementer | P0 | not-started |
+| T-08 | Phase 2: Improve logging, auth token refresh, scheduler reliability | backend-implementer | P0 | Completed |
 | T-09 | Phase 3: Secure parquet streaming and file access controls | api-surface | P0 | not-started |
 | T-10 | Phase 4: Fix Docker release builds and CI/CD workflow | platform-infrastructure | P0 | not-started |
 

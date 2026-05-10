@@ -12,10 +12,16 @@
 - T-07 Phase 1 Firestore consolidation: Completed (owner: backend-implementer).
 - T-07 tester gate: Passed in focused scope (25 passed, 0 failed, 0 skipped).
 - T-07 QA gate: Conditional pass with residual field-preservation risk noted for populated `users/{user_id}` documents.
-- T-08 Phase 2 logging/auth/scheduler reliability: not-started.
+- T-08 Phase 2 logging/auth/scheduler reliability: Completed (owner: backend-implementer).
+- T-08 Phase 2 hardening follow-up: Completed (owner: backend-implementer).
+- T-08 tester second-run peer review: Passed (focused 16 passed + broader targeted 78 passed, 0 failed).
+- T-08 security follow-up: Conditional pass; relative-expiry ambiguity closed and non-`fcntl` risk reduced with explicit env override guardrail.
+- T-08 QA final decision: Conditional pass; release-time guardrails required for non-`fcntl` override governance.
 - T-09 Phase 3 parquet streaming and access controls: not-started.
 - T-10 Phase 4 Docker/CI release hardening: not-started.
 - Focused validation for T-07: `tests/unittest/test_firestore_service.py`, `tests/unittest/test_registration_service.py`, `tests/unittest/test_login_service.py`, `tests/unittest/test_login_service_extended.py` -> 42 passed.
+- Focused validation for T-08: `tests/integrationtest/test_query_handler_extended.py`, `tests/unittest/test_scheduler_extended.py`, `tests/functionaltest/test_main_startup.py` -> 27 passed.
+- Adjacent compatibility validation for T-08: `tests/unittest/test_coverage_gaps_extended.py`, `tests/integrationtest/test_query_handler_coverage.py` -> 17 passed, 1 warning.
 
 ### Track 1 Status
 

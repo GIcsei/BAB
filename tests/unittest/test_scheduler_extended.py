@@ -105,3 +105,42 @@ def test_stop_all_stops_running_jobs(tmp_path):
     sched.stop_all()
     assert sched._jobs == {}
     assert sched._running is False
+
+
+def test_start_bootstraps_leadership_before_monitor_loop(tmp_path):
+    sched = Scheduler(
+        firebase_provider=lambda: MagicMock(),
+        base_dir=tmp_path,
+        target_hour=7,
+        target_minute=45,
+    )
+
+    with (
+        patch.object(sched, "_try_acquire_leadership", return_value=True) as acquire,
+        patch.object(sched, "_on_became_leader") as became,
+        patch.object(sched, "_reconcile_jobs_from_dir") as reconcile,
+    ):
+        sched.start()
+        sched.stop_all()
+
+    assert acquire.call_count >= 1
+    assert became.call_count >= 1
+    reconcile.assert_any_call(tmp_path, 7, 45)
+
+
+def test_try_acquire_leadership_non_fcntl_defaults_to_follower(monkeypatch, tmp_path):
+    sched = Scheduler(base_dir=tmp_path, acquire_lock=True)
+    monkeypatch.delenv("APP_SCHEDULER_NO_FCNTL_ASSUME_LEADER", raising=False)
+
+    with patch("app.infrastructure.sched.scheduler.fcntl", None):
+        assert sched._try_acquire_leadership() is False
+        assert sched.is_leader() is False
+
+
+def test_try_acquire_leadership_non_fcntl_env_opt_in(monkeypatch, tmp_path):
+    sched = Scheduler(base_dir=tmp_path, acquire_lock=True)
+    monkeypatch.setenv("APP_SCHEDULER_NO_FCNTL_ASSUME_LEADER", "true")
+
+    with patch("app.infrastructure.sched.scheduler.fcntl", None):
+        assert sched._try_acquire_leadership() is True
+        assert sched.is_leader() is True

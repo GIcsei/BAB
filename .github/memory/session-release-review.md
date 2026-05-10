@@ -47,3 +47,13 @@
 2. Upon Phase 1 completion, **Phase 2** (backend-implementer) and **Phase 3** (api-surface) proceed in parallel
 3. **Phase 4** (platform-infrastructure) can start immediately if desired
 4. Tester and qa-engineer provide validation gates before each phase merge
+
+---
+
+## Phase 2 Execution Update (2026-05-10)
+
+- Implementation completed for T-08 in `app/main.py`, `app/application/services/token_service.py`, and `app/infrastructure/sched/scheduler.py`.
+- Follow-up hardening run executed for two residual risks: relative-only persisted token expiry ambiguity and non-`fcntl` scheduler leader behavior.
+- Tester peer-review reruns passed (focused 16 passed, broader targeted 78 passed, 0 failed).
+- Security follow-up returned conditional pass with guardrail requirement for `APP_SCHEDULER_NO_FCNTL_ASSUME_LEADER` override governance.
+- QA final Phase 2 decision: conditional pass, Phase 2 complete in sprint execution terms.
