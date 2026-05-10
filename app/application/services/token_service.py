@@ -10,6 +10,7 @@ Tokens refreshed only if there is a valid communication with the client, otherwi
 import asyncio
 import json
 import logging
+import os
 import threading
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
@@ -40,6 +41,10 @@ class TokenPersistence:
             path.parent.mkdir(parents=True, exist_ok=True)
             with open(path, "w", encoding="utf-8") as file:
                 json.dump(data, file)
+            try:
+                os.chmod(path, 0o600)
+            except Exception:
+                logger.debug("chmod not supported for token file %s", path)
             return True
         except Exception:
             logger.exception("Failed to write token file %s", path)
