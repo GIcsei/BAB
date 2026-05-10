@@ -30,6 +30,17 @@ def test_schedule_creates_deletion_pending_file(tmp_path):
     assert result["requested_at_ms"] == data["requested_at_ms"]
 
 
+def test_schedule_sets_restrictive_permissions(tmp_path):
+    user_dir = tmp_path / "user_perm"
+    user_dir.mkdir()
+
+    with patch("app.services.user_deletion_service.os.chmod") as mock_chmod:
+        schedule_user_deletion(user_dir, "user_perm", 60)
+
+    pending_file = user_dir / "deletion_pending.json"
+    mock_chmod.assert_called_once_with(pending_file, 0o600)
+
+
 def test_schedule_deletion_at_correct_offset(tmp_path):
     user_dir = tmp_path / "user_offset"
     user_dir.mkdir()

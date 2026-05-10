@@ -8,7 +8,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from app.core.auth import get_current_user_id, get_firebase_dep
+from app.core.rate_limit import reset_auth_rate_limiter
 from app.main import app
+from app.routers import login as login_router
 from app.routers.login import get_scheduler_dep
 from fastapi.testclient import TestClient
 
@@ -18,6 +20,7 @@ from fastapi.testclient import TestClient
 @pytest.fixture(autouse=True)
 def override_deps():
     """Override infrastructure deps so router tests run without real Firebase."""
+    reset_auth_rate_limiter()
     mock_scheduler = MagicMock()
     mock_firebase = MagicMock()
     app.dependency_overrides[get_current_user_id] = lambda: "test_user"
@@ -74,6 +77,14 @@ def test_register_missing_password_returns_422():
     assert r.status_code == 422
 
 
+def test_register_password_too_long_returns_422():
+    r = client.post(
+        "/user/register",
+        json={"email": "user@example.com", "password": "x" * 257},
+    )
+    assert r.status_code == 422
+
+
 def test_register_failure_registration_failed_error_returns_400():
     from app.core.exceptions import RegistrationFailedError
 
@@ -99,6 +110,36 @@ def test_register_unexpected_exception_returns_400():
             json={"email": "crash@example.com", "password": "pw"},
         )
     assert r.status_code == 400
+    assert r.json()["detail"]["message"] == "Registration failed"
+
+
+def test_register_rate_limited_returns_429():
+    original_limit = login_router._AUTH_RATE_LIMIT_MAX_REQUESTS
+    login_router._AUTH_RATE_LIMIT_MAX_REQUESTS = 1
+    try:
+        from app.schemas.login import RegisterResponse
+
+        mock_resp = RegisterResponse(
+            access_token="tok123",
+            user_id="uid_abc",
+            message="Registration successful",
+        )
+
+        with patch("app.routers.login.register_user", return_value=mock_resp):
+            first = client.post(
+                "/user/register",
+                json={"email": "new@example.com", "password": "secret123"},
+            )
+            second = client.post(
+                "/user/register",
+                json={"email": "next@example.com", "password": "secret123"},
+            )
+    finally:
+        login_router._AUTH_RATE_LIMIT_MAX_REQUESTS = original_limit
+
+    assert first.status_code == 201
+    assert second.status_code == 429
+    assert second.json()["detail"]["error"] == "RATE_LIMITED"
 
 
 # ── POST /user/unregister ──────────────────────────────────────────────────

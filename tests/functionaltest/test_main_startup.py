@@ -28,6 +28,7 @@ def test_health_ready_after_test_mode_startup():
     fresh_health.mark_component_ready("scheduler", "skipped_in_tests")
     fresh_health.mark_component_ready("tokens", "skipped_in_tests")
     fresh_health.mark_component_ready("firebase", "skipped_in_tests")
+    fresh_health.mark_component_ready("selenium", "skipped_in_tests")
     fresh_health.mark_startup_complete()
 
     with patch("app.main.get_health", return_value=fresh_health):
@@ -44,11 +45,13 @@ def test_startup_components_skipped_in_tests():
     fresh_health.mark_component_ready("scheduler", "skipped_in_tests")
     fresh_health.mark_component_ready("tokens", "skipped_in_tests")
     fresh_health.mark_component_ready("firebase", "skipped_in_tests")
+    fresh_health.mark_component_ready("selenium", "skipped_in_tests")
     fresh_health.mark_startup_complete()
 
     assert fresh_health.components["scheduler"]["error"] == "skipped_in_tests"
     assert fresh_health.components["tokens"]["error"] == "skipped_in_tests"
     assert fresh_health.components["firebase"]["error"] == "skipped_in_tests"
+    assert fresh_health.components["selenium"]["error"] == "skipped_in_tests"
     assert fresh_health.is_ready is True
 
 
@@ -73,12 +76,14 @@ def test_lifespan_non_test_marks_all_components_ready(tmp_path, monkeypatch):
         patch("app.main.get_credential", return_value={"project_id": "test-project"}),
         patch("app.main.initialize_app", return_value=mock_firebase),
         patch("app.main.create_scheduler", return_value=mock_scheduler),
+        patch("app.main.probe_selenium_readiness", return_value=None),
     ):
         client = TestClient(app)
         with client:
             pass  # triggers lifespan startup and shutdown
 
     assert h.is_ready is True
+    assert h.components["selenium"]["ready"] is True
     mock_scheduler.restore_jobs_from_dir.assert_called_once()
     mock_firebase.load_tokens_from_dir.assert_called_once()
 
@@ -98,6 +103,7 @@ def test_lifespan_scheduler_none(tmp_path, monkeypatch):
         patch("app.main.get_credential", return_value={"project_id": "test-project"}),
         patch("app.main.initialize_app", return_value=mock_firebase),
         patch("app.main.create_scheduler", return_value=None),
+        patch("app.main.probe_selenium_readiness", return_value=None),
     ):
         client = TestClient(app)
         with client:
@@ -122,6 +128,7 @@ def test_lifespan_token_load_failure_continues_startup(tmp_path, monkeypatch):
         patch("app.main.get_credential", return_value={"project_id": "test-project"}),
         patch("app.main.initialize_app", return_value=mock_firebase),
         patch("app.main.create_scheduler", return_value=mock_scheduler),
+        patch("app.main.probe_selenium_readiness", return_value=None),
     ):
         client = TestClient(app)
         with client:
@@ -155,6 +162,7 @@ def test_lifespan_token_refresh_fails_fallback_no_refresh(tmp_path, monkeypatch)
         patch("app.main.get_credential", return_value={"project_id": "test-project"}),
         patch("app.main.initialize_app", return_value=mock_firebase),
         patch("app.main.create_scheduler", return_value=mock_scheduler),
+        patch("app.main.probe_selenium_readiness", return_value=None),
     ):
         client = TestClient(app)
         with client:
@@ -163,3 +171,30 @@ def test_lifespan_token_refresh_fails_fallback_no_refresh(tmp_path, monkeypatch)
     assert h.is_ready is True
     assert h.components["tokens"]["error"] == "loaded_without_refresh"
     assert call_count == 2
+
+
+def test_lifespan_selenium_probe_failure_does_not_fail_startup(tmp_path, monkeypatch):
+    """Startup remains ready even when Selenium readiness probe is degraded."""
+    monkeypatch.setenv("APP_USER_DATA_DIR", str(tmp_path))
+
+    h = HealthStatus()
+    mock_scheduler = MagicMock()
+    mock_firebase = MagicMock()
+    mock_firebase.load_tokens_from_dir = MagicMock()
+
+    with (
+        patch("app.main.get_health", return_value=h),
+        patch("app.main.is_testing_env", return_value=False),
+        patch("app.main.initialize_firebase_admin"),
+        patch("app.main.get_credential", return_value={"project_id": "test-project"}),
+        patch("app.main.initialize_app", return_value=mock_firebase),
+        patch("app.main.create_scheduler", return_value=mock_scheduler),
+        patch("app.main.probe_selenium_readiness", return_value="unreachable"),
+    ):
+        client = TestClient(app)
+        with client:
+            pass
+
+    assert h.is_ready is True
+    assert h.components["selenium"]["ready"] is False
+    assert h.components["selenium"]["error"] == "unreachable"

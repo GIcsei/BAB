@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from app.core.health import HealthStatus, get_health
 
 
@@ -8,6 +10,7 @@ def test_health_initial_state():
     assert "firebase" in h.components
     assert "scheduler" in h.components
     assert "tokens" in h.components
+    assert "selenium" in h.components
 
 
 def test_mark_startup_complete():
@@ -15,6 +18,8 @@ def test_mark_startup_complete():
     h.mark_startup_complete()
     assert h.is_ready is True
     assert h.startup_complete_time is not None
+    assert h.startup_complete_time.tzinfo is not None
+    assert h.startup_complete_time.utcoffset() == timedelta(0)
 
 
 def test_mark_component_ready_success():
@@ -57,7 +62,12 @@ def test_get_status_after_ready():
 def test_get_status_includes_all_components():
     h = HealthStatus()
     status = h.get_status()
-    assert set(status["components"].keys()) == {"firebase", "scheduler", "tokens"}
+    assert set(status["components"].keys()) == {
+        "firebase",
+        "scheduler",
+        "tokens",
+        "selenium",
+    }
 
 
 def test_get_health_returns_singleton():
@@ -71,9 +81,10 @@ def test_full_startup_sequence():
     h.mark_component_ready("firebase")
     h.mark_component_ready("scheduler")
     h.mark_component_ready("tokens")
+    h.mark_component_ready("selenium")
     h.mark_startup_complete()
 
     status = h.get_status()
     assert status["ready"] is True
-    for comp in ["firebase", "scheduler", "tokens"]:
+    for comp in ["firebase", "scheduler", "tokens", "selenium"]:
         assert status["components"][comp]["ready"] is True

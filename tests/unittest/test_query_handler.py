@@ -1,6 +1,7 @@
 """Tests for app.core.firestore_handler.QueryHandler – Firebase class methods."""
 
 import json
+from unittest.mock import patch
 
 import app.core.firestore_handler.QueryHandler as qh_mod
 import pytest
@@ -112,6 +113,18 @@ def test_register_user_tokens(tmp_path):
     fb.register_user_tokens("u1", token, credentials_path=cred_path)
     assert fb.token_service._registry.get("u1")["idToken"] == "tok"
     assert cred_path.exists()
+
+
+def test_register_user_tokens_sets_restrictive_permissions(tmp_path):
+    fb = initialize_app({"projectId": "p"})
+    token = {"idToken": "tok", "refreshToken": "ref"}
+    cred_path = tmp_path / "u1" / "credentials.json"
+    cred_path.parent.mkdir(parents=True)
+
+    with patch("app.application.services.token_service.os.chmod") as mock_chmod:
+        fb.register_user_tokens("u1", token, credentials_path=cred_path)
+
+    mock_chmod.assert_called_once_with(cred_path, 0o600)
 
 
 def test_register_user_tokens_no_path():

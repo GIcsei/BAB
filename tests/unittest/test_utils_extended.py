@@ -33,11 +33,34 @@ def test_raise_detailed_error_raises_http_error():
 # ── KeepAuthSession ────────────────────────────────────────────────────────
 
 
-def test_keep_auth_session_rebuild_auth_is_noop():
-    """rebuild_auth should not do anything (passes)."""
+def test_keep_auth_session_rebuild_auth_strips_cross_domain_auth():
+    """Authorization header is dropped when redirected to another domain."""
     session = KeepAuthSession()
-    # Should not raise or do anything
-    session.rebuild_auth(MagicMock(), MagicMock())
+    prepared_request = MagicMock()
+    prepared_request.headers = {"Authorization": "Bearer token"}
+    prepared_request.url = "https://other.example/resource"
+
+    response = MagicMock()
+    response.request.url = "https://api.example/resource"
+
+    session.rebuild_auth(prepared_request, response)
+
+    assert "Authorization" not in prepared_request.headers
+
+
+def test_keep_auth_session_rebuild_auth_keeps_same_domain_auth():
+    """Authorization header remains when redirect stays on same domain."""
+    session = KeepAuthSession()
+    prepared_request = MagicMock()
+    prepared_request.headers = {"Authorization": "Bearer token"}
+    prepared_request.url = "https://api.example/next"
+
+    response = MagicMock()
+    response.request.url = "https://api.example/start"
+
+    session.rebuild_auth(prepared_request, response)
+
+    assert prepared_request.headers["Authorization"] == "Bearer token"
 
 
 def test_keep_auth_session_is_requests_session():

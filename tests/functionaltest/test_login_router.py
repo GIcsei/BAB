@@ -8,7 +8,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from app.core.auth import get_current_user, get_current_user_id, get_firebase_dep
+from app.core.rate_limit import reset_auth_rate_limiter
 from app.main import app
+from app.routers import login as login_router
 from app.routers.login import get_scheduler_dep
 from fastapi.testclient import TestClient
 
@@ -16,6 +18,7 @@ from fastapi.testclient import TestClient
 @pytest.fixture(autouse=True)
 def override_auth():
     """Override auth and infrastructure deps so router tests don't need real Firebase."""
+    reset_auth_rate_limiter()
     mock_scheduler = MagicMock()
     mock_firebase = MagicMock()
     app.dependency_overrides[get_current_user_id] = lambda: "test_user"
@@ -62,6 +65,7 @@ def test_login_failure_returns_401():
             json={"email": "bad@example.com", "password": "wrong"},
         )
     assert r.status_code == 401
+    assert r.json()["detail"]["message"] == "Login failed"
 
 
 def test_login_failure_with_login_failed_error_returns_401():
@@ -85,6 +89,41 @@ def test_login_invalid_email_returns_422():
         json={"email": "not-an-email", "password": "pw"},
     )
     assert r.status_code == 422
+
+
+def test_login_password_too_long_returns_422():
+    r = client.post(
+        "/user/login",
+        json={"email": "user@example.com", "password": "x" * 257},
+    )
+    assert r.status_code == 422
+
+
+def test_login_rate_limited_returns_429():
+    original_limit = login_router._AUTH_RATE_LIMIT_MAX_REQUESTS
+    login_router._AUTH_RATE_LIMIT_MAX_REQUESTS = 1
+    try:
+        with patch("app.routers.login.login_user") as mock_login:
+            mock_resp = MagicMock()
+            mock_resp.access_token = "tok"
+            mock_resp.token_type = "bearer"
+            mock_resp.message = "Login successful"
+            mock_login.return_value = mock_resp
+
+            first = client.post(
+                "/user/login",
+                json={"email": "user@example.com", "password": "password"},
+            )
+            second = client.post(
+                "/user/login",
+                json={"email": "user2@example.com", "password": "password"},
+            )
+    finally:
+        login_router._AUTH_RATE_LIMIT_MAX_REQUESTS = original_limit
+
+    assert first.status_code == 200
+    assert second.status_code == 429
+    assert second.json()["detail"]["error"] == "RATE_LIMITED"
 
 
 # ── POST /user/logout ──────────────────────────────────────────────────────

@@ -13,7 +13,9 @@ import app.core.health as health_mod
 import pandas as pd
 import pytest
 from app.core.auth import get_current_user, get_current_user_id, get_firebase_dep
+from app.core.rate_limit import reset_auth_rate_limiter
 from app.main import app
+from app.routers import login as login_router
 from app.routers.login import get_scheduler_dep
 from fastapi.testclient import TestClient
 
@@ -35,6 +37,7 @@ def _setup(monkeypatch):
     app.state.scheduler = None
     app.state.firebase = None
     app.state.deletion_worker = None
+    reset_auth_rate_limiter()
 
     yield
 
@@ -158,6 +161,29 @@ class TestPasswordReset:
             json={"email": "not-an-email"},
         )
         assert r.status_code == 422
+
+    def test_password_reset_rate_limited_returns_429(self, mock_deps):
+        original_limit = login_router._AUTH_RATE_LIMIT_MAX_REQUESTS
+        login_router._AUTH_RATE_LIMIT_MAX_REQUESTS = 1
+        try:
+            with patch("app.routers.login.request_password_reset") as mock_reset:
+                mock_reset.return_value = {
+                    "message": "If the email is registered, a password reset link has been sent."
+                }
+                first = client.post(
+                    "/user/password-reset",
+                    json={"email": "user@example.com"},
+                )
+                second = client.post(
+                    "/user/password-reset",
+                    json={"email": "user2@example.com"},
+                )
+        finally:
+            login_router._AUTH_RATE_LIMIT_MAX_REQUESTS = original_limit
+
+        assert first.status_code == 200
+        assert second.status_code == 429
+        assert second.json()["detail"]["error"] == "RATE_LIMITED"
 
 
 # ── 4. CSV and Parquet filename validation ────────────────────────────────

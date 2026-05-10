@@ -63,6 +63,10 @@ Test full API endpoints through FastAPI TestClient.
 - Verify status codes, response bodies, and error handling
 - Test authentication flow end-to-end
 
+## Platform-Specific Notes
+
+- On some Windows environments, symlink-escape hardening tests can be skipped when the process lacks symlink creation privilege. This is expected and reported deterministically by `tests/unittest/test_security_hardening.py`.
+
 ## Test Configuration
 
 ### Environment Variables

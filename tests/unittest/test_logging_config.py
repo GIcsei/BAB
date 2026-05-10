@@ -1,6 +1,7 @@
 import logging
 import os
 import sys
+from logging.handlers import RotatingFileHandler
 
 from app.core.logging_config import (
     StructuredFormatter,
@@ -93,3 +94,31 @@ def test_configure_logging_json_mode(monkeypatch):
 def test_configure_logging_idempotent():
     configure_logging()
     configure_logging()
+
+
+def test_configure_logging_with_env_rotation_values(tmp_path, monkeypatch):
+    import app.core.config as cfg
+    import app.core.logging_config as log_cfg
+
+    log_file = str(tmp_path / "rotating.log")
+    monkeypatch.setenv("LOG_FILE", log_file)
+    monkeypatch.setenv("LOG_LEVEL", "INFO")
+    monkeypatch.setenv("LOG_ROTATION_MAX_BYTES", "1024")
+    monkeypatch.setenv("LOG_ROTATION_BACKUP_COUNT", "7")
+
+    cfg._SETTINGS = None
+    monkeypatch.setattr(log_cfg, "LOGGER_CONFIGURED", True)
+    try:
+        configure_logging()
+        logger = logging.getLogger("app")
+        rotating_handlers = [
+            handler
+            for handler in logger.handlers
+            if isinstance(handler, RotatingFileHandler)
+        ]
+        assert rotating_handlers
+        handler = rotating_handlers[0]
+        assert handler.maxBytes == 1024
+        assert handler.backupCount == 7
+    finally:
+        cfg._SETTINGS = None

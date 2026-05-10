@@ -62,6 +62,20 @@ def test_store_credentials_missing_field_returns_422():
     assert r.status_code == 422
 
 
+def test_store_credentials_username_too_long_returns_422():
+    payload = dict(CREDENTIALS_PAYLOAD)
+    payload["username"] = "u" * 129
+    r = client.post("/netbank/credentials", json=payload)
+    assert r.status_code == 422
+
+
+def test_store_credentials_password_too_long_returns_422():
+    payload = dict(CREDENTIALS_PAYLOAD)
+    payload["password"] = "p" * 257
+    r = client.post("/netbank/credentials", json=payload)
+    assert r.status_code == 422
+
+
 # ── DELETE /netbank/credentials ────────────────────────────────────────────
 
 

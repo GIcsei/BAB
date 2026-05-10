@@ -38,3 +38,16 @@ def test_cors_preflight_returns_allowed_methods():
     assert r.status_code in (200, 204)
     allow_methods = r.headers.get("access-control-allow-methods", "")
     assert allow_methods != ""
+    methods = {method.strip() for method in allow_methods.split(",") if method.strip()}
+    assert methods == {"GET", "POST", "PUT", "DELETE"}
+
+
+def test_cors_preflight_rejects_disallowed_method():
+    r = client.options(
+        "/user/login",
+        headers={
+            "Origin": "http://localhost:5000",
+            "Access-Control-Request-Method": "PATCH",
+        },
+    )
+    assert r.status_code == 400

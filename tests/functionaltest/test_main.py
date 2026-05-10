@@ -1,8 +1,8 @@
-"""Tests for app.api.main – root, health endpoints, and middleware."""
+"""Tests for app.main - root, health endpoints, and middleware."""
 
 import app.core.health as health_mod
 import pytest
-from app.main import app
+from app.main import MAX_REQUEST_BODY_SIZE_BYTES, app
 from fastapi.testclient import TestClient
 
 
@@ -56,6 +56,7 @@ def test_health_components_present():
     assert "firebase" in comps
     assert "scheduler" in comps
     assert "tokens" in comps
+    assert "selenium" in comps
 
 
 def test_middleware_catches_app_exception():
@@ -76,3 +77,10 @@ def test_middleware_catches_generic_exception():
 
     r = client.get("/test_generic_exc")
     assert r.status_code == 500
+
+
+def test_request_body_size_limit_rejects_oversized_payload():
+    payload = "a" * (MAX_REQUEST_BODY_SIZE_BYTES + 1)
+    r = client.post("/", content=payload, headers={"Content-Type": "text/plain"})
+    assert r.status_code == 413
+    assert r.json() == {"detail": "Request body too large"}

@@ -53,6 +53,37 @@ def test_login_user_success(tmp_path, monkeypatch):
         cfg._SETTINGS = None
 
 
+def test_login_user_uses_unique_temp_auth_token_file(tmp_path, monkeypatch):
+    _reset_settings(tmp_path, monkeypatch)
+
+    mock_auth_client = MagicMock()
+    mock_auth_client.sign_in_with_email_and_password.return_value = {
+        "idToken": "id_tok_123",
+        "refreshToken": "ref_tok_456",
+        "localId": "user_abc",
+    }
+
+    mock_firebase = MagicMock()
+    mock_firebase.auth.return_value = (mock_auth_client, None)
+
+    try:
+        login_user(
+            LoginRequest(email="temp@example.com", password="pw123"),
+            MagicMock(),
+            mock_firebase,
+        )
+
+        temp_path = mock_firebase.auth.call_args[0][0]
+        assert temp_path.name.startswith("auth_token_")
+        assert temp_path.suffix == ".json"
+        assert temp_path.parent == tmp_path
+        assert not temp_path.exists()
+    finally:
+        import app.core.config as cfg
+
+        cfg._SETTINGS = None
+
+
 def test_login_user_missing_id_token_raises(tmp_path, monkeypatch):
     _reset_settings(tmp_path, monkeypatch)
 

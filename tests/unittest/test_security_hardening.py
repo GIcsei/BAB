@@ -1,9 +1,26 @@
 """Tests for security hardening measures."""
 
+import errno
 import logging
 import os
 
 import pytest
+
+
+def _create_symlink_or_skip(link_path, target_path) -> None:
+    """Create symlink or skip deterministically on Windows without symlink privilege."""
+    try:
+        link_path.symlink_to(target_path)
+    except OSError as exc:
+        is_windows_privilege_error = os.name == "nt" and (
+            getattr(exc, "winerror", None) == 1314
+            or exc.errno in {errno.EPERM, errno.EACCES}
+        )
+        if is_windows_privilege_error:
+            pytest.skip(
+                "Symlink creation requires elevated privilege on this Windows env"
+            )
+        raise
 
 
 class TestSensitiveKeyRedaction:
@@ -92,7 +109,7 @@ class TestUserPathValidation:
         # Create a symlink that escapes the base dir
         escape_target = tmp_path / "secret"
         escape_target.mkdir()
-        (base / "evil_link").symlink_to(escape_target)
+        _create_symlink_or_skip(base / "evil_link", escape_target)
 
         with pytest.raises(AppFileNotFoundError):
             _validate_user_path(base, "evil_link")
@@ -129,7 +146,7 @@ class TestCredentialPathValidation:
         real_file = tmp_path / "real.json"
         real_file.write_text("{}")
         link = tmp_path / "link.json"
-        link.symlink_to(real_file)
+        _create_symlink_or_skip(link, real_file)
 
         with pytest.raises(RuntimeError, match="symlink"):
             _validate_credential_path(link)

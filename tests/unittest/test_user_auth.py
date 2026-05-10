@@ -3,6 +3,7 @@
 from unittest.mock import MagicMock, patch
 
 from app.core.firestore_handler.User import Auth
+from requests import HTTPError
 
 
 def _make_auth(api_key="test-key"):
@@ -15,6 +16,15 @@ def _ok_response(data):
     resp.json.return_value = data
     resp.raise_for_status = MagicMock()
     resp.status_code = 200
+    resp.text = ""
+    return resp
+
+
+def _error_response(status_code=400, text="API key not valid"):
+    resp = MagicMock()
+    resp.status_code = status_code
+    resp.text = text
+    resp.raise_for_status.side_effect = HTTPError(text)
     return resp
 
 
@@ -49,6 +59,43 @@ def test_sign_in_sets_current_user():
         auth = Auth("key", mock_req)
         auth.sign_in_with_email_and_password("a@b.com", "pw")
     assert auth.current_user["localId"] == "u"
+
+
+def test_auth_uses_header_api_key_without_query_param_by_default():
+    with patch("app.core.firestore_handler.User.requests") as mock_req:
+        mock_req.post.return_value = _ok_response({"idToken": "tok", "localId": "uid"})
+        auth = Auth("header-key", mock_req)
+
+        auth.sign_in_with_email_and_password("user@example.com", "pw")
+
+    post_call = mock_req.post.call_args_list[0]
+    call_kwargs = post_call.kwargs
+    call_url = call_kwargs.get("url", post_call.args[0])
+    assert "?key=" not in call_url
+    headers = call_kwargs["headers"]
+    assert headers["X-Goog-Api-Key"] == "header-key"
+
+
+def test_auth_falls_back_to_query_key_when_header_rejected():
+    with patch("app.core.firestore_handler.User.requests") as mock_req:
+        mock_req.post.side_effect = [
+            _error_response(status_code=400, text="API key missing or invalid"),
+            _ok_response({"idToken": "tok", "localId": "uid"}),
+        ]
+        auth = Auth("fallback-key", mock_req)
+
+        result = auth.sign_in_with_email_and_password("user@example.com", "pw")
+
+    assert result["localId"] == "uid"
+    assert mock_req.post.call_count == 2
+    first_call_kwargs = mock_req.post.call_args_list[0].kwargs
+    second_call_kwargs = mock_req.post.call_args_list[1].kwargs
+    first_url = first_call_kwargs.get("url", mock_req.post.call_args_list[0].args[0])
+    second_url = second_call_kwargs.get("url", mock_req.post.call_args_list[1].args[0])
+    assert "?key=" not in first_url
+    assert second_url.endswith("?key=fallback-key")
+    assert "X-Goog-Api-Key" in first_call_kwargs["headers"]
+    assert "X-Goog-Api-Key" not in second_call_kwargs["headers"]
 
 
 # ── sign_in_with_custom_token ──────────────────────────────────────────────
