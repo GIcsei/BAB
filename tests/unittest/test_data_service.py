@@ -2,9 +2,11 @@ import os
 from pathlib import Path
 
 import pandas as pd
+import pytest
 
 os.environ.setdefault("APP_ALLOW_UNSAFE_DESERIALIZE", "true")
 
+from app.core.exceptions import FileNotFoundError as AppFileNotFoundError
 from app.services import data_service  # noqa: E402
 
 
@@ -20,10 +22,22 @@ def test_list_data_files_for_user_filters_extensions(tmp_path: Path):
     user = base / "user1"
     user.mkdir(parents=True)
     (user / "a.txt").write_text("ignore")
+    (user / "b.csv").write_text("ignore")
+    (user / "c.json").write_text("ignore")
     df = pd.DataFrame({"x": [1, 2, 3]})
     df.to_parquet(user / "sample.parquet")
     result = data_service.list_data_files_for_user(base, "user1")
-    assert any(f["filename"] == "sample.parquet" for f in result)
+    assert [f["filename"] for f in result] == ["sample.parquet"]
+
+
+def test_resolve_user_parquet_file_path_rejects_non_parquet(tmp_path: Path):
+    base = tmp_path / "data"
+    user = base / "user1"
+    user.mkdir(parents=True)
+    (user / "sample.csv").write_text("ignore")
+
+    with pytest.raises(AppFileNotFoundError):
+        data_service.resolve_user_parquet_file_path(base, "user1", "sample.csv")
 
 
 def test_preview_data_file_dataframe(tmp_path: Path):

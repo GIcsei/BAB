@@ -1,32 +1,22 @@
 # ACTIVE TASK
 
-- Task ID: BAB-RELEASE-STABILITY-PHASE2-2026-05-10
-- Request: Implement Release Stability Sprint Phase 2 (T-08 / issues #2, #1, #7): logging consistency/observability, token refresh reliability and expiration handling, scheduler startup race/multi-worker reliability.
-- Owner: backend-implementer
-- Stage: done
+- Task ID: BAB-RELEASE-STABILITY-PHASE3-2026-05-10
+- Request: Implement Release Stability Sprint Phase 3 (T-09 / issues #5, #6): secure parquet streaming and file access controls.
+- Owner: api-surface
+- Stage: qa-review
 - Priority: high
 - Started: 2026-05-10
-- Finished: 2026-05-10
 
 ## Acceptance Criteria
 
-- [x] Inspect logging consistency, token lifecycle/refresh handling, and scheduler initialization/restore startup behavior.
-- [x] Implement minimal reliability-focused internal fixes without API contract drift.
-- [x] Add/update focused tests for changed behavior.
+- [x] Inspect parquet access control and streaming validation surfaces.
+- [x] Implement minimal API-surface hardening without contract drift.
+- [x] Add/update focused tests for boundary and validation behavior.
 - [x] Run targeted pytest validation.
 - [x] Sync required orchestration memory and backlog artifacts.
 
 ## Evidence
 
-- Logging consistency and startup observability updates applied in `app/main.py` with module-level logger reuse and explicit follower/leader scheduler startup logging.
-- Token refresh reliability and expiration-aware normalization implemented in `app/application/services/token_service.py` with safer fallback behavior for partial refresh responses.
-- Scheduler startup race mitigation implemented in `app/infrastructure/sched/scheduler.py` via immediate leadership bootstrap prior to monitor loop.
-- Focused tests added/updated in `tests/integrationtest/test_query_handler_extended.py`, `tests/unittest/test_scheduler_extended.py`, and `tests/functionaltest/test_main_startup.py`.
-- Focused validation command passed: `python -m pytest -q tests/integrationtest/test_query_handler_extended.py tests/unittest/test_scheduler_extended.py tests/functionaltest/test_main_startup.py` (27 passed).
-- Adjacent compatibility validation passed: `python -m pytest -q tests/unittest/test_coverage_gaps_extended.py tests/integrationtest/test_query_handler_coverage.py` (17 passed, 1 warning).
-- Follow-up hardening pass addressed Phase 2 residual risks in `app/application/services/token_service.py` and `app/infrastructure/sched/scheduler.py` with focused tests in `tests/unittest/test_coverage_gaps_extended.py` and `tests/unittest/test_scheduler_extended.py` (16 passed).
-- Tester second-run peer review passed: focused hardening set (16 passed) and broader targeted Phase 2 set (78 passed), 0 failed.
-- Security follow-up review: conditional pass, with legacy relative-expiry ambiguity closed and non-`fcntl` risk reduced via follower-safe default plus explicit env override.
-- QA final decision: conditional pass; Phase 2 complete in sprint execution terms with release-time guardrails required for non-`fcntl` override governance.
-- Post-phase reliability hotfix: scheduler now dedupes same-user in-flight immediate triggers to prevent overlapping `/user/collect_automatically` runs while preserving per-user daily schedule dedupe.
-- Hotfix-focused tester validation passed: `pytest -q -ra tests/unittest/test_scheduler_extended.py tests/unittest/test_scheduler.py tests/unittest/test_scheduler_worker.py tests/unittest/test_scheduler_coverage.py` (51 passed).
+- Phase 3 api-surface implementation completed with parquet-only listing, parquet filename enforcement, and secure stream endpoint.
+- Focused validation command passed: `python -m pytest -q tests/functionaltest/test_data_plot_router.py tests/unittest/test_data_service.py` (24 passed).
+- Tester peer review passed for Phase 3 parquet-only stream and file exposure changes.

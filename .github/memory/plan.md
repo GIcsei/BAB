@@ -59,7 +59,7 @@ See [`.github/memory/RELEASE_PLAN.md`](.github/memory/RELEASE_PLAN.md) for full 
 6. Validation: focused Phase 2 command passed with 27 passed and 0 failed; adjacent compatibility command passed with 17 passed and 0 failed (1 warning).
 7. Completed: second-run hardening for Phase 2 residual risks (legacy relative-expiry ambiguity and non-`fcntl` leader behavior) with focused follow-up tests passing (16 passed).
 8. Peer-review gates: tester revalidation passed (focused 16 + broader targeted 78, 0 failed); security follow-up conditional pass; QA final conditional pass with release guardrails for non-`fcntl` override governance.
-9. Next: Phase 3 (`api-surface`) and Phase 4 (`platform-infrastructure`) remain queued.
+9. Next: Phase 3 (`api-surface`) implementation completed, tester review passed, and QA readiness review is next; Phase 4 (`platform-infrastructure`) remains queued.
 10. Post-phase hotfix: added scheduler per-user in-flight dedupe to prevent overlapping immediate `/user/collect_automatically` runs for the same user while preserving existing schedule dedupe.
 11. Hotfix validation: focused scheduler regression suite passed with 51 passed and 0 failed.
 
@@ -81,3 +81,6 @@ See [`.github/memory/RELEASE_PLAN.md`](.github/memory/RELEASE_PLAN.md) for full 
 14. Completed: final tester gate.
 15. Completed: final QA acceptance.
 16. Completed: documentation synchronization and closure.
+17. Started: Phase 3 api-surface handoff for secure parquet streaming and file exposure.
+18. Completed: Phase 3 api-surface implementation with parquet-only listing and secure stream endpoint; focused validation passed (24 passed).
+19. Completed: Phase 3 tester peer review passed with no concrete defect found.

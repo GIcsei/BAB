@@ -243,3 +243,31 @@ Use this file as the durable summary surface for delegated work.
 - Outcome: Approved hotfix scope; same-user duplicate immediate trigger overlap prevented while allowing subsequent run after prior completion.
 - Evidence: Ran `pytest -q -ra tests/unittest/test_scheduler_extended.py tests/unittest/test_scheduler.py tests/unittest/test_scheduler_worker.py tests/unittest/test_scheduler_coverage.py` (51 passed, 0 failed).
 - Next handoff: `scrum-master` to report outcome and keep Phase 3/4 queue unchanged.
+
+### 2026-05-10 | scrum-master
+
+- Scope: Start Release Stability Sprint Phase 3 handoff for secure parquet streaming and file exposure.
+- Outcome: Routed the api-surface slice after checking the current `/data` router and service boundary plus current FastAPI/OWASP file-handling guidance; Phase 3 is now owned by api-surface.
+- Evidence: Reviewed `.github/memory/RELEASE_PLAN.md`, `.github/memory/TODO.md`, `.github/memory/active-context.md`, `app/routers/data_plot.py`, `app/services/data_service.py`, `tests/functionaltest/test_data_plot_router.py`; web-checked FastAPI custom response docs and OWASP path traversal guidance.
+- Next handoff: `api-surface` implementation.
+
+### 2026-05-10 | api-surface
+
+- Scope: Implement Phase 3 parquet-only file exposure and secure stream route.
+- Outcome: Added parquet-only file listing and filename validation, a shared safe resolved file-path helper, and a validated stream endpoint for authenticated parquet downloads.
+- Evidence: Updated `app/routers/data_plot.py`, `app/services/data_service.py`, `tests/functionaltest/test_data_plot_router.py`, and `tests/unittest/test_data_service.py`; ran `python -m pytest -q tests/functionaltest/test_data_plot_router.py tests/unittest/test_data_service.py` (24 passed).
+- Next handoff: `tester` for broader regression review.
+
+### 2026-05-10 | tester
+
+- Scope: Peer-review regression pass for Phase 3 parquet-only file exposure and stream route.
+- Outcome: Passed; no concrete defect found and the router/service boundary stayed internally consistent.
+- Evidence: Reviewed `app/routers/data_plot.py` and `app/services/data_service.py`; reran `python -m pytest -q tests/functionaltest/test_data_plot_router.py tests/unittest/test_data_service.py` (24 passed).
+- Next handoff: `qa-engineer` for release readiness review.
+
+### 2026-05-10 | api-surface
+
+- Scope: Phase 3 parquet streaming and file exposure hardening in `app/routers/data_plot.py` and `app/services/data_service.py`.
+- Outcome: Routed `/data/files/{filename}/stream` through a parquet-only service resolver, preserved auth and user-boundary checks, and added focused coverage for the stream 404 path plus the parquet-only resolver rejection.
+- Evidence: Updated `app/routers/data_plot.py`, `app/services/data_service.py`, `tests/functionaltest/test_data_plot_router.py`, and `tests/unittest/test_data_service.py`; ran `pytest -q tests/functionaltest/test_data_plot_router.py tests/unittest/test_data_service.py` (24 passed).
+- Next handoff: `tester` for optional broader regression.

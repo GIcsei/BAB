@@ -1,6 +1,6 @@
 # BAB - Multi-Agent Backlog
 
-Updated: 2026-05-08
+Updated: 2026-05-10
 
 ## Program Goal
 
@@ -37,7 +37,7 @@ Link to detailed plan: [`.github/memory/RELEASE_PLAN.md`](.github/memory/RELEASE
 |---|---|---|---|---|
 | T-07 | Phase 1: Consolidate Firestore services — eliminate duplication | backend-implementer | P0 | Completed |
 | T-08 | Phase 2: Improve logging, auth token refresh, scheduler reliability | backend-implementer | P0 | Completed |
-| T-09 | Phase 3: Secure parquet streaming and file access controls | api-surface | P0 | not-started |
+| T-09 | Phase 3: Secure parquet streaming and file access controls | api-surface | P0 | in-progress |
 | T-10 | Phase 4: Fix Docker release builds and CI/CD workflow | platform-infrastructure | P0 | not-started |
 
 ## Workflow Rules

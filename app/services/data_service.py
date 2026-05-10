@@ -57,11 +57,7 @@ def list_data_files_for_user(base_data_dir: Path, user_id: str) -> List[Dict[str
         return out
     try:
         for p in sorted(user_dir.iterdir(), key=lambda x: x.name):
-            if p.is_file() and p.suffix.lower() in {
-                ".csv",
-                ".parquet",
-                ".json",
-            }:
+            if p.is_file() and p.suffix.lower() == ".parquet":
                 try:
                     out.append(
                         {
@@ -79,6 +75,26 @@ def list_data_files_for_user(base_data_dir: Path, user_id: str) -> List[Dict[str
 
 # Backward-compatible alias
 list_pickles_for_user = list_data_files_for_user
+
+
+def resolve_user_file_path(base_data_dir: Path, user_id: str, filename: str) -> Path:
+    user_dir = _validate_user_path(base_data_dir, user_id)
+    safe_name = _safe_basename(filename)
+    path = (user_dir / safe_name).resolve()
+    if not path.is_relative_to(user_dir):
+        raise FileNotFoundError(str(path))
+    if not path.exists() or not path.is_file():
+        raise FileNotFoundError(str(path))
+    return path
+
+
+def resolve_user_parquet_file_path(
+    base_data_dir: Path, user_id: str, filename: str
+) -> Path:
+    path = resolve_user_file_path(base_data_dir, user_id, filename)
+    if path.suffix.lower() != ".parquet":
+        raise FileNotFoundError(str(path))
+    return path
 
 
 def _load_file(path: Path) -> Any:
@@ -161,12 +177,8 @@ def _to_json_serializable(obj: Any, max_rows: int = 200) -> Dict[str, Any]:
 def preview_pickle_file(
     base_data_dir: Path, user_id: str, filename: str, max_rows: int = 200
 ) -> Dict[str, Any]:
-    _validate_user_path(base_data_dir, user_id)
-    safe_name = _safe_basename(filename)
-    path = base_data_dir / user_id / safe_name
+    path = resolve_user_file_path(base_data_dir, user_id, filename)
     _validate_file_size(path)
-    if not path.exists() or not path.is_file():
-        raise FileNotFoundError(str(path))
     obj = _load_file(path)
     return _to_json_serializable(obj, max_rows=max_rows)
 
@@ -193,12 +205,8 @@ def extract_series(
     y_column: str,
     max_points: int = 10000,
 ) -> Dict[str, Any]:
-    _validate_user_path(base_data_dir, user_id)
-    safe_name = _safe_basename(filename)
-    path = base_data_dir / user_id / safe_name
+    path = resolve_user_file_path(base_data_dir, user_id, filename)
     _validate_file_size(path)
-    if not path.exists() or not path.is_file():
-        raise FileNotFoundError(str(path))
 
     obj = _load_file(path)
 
