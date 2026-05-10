@@ -1,7 +1,10 @@
 import json
 import logging
 import os
-from typing import Any, Dict, Optional
+import tempfile
+from contextlib import contextmanager
+from pathlib import Path
+from typing import Any, Dict, Iterator, Optional
 
 from app.core.config import Settings, get_settings
 from app.core.exceptions import LoginFailedError, RegistrationFailedError
@@ -61,6 +64,30 @@ def _write_credentials(
     return token_copy
 
 
+@contextmanager
+def _temporary_auth_token_path(base_data_dir: Path) -> Iterator[Path]:
+    base_data_dir.mkdir(parents=True, exist_ok=True)
+    fd, raw_path = tempfile.mkstemp(
+        prefix="auth_token_",
+        suffix=".json",
+        dir=str(base_data_dir),
+    )
+    os.close(fd)
+    temp_path = Path(raw_path)
+    try:
+        try:
+            os.chmod(temp_path, 0o600)
+        except Exception:
+            logger.debug("chmod on temporary auth token file may not be supported")
+        yield temp_path
+    finally:
+        try:
+            if temp_path.exists():
+                temp_path.unlink()
+        except Exception:
+            logger.debug("Failed to remove temporary auth token file %s", temp_path)
+
+
 def login_user(
     data: LoginRequest, scheduler: Scheduler, firebase: Firebase
 ) -> LoginResponse:
@@ -70,11 +97,12 @@ def login_user(
     base_data_dir = settings.app_user_data_dir
     base_data_dir.mkdir(parents=True, exist_ok=True)
 
-    temp_token_path = base_data_dir / "auth_token_tmp.json"
-    auth_client, _ = firebase.auth(temp_token_path)
-
     try:
-        user = auth_client.sign_in_with_email_and_password(data.email, data.password)
+        with _temporary_auth_token_path(base_data_dir) as temp_token_path:
+            auth_client, _ = firebase.auth(temp_token_path)
+            user = auth_client.sign_in_with_email_and_password(
+                data.email, data.password
+            )
         logger.debug("Auth response keys: %s", list(user.keys()))
 
         id_token = user.get("idToken")
@@ -145,14 +173,14 @@ def register_user(
     base_data_dir = settings.app_user_data_dir
     base_data_dir.mkdir(parents=True, exist_ok=True)
 
-    temp_token_path = base_data_dir / "auth_token_tmp.json"
-    auth_client, _ = firebase.auth(temp_token_path)
-
     try:
+        with _temporary_auth_token_path(base_data_dir) as temp_token_path:
+            auth_client, _ = firebase.auth(temp_token_path)
+            created = auth_client.create_user_with_email_and_password(
+                data.email, data.password
+            )
+
         # Step 1: create the account
-        created = auth_client.create_user_with_email_and_password(
-            data.email, data.password
-        )
         logger.debug("Registration response keys: %s", list(created.keys()))
 
         id_token = created.get("idToken")
@@ -329,9 +357,9 @@ def request_password_reset(email: str, firebase: Firebase) -> Dict[str, str]:
     settings = _get_settings()
     base_data_dir = settings.app_user_data_dir
     base_data_dir.mkdir(parents=True, exist_ok=True)
-    temp_token_path = base_data_dir / "auth_token_tmp.json"
-    auth_client, _ = firebase.auth(temp_token_path)
-    auth_client.send_password_reset_email(email)
+    with _temporary_auth_token_path(base_data_dir) as temp_token_path:
+        auth_client, _ = firebase.auth(temp_token_path)
+        auth_client.send_password_reset_email(email)
     return {
         "message": "If the email is registered, a password reset link has been sent."
     }
