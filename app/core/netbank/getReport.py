@@ -152,9 +152,10 @@ class ErsteNetBroker:
             )
             return False
 
-    def _file_exist_today(self, extension: List[str] = ["xls"]) -> bool:
+    def _file_exist_today(self, extension: Optional[List[str]] = None) -> bool:
+        extensions = extension if extension is not None else ["xls"]
         files = []
-        for ext in extension:
+        for ext in extensions:
             files.extend(get_all_files_from_folder(str(self.__SAVE_TO), ext))
         for file in files:
             date = extract_date_from_filename(file)
@@ -185,6 +186,8 @@ class ErsteNetBroker:
                 ),
                 "download.prompt_for_download": False,
                 "download.directory_upgrade": True,
+                # Keep disabled to prevent headless download prompts from blocking automation.
+                # Files are still validated by the formatter pipeline before downstream usage.
                 "safebrowsing.enabled": False,
                 "profile.default_content_settings.popups": 0,
                 "profile.default_content_setting_values.automatic_downloads": 1,
@@ -195,7 +198,7 @@ class ErsteNetBroker:
             try:
                 os.makedirs(path, exist_ok=True)
                 try:
-                    os.chmod(path, 0o777)  # nosec B103
+                    os.chmod(path, 0o700)
                 except Exception:
                     logger.warning("chmod not supported for %s", path)
             except Exception:
@@ -206,8 +209,11 @@ class ErsteNetBroker:
         ensure_directory(self.__LOCAL_DIR)
 
         try:
+            selenium_remote_url = os.environ.get(
+                "SELENIUM_REMOTE_URL", "http://selenium:4444"
+            )
             self.driver = webdriver.Remote(
-                options=edge_options, command_executor="http://selenium:4444"
+                options=edge_options, command_executor=selenium_remote_url
             )
             logger.debug("Edge WebDriver started")
         except WebDriverException:
@@ -230,7 +236,7 @@ class ErsteNetBroker:
 
             files = glob.glob(os.path.join(download_folder, "*.xls*"))
             if files:
-                latest_file = Path(max(files, key=os.path.getctime))
+                latest_file = Path(max(files, key=os.path.getmtime))
                 logger.info("Download finished: %s", latest_file)
                 has_timeout = False
                 break
