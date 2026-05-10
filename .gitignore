@@ -2,7 +2,9 @@
 __pycache__/
 *.pyc
 .venv/
+.env
 .env.*
+!.env.example
 *.sqlite3
 .idea/
 .DS_Store

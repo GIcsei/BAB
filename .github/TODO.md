@@ -21,12 +21,12 @@ Use one user-facing orchestrator (`scrum-master`) plus narrow backend specialist
 
 | ID | Task | Delegate | Priority | Status |
 |---|---|---|---|---|
-| T-01 | Validate the refreshed `.github` backend orchestration with one real backend task | scrum-master | P0 | Planned |
-| T-02 | Audit router response models and OpenAPI accuracy against live docs | api-surface | P1 | Planned |
-| T-03 | Review service-layer duplication and narrow refactor candidates in `app/services/` | backend-implementer | P1 | Planned |
-| T-04 | Re-check scheduler restore and file-lock behavior for multi-worker startup | platform-infrastructure | P1 | Planned |
-| T-05 | Re-run focused auth and credential lifecycle review with current tests | security-engineer | P1 | Planned |
-| T-06 | Map high-risk backend slices to focused pytest commands | tester | P2 | Planned |
+| T-01 | Validate the refreshed `.github` backend orchestration with one real backend task | scrum-master | P0 | Completed |
+| T-02 | Audit router response models and OpenAPI accuracy against live docs | api-surface | P1 | Completed |
+| T-03 | Review service-layer duplication and narrow refactor candidates in `app/services/` | backend-implementer | P1 | Completed |
+| T-04 | Re-check scheduler restore and file-lock behavior for multi-worker startup | platform-infrastructure | P1 | Completed |
+| T-05 | Re-run focused auth and credential lifecycle review with current tests | security-engineer | P1 | Completed |
+| T-06 | Map high-risk backend slices to focused pytest commands | tester | P2 | Completed |
 
 ## Workflow Rules
 

@@ -34,6 +34,8 @@ APP_JOB_MINUTE=0
 LOG_LEVEL=DEBUG
 ```
 
+`.env` is git-ignored. Keep `.env.example` as the committed template and never commit runtime secrets.
+
 - `APP_USER_DATA_DIR`: per-user data directory (where credentials, JWTs, and pickles are stored).
 - `APP_JOB_HOUR`/`APP_JOB_MINUTE`: schedule daily jobs (e.g. token refresh).
 - `LOG_LEVEL`: set to `DEBUG` for development; change to `INFO`/`WARNING` in production.
@@ -51,10 +53,12 @@ Access the app at [http://localhost:8000](http://localhost:8000).
 
 ## Running on TrueNAS SCALE
 
-1. Copy `truenas.env.example` to `truenas.env` and set dataset paths (`APP_USER_DATA_HOST_PATH`, `APP_DOWNLOADS_HOST_PATH`) and `FIRESTORE_MASTER_KEY`.
+1. Copy `truenas.env.example` to `truenas.env` and set dataset paths (`APP_USER_DATA_HOST_PATH`, `APP_DOWNLOADS_HOST_PATH`) and required secrets (`FIRESTORE_MASTER_KEY`, `FIREBASE_API_KEY`).
 2. Use `docker-compose.truenas.yml` in TrueNAS Custom App / Docker Compose stack configuration.
 3. Keep container UID/GID aligned with TrueNAS apps user (`PUID=568`, `PGID=568` by default).
 4. Store secrets outside the repository and mount them read-only (for example under `/mnt/<pool>/apps/bab/secrets`).
+
+Operational TrueNAS env knobs include `SELENIUM_REMOTE_URL` and `APP_UNREGISTER_DELETION_DAYS` in `truenas.env.example`.
 
 The container now supports runtime UID/GID remapping through `PUID`/`PGID` so mounted datasets remain writable without running your app process as root.
 
@@ -173,6 +177,14 @@ Recommendation: run `pytest --cov=app --cov-report=term-missing` locally and ens
 - Authentication: endpoints use Firebase `idToken` verification; never bypass `Depends(get_current_user_id)`.
 - Resource quotas: enforce file-size limits and use thread pools/worker pools to avoid event-loop blocking and DoS from expensive deserialization.
 - Do not log secrets (tokens, passwords) — log redacted values where necessary.
+
+## Runtime behavior (verified)
+
+- Runtime is pinned to one worker (`--workers 1`) for consistent in-memory auth/token state.
+- Request body limit is `1,048,576` bytes (`1 MiB`) for `POST`, `PUT`, and `PATCH`; oversized payloads return `413`.
+- CORS uses explicit method allowlist: `GET`, `POST`, `PUT`, `DELETE`.
+- File logging rotation is configurable with `LOG_ROTATION_MAX_BYTES` and `LOG_ROTATION_BACKUP_COUNT` when `LOG_FILE` is set.
+- Startup probes Selenium via `SELENIUM_REMOTE_URL`; `/health` includes a `selenium` component status after startup.
 
 ## Contributing and coding standards
 

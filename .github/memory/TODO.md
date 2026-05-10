@@ -1,5 +1,52 @@
 ## TODO — Security & Bug Findings (Audit 2026-05-08)
 
+### Execution Status Snapshot (2026-05-08)
+
+- Overall program status: In Progress (delegated sequencing underway).
+- Current owner: scrum-master.
+- Next handoff: tech-lead (define smallest-first implementation sequence).
+- Dependency freshness/web vulnerability verification: Pending and required before dependency changes.
+
+### Track 1 Status
+
+- C-2 FIREBASE_API_KEY TrueNAS wiring: Completed (owner: platform-infrastructure).
+- Dependency freshness/web vulnerability check: Completed (owner: security-engineer).
+- L-1 legacy `parquet` dependency removal: Completed.
+- C-1 .env tracking safeguard: Completed.
+- C-3 short-term worker pinning: Completed.
+- H-1 SELENIUM_REMOTE_URL wiring: Completed.
+- M-7 TrueNAS remap start requirement: Completed.
+- L-3 APP_UNREGISTER_DELETION_DAYS template doc: Completed.
+- Next queued: security hardening bundle (C-4, H-2, H-3, H-4, H-5, H-7, H-8, M-2, M-9).
+
+### Security Bundle Status
+
+- C-4 auth endpoint rate limiting: Completed.
+- H-2 temp token file race fix: Completed.
+- H-3 download permission tightening: Completed.
+- H-4 deletion pending file permissions: Completed.
+- H-5 cross-domain redirect auth forwarding safety: Completed.
+- H-7 netbank credential bounds: Completed.
+- H-8 login/register password bounds: Completed.
+- M-2 login/register internal error leakage reduction: Completed.
+- M-9 token/credential file restrictive permissions hardening: Completed (minimum-risk step).
+
+### Validation Follow-up
+
+- QA-requested Windows symlink-hardening deterministic behavior: Completed.
+
+### Remaining Unresolved Sequence
+
+- Track 1 (backend-implementer): Completed.
+- Track 2 (api-surface): Completed.
+- Track 3 (platform-infrastructure): Completed.
+- Track 4 (security tail): Completed.
+
+### Closure
+
+- Documentation synchronization: Completed.
+- Open-point execution cycle: Completed.
+
 > Objective: ensure BAB is production-safe on TrueNAS, debuggable on Linux and Windows.
 > Severity: **CRITICAL** · **HIGH** · **MEDIUM** · **LOW**
 > Effort: **Trivial** (< 1h) · **Low** (half day) · **Medium** (1-2 days) · **High** (> 2 days)
