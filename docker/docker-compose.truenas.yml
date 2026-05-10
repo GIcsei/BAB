@@ -51,7 +51,7 @@ services:
           memory: '512M'
 
   selenium:
-    image: selenium/standalone-edge:144.0-20260202
+    image: selenium/standalone-edge:146.0-20260404
     container_name: bank-analysis-selenium
     restart: always
     shm_size: "2g"
