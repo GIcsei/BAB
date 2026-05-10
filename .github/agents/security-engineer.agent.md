@@ -17,6 +17,8 @@ Owned boundary:
 - auth and credential paths in `app/services/`
 - secret-bearing or credential-bearing code in `app/core/` and `app/infrastructure/`
 - logging redaction, auth error handling, and unsafe file handling reviews
+- security-sensitive code review for changes touching any part of the system
+- Firestore services or schedulers when they touch auth-sensitive code paths or token handling
 
 Responsibilities:
 - Protect token verification and credential lifecycle behavior.

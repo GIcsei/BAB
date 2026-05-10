@@ -17,6 +17,7 @@ Responsibilities:
 - Add or update pytest coverage under `tests/`.
 - Validate changed behavior with focused commands before broader runs.
 - Return actionable evidence when validation fails.
+- Ensure that CI/CD runs are green before signoff.
 
 Rules:
 - Edit only tests, fixtures, or minimal test-support code.

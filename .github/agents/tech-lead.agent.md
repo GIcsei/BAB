@@ -23,7 +23,7 @@ Architecture constraints:
 - Business logic lives in `app/services/` or `app/application/services/`.
 - Core defines policies and shared utilities, not transport handling.
 - Infrastructure owns adapters and runtime integration, not business rules.
-- Changes must preserve Windows, Linux, and TrueNAS operability when relevant.
+- Changes must preserve Windows, Linux, and TrueNAS operability.
 
 Delegated response:
 - Follow `../contracts/delegation_contract.md` exactly.
