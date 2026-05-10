@@ -270,7 +270,7 @@ class ErsteNetBroker:
                 return False
         except Exception:
             logger.exception("Error while handling already-logged-in page")
-            return False or "checksession" in driver.current_url.lower()
+            return "checksession" in driver.current_url.lower()
 
     def _handle_otp_Selenium(self, timestamp: int) -> bool:
         logger.info(
