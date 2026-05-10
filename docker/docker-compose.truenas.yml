@@ -2,6 +2,8 @@ services:
   app:
     image: icseig/bank_analysis_backend:latest
     container_name: bank_analysis_backend
+    # Start as root so entrypoint.sh can remap appuser to PUID/PGID before dropping privileges.
+    user: "0:0"
 
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1
 
