@@ -1,11 +1,11 @@
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Optional, cast
 
 import jwt
 import requests
 from Crypto.PublicKey import RSA  # nosec B413
-from requests import Session
+from requests import Response, Session
 
 from app.core.firestore_handler.Utils import raise_detailed_error
 
@@ -24,18 +24,47 @@ class Auth:
         self.requests = requests_session if requests_session is not None else requests
         self.credentials = credentials
 
+    def _base_headers(self, include_header_api_key: bool = True) -> Dict[str, str]:
+        headers = {"content-type": "application/json; charset=UTF-8"}
+        if include_header_api_key:
+            headers["X-Goog-Api-Key"] = self.api_key
+        return headers
+
+    def _is_api_key_header_not_supported(self, response: Response) -> bool:
+        if response.status_code not in (400, 401, 403):
+            return False
+        response_text = (response.text or "").lower()
+        return "api key" in response_text and (
+            "not valid" in response_text
+            or "required" in response_text
+            or "missing" in response_text
+        )
+
+    def _post_with_api_key_mitigation(self, request_ref: str, data: str) -> Response:
+        request_object = self.requests.post(
+            request_ref,
+            headers=self._base_headers(include_header_api_key=True),
+            data=data,
+        )
+        if self._is_api_key_header_not_supported(request_object):
+            # Compatibility fallback for endpoints/environments that only accept key query params.
+            request_object = self.requests.post(
+                f"{request_ref}?key={self.api_key}",
+                headers=self._base_headers(include_header_api_key=False),
+                data=data,
+            )
+        return request_object
+
     def sign_in_with_email_and_password(
         self, email: str, password: str
     ) -> Dict[str, Any]:
         request_ref = (
             "https://www.googleapis.com/identitytoolkit/v3/relyingparty/verifyPassword"
-            f"?key={self.api_key}"
         )
-        headers = {"content-type": "application/json; charset=UTF-8"}
         data = json.dumps(
             {"email": email, "password": password, "returnSecureToken": True}
         )
-        request_object = self.requests.post(request_ref, headers=headers, data=data)
+        request_object = self._post_with_api_key_mitigation(request_ref, data)
         raise_detailed_error(request_object)
         payload = cast(Dict[str, Any], request_object.json())
         self.current_user = payload
@@ -56,30 +85,23 @@ class Auth:
                 "google.identity.identitytoolkit.v1.IdentityToolkit"
             ),
             "uid": uid,
-            "exp": datetime.utcnow() + timedelta(minutes=60),
+            "exp": datetime.now(timezone.utc) + timedelta(minutes=60),
         }
         if additional_claims:
             payload["claims"] = additional_claims
         return jwt.encode(payload, private_key.export_key(), algorithm="RS256")
 
     def sign_in_with_custom_token(self, token: str) -> Dict[str, Any]:
-        request_ref = (
-            "https://www.googleapis.com/identitytoolkit/v3/relyingparty/verifyCustomToken"
-            f"?key={self.api_key}"
-        )
-        headers = {"content-type": "application/json; charset=UTF-8"}
+        request_ref = "https://www.googleapis.com/identitytoolkit/v3/relyingparty/verifyCustomToken"
         data = json.dumps({"returnSecureToken": True, "token": token})
-        request_object = self.requests.post(request_ref, headers=headers, data=data)
+        request_object = self._post_with_api_key_mitigation(request_ref, data)
         raise_detailed_error(request_object)
         return cast(Dict[str, Any], request_object.json())
 
     def refresh(self, refresh_token: str) -> Dict[str, Any]:
-        request_ref = "https://securetoken.googleapis.com/v1/token?key={0}".format(
-            self.api_key
-        )
-        headers = {"content-type": "application/json; charset=UTF-8"}
+        request_ref = "https://securetoken.googleapis.com/v1/token"
         data = json.dumps({"grantType": "refresh_token", "refreshToken": refresh_token})
-        request_object = self.requests.post(request_ref, headers=headers, data=data)
+        request_object = self._post_with_api_key_mitigation(request_ref, data)
         raise_detailed_error(request_object)
         request_object_json = cast(Dict[str, Any], request_object.json())
         user = {
@@ -92,33 +114,29 @@ class Auth:
     def get_account_info(self, id_token: str) -> Dict[str, Any]:
         request_ref = (
             "https://www.googleapis.com/identitytoolkit/v3/relyingparty/getAccountInfo"
-            f"?key={self.api_key}"
         )
-        headers = {"content-type": "application/json; charset=UTF-8"}
         data = json.dumps({"idToken": id_token})
-        request_object = self.requests.post(request_ref, headers=headers, data=data)
+        request_object = self._post_with_api_key_mitigation(request_ref, data)
         raise_detailed_error(request_object)
         return cast(Dict[str, Any], request_object.json())
 
     def send_email_verification(self, id_token: str) -> Dict[str, Any]:
         request_ref = (
             "https://www.googleapis.com/identitytoolkit/v3/relyingparty/"
-            f"getOobConfirmationCode?key={self.api_key}"
+            "getOobConfirmationCode"
         )
-        headers = {"content-type": "application/json; charset=UTF-8"}
         data = json.dumps({"requestType": "VERIFY_EMAIL", "idToken": id_token})
-        request_object = self.requests.post(request_ref, headers=headers, data=data)
+        request_object = self._post_with_api_key_mitigation(request_ref, data)
         raise_detailed_error(request_object)
         return cast(Dict[str, Any], request_object.json())
 
     def send_password_reset_email(self, email: str) -> Dict[str, Any]:
         request_ref = (
             "https://www.googleapis.com/identitytoolkit/v3/relyingparty/"
-            f"getOobConfirmationCode?key={self.api_key}"
+            "getOobConfirmationCode"
         )
-        headers = {"content-type": "application/json; charset=UTF-8"}
         data = json.dumps({"requestType": "PASSWORD_RESET", "email": email})
-        request_object = self.requests.post(request_ref, headers=headers, data=data)
+        request_object = self._post_with_api_key_mitigation(request_ref, data)
         raise_detailed_error(request_object)
         return cast(Dict[str, Any], request_object.json())
 
@@ -127,11 +145,9 @@ class Auth:
     ) -> Dict[str, Any]:
         request_ref = (
             "https://www.googleapis.com/identitytoolkit/v3/relyingparty/resetPassword"
-            f"?key={self.api_key}"
         )
-        headers = {"content-type": "application/json; charset=UTF-8"}
         data = json.dumps({"oobCode": reset_code, "newPassword": new_password})
-        request_object = self.requests.post(request_ref, headers=headers, data=data)
+        request_object = self._post_with_api_key_mitigation(request_ref, data)
         raise_detailed_error(request_object)
         return cast(Dict[str, Any], request_object.json())
 
@@ -140,12 +156,10 @@ class Auth:
     ) -> Dict[str, Any]:
         request_ref = (
             "https://www.googleapis.com/identitytoolkit/v3/relyingparty/signupNewUser"
-            f"?key={self.api_key}"
         )
-        headers = {"content-type": "application/json; charset=UTF-8"}
         data = json.dumps(
             {"email": email, "password": password, "returnSecureToken": True}
         )
-        request_object = self.requests.post(request_ref, headers=headers, data=data)
+        request_object = self._post_with_api_key_mitigation(request_ref, data)
         raise_detailed_error(request_object)
         return cast(Dict[str, Any], request_object.json())
