@@ -7,6 +7,7 @@ Structured logging configuration with token redaction.
 
 import json
 import logging
+import os
 import re
 import sys
 from logging.handlers import RotatingFileHandler
@@ -37,6 +38,31 @@ _SENSITIVE_RE = re.compile(
 )
 
 LOGGER_CONFIGURED = False
+
+
+def _get_env_int(name: str, default: int, minimum: int = 0) -> int:
+    raw_value = os.getenv(name)
+    if raw_value is None:
+        return default
+    try:
+        parsed = int(raw_value)
+    except ValueError:
+        logging.getLogger(__name__).warning(
+            "Invalid %s value '%s'; using default %d",
+            name,
+            raw_value,
+            default,
+        )
+        return default
+    if parsed < minimum:
+        logging.getLogger(__name__).warning(
+            "%s must be >= %d; using default %d",
+            name,
+            minimum,
+            default,
+        )
+        return default
+    return parsed
 
 
 class TokenRedactingFilter(logging.Filter):
@@ -101,11 +127,19 @@ def configure_logging(use_json: bool = False) -> None:
     formatter = StructuredFormatter(use_json=use_json)
 
     if log_file:
+        rotation_max_bytes = _get_env_int(
+            "LOG_ROTATION_MAX_BYTES", 10 * 1024 * 1024, minimum=1
+        )
+        rotation_backup_count = _get_env_int("LOG_ROTATION_BACKUP_COUNT", 5)
         try:
             Path(log_file).parent.mkdir(parents=True, exist_ok=True)
         except Exception as exc:
             project_logger.warning("Could not create log directory: %s", exc)
-        fh = RotatingFileHandler(log_file, maxBytes=10 * 1024 * 1024, backupCount=5)
+        fh = RotatingFileHandler(
+            log_file,
+            maxBytes=rotation_max_bytes,
+            backupCount=rotation_backup_count,
+        )
         fh.setLevel(level)
         fh.setFormatter(formatter)
         fh.addFilter(redact_filter)
