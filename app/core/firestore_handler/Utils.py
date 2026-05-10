@@ -40,11 +40,18 @@ def raise_detailed_error(request_object: Response) -> None:
 
 class KeepAuthSession(Session):
     """
-    A session that doesn't drop Authentication on redirects between domains.
+    A session that keeps auth headers only for same-domain redirects.
     """
 
     def rebuild_auth(self, prepared_request: Any, response: Response) -> None:
-        return None
+        headers = prepared_request.headers
+        if "Authorization" not in headers:
+            return
+
+        original_url = response.request.url
+        redirected_url = prepared_request.url
+        if self.should_strip_auth(original_url, redirected_url):
+            del headers["Authorization"]
 
 
 class ClosableSSEClient(SSEClient):
