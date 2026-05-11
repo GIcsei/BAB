@@ -194,19 +194,23 @@ class ErsteNetBroker:
             },
         )
 
-        def ensure_directory(path: Path) -> None:
+        def ensure_directory(path: Path, mode: int) -> None:
             try:
                 os.makedirs(path, exist_ok=True)
                 try:
-                    os.chmod(path, 0o700)
+                    os.chmod(path, mode)
                 except Exception:
                     logger.warning("chmod not supported for %s", path)
             except Exception:
                 logger.exception("Failed to create save folder %s", path)
                 raise
 
-        ensure_directory(self.__SAVE_TO)
-        ensure_directory(self.__LOCAL_DIR)
+        ensure_directory(
+            self.__SAVE_TO, 0o700
+        )  # Private per-user output folder (app-owned)
+        ensure_directory(
+            self.__LOCAL_DIR, 0o777
+        )  # Shared folder with Selenium container
 
         try:
             selenium_remote_url = os.environ.get(
