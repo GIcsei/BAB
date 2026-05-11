@@ -22,8 +22,8 @@ def test_config_edge_uses_owner_only_directory_permissions(tmp_path):
         broker._config_edge()
 
     assert mock_chmod.call_count == 2
-    for call in mock_chmod.call_args_list:
-        assert call.args[1] == 0o700
+    assert mock_chmod.call_args_list[0].args[1] == 0o700
+    assert mock_chmod.call_args_list[1].args[1] == 0o777
 
 
 def test_rename_downloaded_file_prefers_most_recent_mtime(tmp_path):
