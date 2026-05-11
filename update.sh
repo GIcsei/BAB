@@ -157,6 +157,7 @@ docker build \
   --pull \
   -t "${USER_SPACE}/${PROJECT_NAME}:${IMAGE_TAG}_${ENV}" \
   -t "${USER_SPACE}/${PROJECT_NAME}:latest" \
+  -t "${PROJECT_NAME}:latest" \
   .
 
 echo -e "${GREEN}Build completed.${NC}"
