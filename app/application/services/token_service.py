@@ -351,6 +351,23 @@ class TokenService:
         token = self._registry.get(user_id)
         if not token:
             raise ValueError(f"No token registered for user {user_id}")
+
+        if self._is_token_expired(token):
+            refresh_token = token.get("refreshToken")
+            if isinstance(refresh_token, str) and refresh_token:
+                try:
+                    token = self.refresh_token(user_id)
+                except Exception:
+                    logger.exception(
+                        "Failed to refresh expired token for active user %s; using stored token",
+                        user_id,
+                    )
+            else:
+                logger.warning(
+                    "Token for user %s is expired and has no usable refreshToken",
+                    user_id,
+                )
+
         self._registry.set_active(user_id)
         return token
 

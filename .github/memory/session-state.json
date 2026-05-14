@@ -1,12 +1,12 @@
 {
-  "activeRequest": "Add BAB version readout to /health",
-  "currentStage": "documentation-sync-complete",
+  "activeRequest": "Fix Firestore token expiry after long inactive session causing scheduler OTP polling 401 loops",
+  "currentStage": "qa-conditional-pass",
   "currentOwner": "scrum-master",
   "nextHandoff": "none",
   "agentQueue": [
-    "api-surface",
+    "platform-infrastructure",
     "tester",
-    "documentation-writer"
+    "qa-engineer"
   ],
   "blockers": [
     "Residual risk: symlink privileged branch remains skipped on non-elevated Windows test runs.",
@@ -16,8 +16,11 @@
   "locks": {
     "memory": null
   },
-  "lastUpdated": "2026-05-10T21:10:00Z",
+  "lastUpdated": "2026-05-14T07:22:23Z",
   "notes": [
+    "2026-05-14: Platform-infrastructure implemented token refresh on expired active user token in set_active_user to prevent long-idle Firestore 401 loops.",
+    "2026-05-14: Tester validation passed for query handler + token expiry adjacent tests (29 passed + 2 passed + 10 passed).",
+    "2026-05-14: QA decision is conditional pass with recommendation for guarded rollout monitoring and optional 24h idle soak check.",
     "2026-05-10: /health endpoint enhanced to always expose version in both ready and not-ready responses.",
     "2026-05-10: Tester validated /health version contract with focused endpoint+unit tests (13 passed total).",
     "2026-05-10: API docs updated to note version presence for 200 and 503 /health responses.",

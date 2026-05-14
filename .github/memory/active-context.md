@@ -1,10 +1,10 @@
 # ACTIVE CONTEXT
 
 ## Current Focus
-Add BAB version readout to `/health` and validate contract/docs.
+Fix Firestore token expiry during long-running inactive sessions affecting scheduler OTP polling.
 
 ## Current Phase
-/health version readout (complete)
+firestore token-expiry regression fix (qa conditional-pass)
 
 ## Current Owner
 scrum-master
@@ -16,8 +16,13 @@ none
 - Residual risk: privileged Windows symlink branch remains skipped in non-elevated environments.
 - Residual risk: `set_user_block_state` currently uses full-document write semantics and may overwrite non-blocking fields in `users/{user_id}` when populated documents exist.
 - Residual risk: non-`fcntl` scheduler leadership now defaults to follower safety unless explicit env opt-in (`APP_SCHEDULER_NO_FCNTL_ASSUME_LEADER`) is configured for deterministic single-leader deployment.
+- Residual risk: if token refresh endpoint is unavailable, active-user fallback keeps stored token and Firestore calls can still return 401 until refresh/login succeeds.
+- Residual risk: no >24h idle end-to-end scheduler OTP polling soak test has been executed in this run.
 
 ## Notes
+- **2026-05-14: Platform-infrastructure fixed long-idle Firestore auth expiry by refreshing expired active-user tokens in `app/application/services/token_service.py::set_active_user` before scheduler/query use.**
+- **2026-05-14: Tester gate passed for scoped regression (`tests/unittest/test_query_handler.py` 29 passed, token expiry normalization slice 2 passed, `tests/integrationtest/test_query_handler_extended.py` 10 passed).**
+- **2026-05-14: QA returned conditional pass for merge/release with rollout monitoring requested for refresh failures and scheduler OTP polling 401 signals.**
 - **2026-05-10: `/health` now includes `version` in both ready (200) and not-ready (503) responses via api-surface implementation in `app/main.py`.**
 - **2026-05-10: Tester gate passed for the health-version scope (`3 passed` endpoint tests + `10 passed` unit health tests).**
 - **2026-05-10: Documentation updated in `docs/api.md` to reflect `version` presence for both 200 and 503 health responses.**

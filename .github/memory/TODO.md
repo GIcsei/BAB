@@ -1,5 +1,15 @@
 ## TODO — Security & Bug Findings (Audit 2026-05-08)
 
+### Firestore Token-Expiry Scheduler Incident (2026-05-14)
+
+- User report: after ~1 day inactivity, scheduler OTP polling repeatedly receives Firestore `401 UNAUTHENTICATED` until user logs in again.
+- Implementation owner: `platform-infrastructure`.
+- Contract delta: active-user token selection now refreshes expired tokens during `set_active_user` before Firestore query use.
+- Test coverage delta: added expired-token refresh success/failure tests in `tests/unittest/test_query_handler.py`.
+- Tester gate: passed (`tests/unittest/test_query_handler.py` 29 passed; token expiry adjacent slice 2 passed; `tests/integrationtest/test_query_handler_extended.py` 10 passed).
+- QA gate: conditional pass with recommendation for rollout monitoring and optional >24h idle soak scenario.
+- Status: Completed (conditional-pass).
+
 ### Health Version Readout Snapshot (2026-05-10)
 
 - User request: add BAB version readout possibility to `/health`.
