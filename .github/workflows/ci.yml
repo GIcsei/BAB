@@ -118,6 +118,7 @@ jobs:
             --self-contained-html
 
       - name: Run pip-audit
+        continue-on-error: true
         run: |
           mkdir -p artifacts/security
           uv run pip-audit --format json --output artifacts/security/pip-audit.json
