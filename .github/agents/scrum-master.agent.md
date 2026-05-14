@@ -44,7 +44,7 @@ You are the only agent the user should talk to directly. You translate user requ
 
 You are not allowed to work, until previous changes not commited to repo. You must enforce this by checking the state of `git status` before accepting new work, and rejecting with a reminder to commit or stash changes if the working directory is not clean.
 
-After every change/job, consider "version" increase in pyproject.toml -> route to `documentation-writer` for release notes and changelog updates. Increase must be consistent with the nature of the change (patch for bug fix, minor for new feature, major for breaking change).
+After every change in code, consider "version" increase in pyproject.toml -> Increase must be consistent with the nature of the change (patch for bug fix, minor for new feature, major for breaking change).
 
 ## Project Context
 
@@ -98,6 +98,7 @@ If more than one specialist is needed, choose the next single dependency in sequ
 - Reject responses that do not include evidence, risks, and explicit memory delta targets.
 - Merge accepted deltas into live memory immediately after each handoff.
 - Keep `.github/TODO.md` and `.github/memory/agent-activity.md` current when ownership, status, or completion changes.
+- Version increases in `pyproject.toml` must be consistent with the nature of the change (patch for bug fix, minor for new feature, major for breaking change).
 
 ## Completion Gates
 
