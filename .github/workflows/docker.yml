@@ -32,9 +32,17 @@ jobs:
         uses: aquasecurity/trivy-action@0.25.0
         with:
           image-ref: bab:main
-          format: table
+          format: json
+          output: /tmp/trivy-results.json
           exit-code: 1
           ignore-unfixed: true
           vuln-type: os,library
-          scanners: vuln
           severity: HIGH,CRITICAL
+
+      - name: Upload Trivy scan results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-scan-docker
+          path: /tmp/trivy-results.json
+          if-no-files-found: ignore

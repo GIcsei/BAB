@@ -117,6 +117,24 @@ jobs:
             --html=reports/pytest-report.html \
             --self-contained-html
 
+      - name: Run pip-audit
+        run: |
+          mkdir -p artifacts/security
+          uv run pip-audit --format json --output artifacts/security/pip-audit.json
+
+      - name: Run bandit
+        if: always()
+        run: |
+          uv run bandit -r app -ll --format json --output artifacts/security/bandit.json
+
+      - name: Upload security scan reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-scan-ci
+          path: artifacts/security/
+          if-no-files-found: ignore
+
       - name: Upload reports
         if: always()
         uses: actions/upload-artifact@v4

@@ -37,6 +37,18 @@ jobs:
           python -m pip install --upgrade pip uv
           uv sync --frozen --group dev
 
+      - name: Extract and validate version sync
+        run: |
+          TAG_VERSION=${GITHUB_REF#refs/tags/v}
+          PYPROJECT_VERSION=$(grep '^version' pyproject.toml | grep -oP '"\K[^"]+' || grep '^version = "' pyproject.toml | grep -oP '"\K[^"]+' )
+          echo "Tag version: $TAG_VERSION"
+          echo "Pyproject version: $PYPROJECT_VERSION"
+          if [ "$TAG_VERSION" != "$PYPROJECT_VERSION" ]; then
+            echo "ERROR: Tag version v$TAG_VERSION does not match pyproject.toml version $PYPROJECT_VERSION"
+            exit 1
+          fi
+          echo "✓ Version sync validated: $TAG_VERSION"
+
       - name: Ruff
         run: uv run ruff check app tests
 
@@ -50,7 +62,16 @@ jobs:
         run: uv run pip-audit
 
       - name: Bandit static analysis
-        run: uv run bandit -r app -ll
+        run: |
+          mkdir -p reports
+          uv run bandit -r app -ll --format json --output reports/bandit-release.json
+
+      - name: Upload bandit report
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-scan-validate
+          path: reports/bandit-release.json
+          if-no-files-found: ignore
 
       - name: Run tests with coverage
         run: |
@@ -110,6 +131,34 @@ jobs:
 
       - name: Set up Buildx
         uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image for Trivy scan
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: docker/Dockerfile
+          tags: bab:release-scan
+          load: true
+          cache-from: type=gha
+
+      - name: Trivy image scan
+        uses: aquasecurity/trivy-action@0.25.0
+        with:
+          image-ref: bab:release-scan
+          format: json
+          output: /tmp/trivy-release.json
+          exit-code: 1
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: CRITICAL
+
+      - name: Upload Trivy scan report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-scan-release
+          path: /tmp/trivy-release.json
+          if-no-files-found: ignore
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
