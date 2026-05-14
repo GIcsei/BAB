@@ -341,3 +341,24 @@ Use this file as the durable summary surface for delegated work.
 - Outcome: Updated API docs to state that both 200 and 503 health responses include `version`, and clarified uptime is only present when ready.
 - Evidence: Updated `docs/api.md` (health response examples and operational note).
 - Next handoff: `scrum-master` to close task.
+
+### 2026-05-14 | platform-infrastructure
+
+- Scope: Fix Firestore authentication expiry in long-running inactive sessions impacting scheduler OTP polling.
+- Outcome: Updated token activation path to refresh expired active-user tokens before query use, with safe fallback if refresh fails.
+- Evidence: Updated `app/application/services/token_service.py` and `tests/unittest/test_query_handler.py`; validation reported `tests/unittest/test_query_handler.py` passing in focused scope.
+- Next handoff: `tester` for independent regression verification.
+
+### 2026-05-14 | tester
+
+- Scope: Validate token-expiry fix and adjacent token/query handler behavior.
+- Outcome: Pass; focused and adjacent test slices succeeded with no production code changes required.
+- Evidence: Ran `./.venv/Scripts/python.exe -m pytest tests/unittest/test_query_handler.py -q` (29 passed), `./.venv/Scripts/python.exe -m pytest tests/unittest/test_coverage_gaps_extended.py -q -k "token_service_relative_only_expiry_is_treated_as_expired or token_service_normalize_sets_absolute_expiry_from_refresh_relative"` (2 passed), and `./.venv/Scripts/python.exe -m pytest tests/integrationtest/test_query_handler_extended.py -q` (10 passed).
+- Next handoff: `qa-engineer` for readiness adjudication.
+
+### 2026-05-14 | qa-engineer
+
+- Scope: Readiness review for Firestore token-expiry fix affecting scheduler OTP polling path.
+- Outcome: Conditional pass for merge/release based on implementation and test evidence.
+- Evidence: Reviewed `app/application/services/token_service.py` and `tests/unittest/test_query_handler.py`; accepted tester evidence (`29 passed` + `10 passed` for query-handler scopes).
+- Next handoff: `scrum-master` to close with rollout monitoring guidance.

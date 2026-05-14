@@ -1,7 +1,8 @@
 """Tests for app.core.firestore_handler.QueryHandler – Firebase class methods."""
 
 import json
-from unittest.mock import patch
+import time
+from unittest.mock import MagicMock, patch
 
 import app.core.firestore_handler.QueryHandler as qh_mod
 import pytest
@@ -161,6 +162,51 @@ def test_set_active_user_missing_raises():
     fb = initialize_app({"projectId": "p"})
     with pytest.raises(ValueError, match="No token registered"):
         fb.set_active_user("nobody")
+
+
+def test_set_active_user_refreshes_expired_token():
+    fb = initialize_app({"projectId": "p"})
+    expired_at = int(time.time()) - 3600
+    fb.token_service._registry.register(
+        "u_expired",
+        {"idToken": "old", "refreshToken": "ref", "expiresAt": expired_at},
+    )
+
+    mock_auth_client = MagicMock()
+    mock_auth_client.refresh.return_value = {
+        "idToken": "new",
+        "refreshToken": "new_ref",
+        "userId": "u_expired",
+    }
+    fb.token_service._auth_client = mock_auth_client
+
+    token = fb.set_active_user("u_expired")
+
+    assert token is not None
+    assert token["idToken"] == "new"
+    assert fb.get_user_token("u_expired")["idToken"] == "new"
+    assert fb.token_service.get_active_token()["idToken"] == "new"
+    mock_auth_client.refresh.assert_called_once_with("ref")
+
+
+def test_set_active_user_refresh_failure_uses_stored_token():
+    fb = initialize_app({"projectId": "p"})
+    expired_at = int(time.time()) - 3600
+    fb.token_service._registry.register(
+        "u_expired",
+        {"idToken": "old", "refreshToken": "ref", "expiresAt": expired_at},
+    )
+
+    mock_auth_client = MagicMock()
+    mock_auth_client.refresh.side_effect = RuntimeError("refresh failed")
+    fb.token_service._auth_client = mock_auth_client
+
+    token = fb.set_active_user("u_expired")
+
+    assert token is not None
+    assert token["idToken"] == "old"
+    assert fb.token_service.get_active_token()["idToken"] == "old"
+    mock_auth_client.refresh.assert_called_once_with("ref")
 
 
 # ── Firebase.clear_user ────────────────────────────────────────────────────

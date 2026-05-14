@@ -1,6 +1,6 @@
 # BAB - Multi-Agent Backlog
 
-Updated: 2026-05-10
+Updated: 2026-05-14
 
 ## Program Goal
 
@@ -41,6 +41,7 @@ Link to detailed plan: [`.github/memory/RELEASE_PLAN.md`](.github/memory/RELEASE
 | T-10 | Phase 4: Fix Docker release builds and CI/CD workflow | platform-infrastructure | P0 | not-started |
 | T-11 | CI gate recovery: fix pytest, bandit, and mypy blockers from full verification run | backend-implementer | P0 | completed |
 | T-12 | Add BAB version readout to `/health` with validation and docs sync | api-surface | P1 | completed |
+| T-13 | Fix long-idle Firestore token expiry causing scheduler OTP polling 401 loops | platform-infrastructure | P0 | completed |
 
 ## Workflow Rules
 

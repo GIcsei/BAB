@@ -106,3 +106,4 @@ CI recovery result:
 20. Completed: Phase 4 platform-infrastructure implementation with release workflow gated behind Docker publish; YAML validation passed.
 21. Completed: Phase 4 QA approval and sprint completion.
 22. Completed: `/health` version readout enhancement with tester validation and API documentation synchronization.
+23. Completed: Firestore token-expiry regression fix for long-idle scheduler OTP polling path with platform-infrastructure implementation, tester gate pass, and QA conditional-pass review.
