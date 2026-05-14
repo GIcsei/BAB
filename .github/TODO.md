@@ -38,10 +38,20 @@ Link to detailed plan: [`.github/memory/RELEASE_PLAN.md`](.github/memory/RELEASE
 | T-07 | Phase 1: Consolidate Firestore services — eliminate duplication | backend-implementer | P0 | Completed |
 | T-08 | Phase 2: Improve logging, auth token refresh, scheduler reliability | backend-implementer | P0 | Completed |
 | T-09 | Phase 3: Secure parquet streaming and file access controls | api-surface | P0 | in-progress |
-| T-10 | Phase 4: Fix Docker release builds and CI/CD workflow | platform-infrastructure | P0 | not-started |
+| T-10 | Phase 4: Fix Docker release builds and CI/CD workflow | platform-infrastructure | P0 | completed |
 | T-11 | CI gate recovery: fix pytest, bandit, and mypy blockers from full verification run | backend-implementer | P0 | completed |
 | T-12 | Add BAB version readout to `/health` with validation and docs sync | api-surface | P1 | completed |
 | T-13 | Fix long-idle Firestore token expiry causing scheduler OTP polling 401 loops | platform-infrastructure | P0 | completed |
+
+## Completed Tasks (E7 Summary)
+
+**T-10 Phase 4 CI/CD Implementation**:
+- ✓ Consolidated Docker builds into reusable `docker-build-push.yml` workflow
+- ✓ Added security scanning to main CI: pip-audit, bandit
+- ✓ Implemented version validation (tag vs pyproject.toml) in release workflow
+- ✓ GitHub Pages auto-publishes security reports at `/reports/security/vX.Y.Z/` with `latest` symlink
+- ✓ Created `scripts/generate-security-reports.py` for HTML report generation
+- ✓ Updated documentation: README (Releases section), ci.md (detailed workflows + security gates), deployment.md (release publishing), security.md (CI scanning details), new github-pages.md
 
 ## Workflow Rules
 
