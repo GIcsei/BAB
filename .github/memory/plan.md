@@ -107,3 +107,4 @@ CI recovery result:
 21. Completed: Phase 4 QA approval and sprint completion.
 22. Completed: `/health` version readout enhancement with tester validation and API documentation synchronization.
 23. Completed: Firestore token-expiry regression fix for long-idle scheduler OTP polling path with platform-infrastructure implementation, tester gate pass, and QA conditional-pass review.
+24. Completed: Docker builder uv virtualenv resolution fix by switching editable install to explicit interpreter path and applying patch version bump to 1.0.11; focused tester validation passed with full CI/container completion pending.

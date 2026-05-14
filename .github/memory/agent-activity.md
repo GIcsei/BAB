@@ -362,3 +362,17 @@ Use this file as the durable summary surface for delegated work.
 - Outcome: Conditional pass for merge/release based on implementation and test evidence.
 - Evidence: Reviewed `app/application/services/token_service.py` and `tests/unittest/test_query_handler.py`; accepted tester evidence (`29 passed` + `10 passed` for query-handler scopes).
 - Next handoff: `scrum-master` to close with rollout monitoring guidance.
+
+### 2026-05-14 | platform-infrastructure
+
+- Scope: Fix GitHub Docker builder failure where `uv pip install -e .` could not locate an active virtual environment.
+- Outcome: Switched editable install command to explicit interpreter path and applied a patch version bump for release tracking.
+- Evidence: Updated `docker/Dockerfile` (`uv pip install --python /opt/venv/bin/python -e .`) and `pyproject.toml` (`1.0.10` -> `1.0.11`); attempted `docker build --target builder -f docker/Dockerfile .` in-session.
+- Next handoff: `tester` for focused validation.
+
+### 2026-05-14 | tester
+
+- Scope: Validate Docker uv builder fix and versioning change without implementation edits.
+- Outcome: Pass with caveat; uv CLI semantics and local editable install path verified, while full builder-step completion was not observed in-session.
+- Evidence: Verified Dockerfile command and pyproject version, confirmed `uv pip --help` includes `--python`, ran `uv pip install --python .\\.venv\\Scripts\\python.exe -e .` (success), and attempted `docker build --target builder -f docker/Dockerfile .` (reached step 6/8 before interruption).
+- Next handoff: `scrum-master` to report completion caveat and request CI build confirmation.

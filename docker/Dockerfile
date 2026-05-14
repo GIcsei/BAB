@@ -23,7 +23,7 @@ ENV UV_PROJECT_ENVIRONMENT=/opt/venv \
     UV_CACHE_DIR=/tmp/uv-cache
 
 RUN uv sync --frozen --no-dev
-RUN uv pip install -e .
+RUN uv pip install --python /opt/venv/bin/python -e .
 RUN rm -rf /tmp/uv-cache
 
 FROM base AS runtime

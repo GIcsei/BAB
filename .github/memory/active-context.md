@@ -1,10 +1,10 @@
 # ACTIVE CONTEXT
 
 ## Current Focus
-Fix Firestore token expiry during long-running inactive sessions affecting scheduler OTP polling.
+Fix GitHub Docker build failure where `uv pip install -e .` cannot find a virtual environment during image build.
 
 ## Current Phase
-firestore token-expiry regression fix (qa conditional-pass)
+tester-pass-caveat
 
 ## Current Owner
 scrum-master
@@ -18,8 +18,12 @@ none
 - Residual risk: non-`fcntl` scheduler leadership now defaults to follower safety unless explicit env opt-in (`APP_SCHEDULER_NO_FCNTL_ASSUME_LEADER`) is configured for deterministic single-leader deployment.
 - Residual risk: if token refresh endpoint is unavailable, active-user fallback keeps stored token and Firestore calls can still return 401 until refresh/login succeeds.
 - Residual risk: no >24h idle end-to-end scheduler OTP polling soak test has been executed in this run.
+- Residual validation risk: local Docker build did not run to completion through builder step 7/8 in this session; CI/build-host full run is still required.
 
 ## Notes
+- **2026-05-14: Docker builder fix implemented in `docker/Dockerfile` by replacing `uv pip install -e .` with `uv pip install --python /opt/venv/bin/python -e .`, matching current uv venv resolution behavior in containers.**
+- **2026-05-14: Patch version incremented in `pyproject.toml` from `1.0.10` to `1.0.11` for bug-fix release tracking.**
+- **2026-05-14: Tester focused validation passed for uv CLI support and local editable install path; full builder completion remains pending a complete Docker run.**
 - **2026-05-14: Platform-infrastructure fixed long-idle Firestore auth expiry by refreshing expired active-user tokens in `app/application/services/token_service.py::set_active_user` before scheduler/query use.**
 - **2026-05-14: Tester gate passed for scoped regression (`tests/unittest/test_query_handler.py` 29 passed, token expiry normalization slice 2 passed, `tests/integrationtest/test_query_handler_extended.py` 10 passed).**
 - **2026-05-14: QA returned conditional pass for merge/release with rollout monitoring requested for refresh failures and scheduler OTP polling 401 signals.**

@@ -42,6 +42,7 @@ Link to detailed plan: [`.github/memory/RELEASE_PLAN.md`](.github/memory/RELEASE
 | T-11 | CI gate recovery: fix pytest, bandit, and mypy blockers from full verification run | backend-implementer | P0 | completed |
 | T-12 | Add BAB version readout to `/health` with validation and docs sync | api-surface | P1 | completed |
 | T-13 | Fix long-idle Firestore token expiry causing scheduler OTP polling 401 loops | platform-infrastructure | P0 | completed |
+| T-14 | Fix Docker builder uv editable-install failure (`uv pip install -e .`) in GitHub builds | platform-infrastructure | P0 | completed |
 
 ## Completed Tasks (E7 Summary)
 

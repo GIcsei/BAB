@@ -1,6 +1,6 @@
 {
-  "activeRequest": "Fix Firestore token expiry after long inactive session causing scheduler OTP polling 401 loops",
-  "currentStage": "qa-conditional-pass",
+  "activeRequest": "Fix GitHub Docker build failure caused by uv pip install requiring explicit Python/venv selection",
+  "currentStage": "tester-pass-caveat",
   "currentOwner": "scrum-master",
   "nextHandoff": "none",
   "agentQueue": [
@@ -11,13 +11,16 @@
   "blockers": [
     "Residual risk: symlink privileged branch remains skipped on non-elevated Windows test runs.",
     "Residual risk: Firestore user block-state writes use full-document semantics and may overwrite non-block fields on populated users/{user_id} docs.",
-    "Residual release risk: non-fcntl scheduler leader override can re-enable multi-leader execution if APP_SCHEDULER_NO_FCNTL_ASSUME_LEADER is misconfigured across multiple nodes."
+    "Residual release risk: non-fcntl scheduler leader override can re-enable multi-leader execution if APP_SCHEDULER_NO_FCNTL_ASSUME_LEADER is misconfigured across multiple nodes.",
+    "Residual validation risk: local Docker build run did not complete through builder step 7/8 in this session due terminal interruption; full CI/container-host completion still required."
   ],
   "locks": {
     "memory": null
   },
-  "lastUpdated": "2026-05-14T07:22:23Z",
+  "lastUpdated": "2026-05-14T12:10:00Z",
   "notes": [
+    "2026-05-14: Platform-infrastructure fixed Docker uv builder failure by switching to explicit interpreter install (`uv pip install --python /opt/venv/bin/python -e .`) and patch-bumped version to 1.0.11.",
+    "2026-05-14: Tester focused validation passed for uv CLI semantics and local editable install path; full container step 7/8 execution was not observed to completion in this run.",
     "2026-05-14: Platform-infrastructure implemented token refresh on expired active user token in set_active_user to prevent long-idle Firestore 401 loops.",
     "2026-05-14: Tester validation passed for query handler + token expiry adjacent tests (29 passed + 2 passed + 10 passed).",
     "2026-05-14: QA decision is conditional pass with recommendation for guarded rollout monitoring and optional 24h idle soak check.",

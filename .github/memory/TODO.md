@@ -1,5 +1,14 @@
 ## TODO — Security & Bug Findings (Audit 2026-05-08)
 
+### Docker uv Builder Failure Snapshot (2026-05-14)
+
+- User report: GitHub Docker build failed at builder step with `uv pip install -e .` error `No virtual environment found`.
+- Implementation owner: `platform-infrastructure`.
+- Contract delta: `docker/Dockerfile` now installs editable package with explicit interpreter path (`uv pip install --python /opt/venv/bin/python -e .`).
+- Versioning delta: `pyproject.toml` patch bump `1.0.10 -> 1.0.11`.
+- Tester gate: focused pass for uv CLI semantics and local editable install path; full container builder completion remains pending CI/build-host run.
+- Status: Implemented (tester-pass with caveat).
+
 ### Firestore Token-Expiry Scheduler Incident (2026-05-14)
 
 - User report: after ~1 day inactivity, scheduler OTP polling repeatedly receives Firestore `401 UNAUTHENTICATED` until user logs in again.
