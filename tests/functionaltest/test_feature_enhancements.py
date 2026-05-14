@@ -101,6 +101,17 @@ class TestHealthEndpoint:
         assert "uptime_seconds" in status
         assert status["uptime_seconds"] >= 0
 
+    def test_health_version_is_resolved_not_unknown(self):
+        """Verify version is resolved from package metadata, not 'unknown'."""
+        h = health_mod.get_health()
+        h.mark_startup_complete()
+
+        r = client.get("/health")
+        assert r.status_code == 200
+        body = r.json()
+        assert body["version"] != "unknown"
+        assert len(body["version"]) > 0
+
 
 # ── 2. Enhanced /user/me ──────────────────────────────────────────────────
 
