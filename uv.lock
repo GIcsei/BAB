@@ -96,7 +96,7 @@ wheels = [
 
 [[package]]
 name = "bab"
-version = "1.0.9"
+version = "1.0.10"
 source = { editable = "." }
 dependencies = [
     { name = "cryptography" },

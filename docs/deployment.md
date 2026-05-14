@@ -80,6 +80,26 @@ The entrypoint script dynamically remaps UID/GID for compatibility with host vol
 
 Runtime is pinned to one worker (`--workers 1`) in image and compose runtime commands for consistency of in-memory auth/token state across requests.
 
+## Release to GitHub Pages
+
+Releases are published automatically to GitHub Pages on version tag push:
+
+1. **GitHub Release**: Auto-generated changelog from git history.
+2. **Docker Image**: Pushed to Docker Hub with version tag (`icseig/bank_analysis_backend:vX.Y.Z`).
+3. **Security Reports**: Trivy, bandit, and pip-audit HTML reports published to:
+   ```
+   https://gicsei.github.io/BAB/reports/security/vX.Y.Z/
+   ```
+4. **Latest Symlink**: `/reports/security/latest/` points to the most recent release.
+
+### Manual Deployment on TrueNAS
+
+To deploy a released version manually on TrueNAS:
+
+1. Pull the published Docker image: `docker pull icseig/bank_analysis_backend:vX.Y.Z`.
+2. Update `docker-compose.truenas.yml` to reference the new image tag.
+3. Restart the stack in TrueNAS Custom Apps.
+
 ## Monitoring
 
 ### Logs

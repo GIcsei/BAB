@@ -43,17 +43,70 @@ BAB follows defence-in-depth practices. This page documents the key security dec
 
 ## CI Security Scanning
 
-| Tool | Purpose | Trigger |
-|------|---------|---------|
-| `pip-audit` | Known CVEs in Python dependencies | Every CI run |
-| `bandit` | Static analysis for common Python security anti-patterns (medium+ severity) | Every CI run |
-| Trivy | OS + library CVE scan of the production Docker image | Push to `main` |
+The CI/CD pipeline includes three layers of security scanning:
+
+### pip-audit: Dependency Vulnerability Scan
+
+| Aspect | Details |
+|--------|----------|
+| **Tool** | pip-audit |
+| **Purpose** | Detect known CVEs in Python dependencies |
+| **Trigger** | Every CI run and on release |
+| **Main branch** | Informational; does not block merges |
+| **Release** | **Blocking**: release aborted if any CVE found |
+| **Report** | Available in CI artifacts and published to GitHub Pages on release |
+
+**Fix**: Update vulnerable package in `pyproject.toml`, commit, and re-tag release.
+
+### bandit: Static Code Security Analysis
+
+| Aspect | Details |
+|--------|----------|
+| **Tool** | bandit |
+| **Purpose** | Detect common Python security anti-patterns |
+| **Trigger** | Every CI run and on release |
+| **Main branch** | Reports all issues (LOW+); does not block |
+| **Release** | **Blocking**: aborts if MEDIUM or CRITICAL issues found |
+| **Report** | JSON format in artifacts; HTML report published to GitHub Pages on release |
+| **Severity levels** | LOW, MEDIUM, HIGH, CRITICAL |
+
+**Fix**: Review `bandit-report.json`, fix code issues (e.g., hardcoded secrets, SQL injection), commit, and re-tag.
+
+### Trivy: Docker Image Vulnerability Scan
+
+| Aspect | Details |
+|--------|----------|
+| **Tool** | Trivy |
+| **Purpose** | Scan base image and installed libraries for OS/library CVEs |
+| **Trigger** | Docker build on main branch push; release image build |
+| **Main branch** | **Blocking**: aborts if HIGH or CRITICAL vulnerability found |
+| **Release** | **Blocking**: aborts if HIGH or CRITICAL vulnerability found |
+| **Report** | JSON format; HTML report published to GitHub Pages on release |
+| **Severity levels** | LOW, MEDIUM, HIGH, CRITICAL |
+
+**Fix**: Update base Docker image (see `Dockerfile`) or vulnerable dependencies, rebuild, and re-tag.
+
+### Security Reports on GitHub Pages
+
+After a successful release, all three scan reports are published in HTML format at:
+
+```
+https://gicsei.github.io/BAB/reports/security/vX.Y.Z/
+```
+
+Reports include:
+- `trivy.html`: OS/library CVE scan results
+- `bandit.html`: Code security issues
+- `pip-audit.html`: Dependency vulnerabilities
+
+The `latest/` directory is a symlink to the most recent release.
 
 ## Dependency Policy
 
 - Dependencies are pinned via `uv.lock` and must be updated deliberately.
 - Run `uv run pip-audit` locally before bumping dependencies.
 - Review `bandit` output (`bandit-report.json` artifact) after each CI run.
+- Before releasing, ensure all three security gates pass (pip-audit, bandit MEDIUM+, Trivy HIGH+).
 
 ## Reporting Vulnerabilities
 

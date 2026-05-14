@@ -6,9 +6,10 @@
 - [API Documentation](api.md) — REST endpoints, request/response formats, error codes
 - [Setup Instructions](setup.md) — Local development environment setup
 - [Deployment Instructions](deployment.md) — Docker, TrueNAS, production deployment
+- [CI/CD Pipeline](ci.md) — GitHub Actions workflows, checks, and deployment
+- [GitHub Pages](github-pages.md) — Documentation and security report publishing
 - [Testing Instructions](testing.md) — Running tests, test structure, writing new tests
 - [Security Notes](security.md) — Security considerations, scanning tools, vulnerability policy
-- [CI/CD Pipeline](ci.md) — GitHub Actions workflows, checks, and deployment
 - [Troubleshooting & FAQ](troubleshooting.md) — Common issues and frequently asked questions
 
 ## Quick Links

@@ -35,6 +35,7 @@ nav:
   - Setup: setup.md
   - Deployment: deployment.md
   - CI/CD: ci.md
+  - GitHub Pages: github-pages.md
   - Testing: testing.md
   - Security: security.md
   - Troubleshooting: troubleshooting.md

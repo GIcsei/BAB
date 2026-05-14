@@ -105,6 +105,41 @@ Notes on authentication and authorization:
 - The project uses `app/core/auth.py`, which relies on the Firebase singleton in `app/core/firestore_handler/QueryHandler.py`.
 - Routes now use `Depends(get_current_user_id)` to enforce that the caller is authenticated and to scope file access to the authenticated user's folder.
 
+## Releases
+
+Releases are automated via GitHub Actions and triggered by version tags.
+
+### Release Process
+
+1. **Bump version**: Edit `pyproject.toml` and set `version = "X.Y.Z"`.
+2. **Commit**: `git add pyproject.toml && git commit -m "bump: version X.Y.Z"`.
+3. **Tag**: `git tag -a vX.Y.Z -m "Release X.Y.Z"`.
+4. **Push**: `git push origin main && git push origin vX.Y.Z`.
+
+### What CI/CD Does
+
+Upon tag push, the release workflow (`release.yml`) runs:
+
+- **Validates** version sync: tag must match `pyproject.toml` version.
+- **Runs all checks**: lint, type checking, tests (70% coverage minimum), security scans.
+- **Security gates** (blocks release if any fail):
+  - `pip-audit`: dependency vulnerability check.
+  - `bandit`: static code security analysis (MEDIUM/CRITICAL severity).
+  - Trivy: Docker image OS/library vulnerability scan (HIGH/CRITICAL severity).
+- **Builds & pushes** Docker image to Docker Hub (`icseig/bank_analysis_backend:vX.Y.Z`).
+- **Creates** GitHub Release with auto-generated changelog.
+- **Publishes** security reports to GitHub Pages.
+
+### Security Reports
+
+After a successful release, security scan reports are published at:
+
+```
+https://gicsei.github.io/BAB/reports/security/vX.Y.Z/
+```
+
+The `latest` symlink is updated to point to the most recent release. Reports include Trivy (OS/library CVEs), bandit (code issues), and pip-audit (dependency CVEs) in HTML format.
+
 ## AI Model Overview
 
 This project contains the code and services required to host an AI-assisted data analysis model that authenticates users, loads per-user pickled datasets, extracts numeric series for plotting, and exposes those capabilities via authenticated HTTP endpoints.
