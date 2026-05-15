@@ -1,49 +1,57 @@
-name: Docker Build and Push (Reusable)
+name: Docker Build and Push
 
 on:
   workflow_call:
     inputs:
       image-name:
-        description: 'Docker image name'
+        description: Docker image name
         required: false
-        default: 'bank_analysis_backend'
+        default: bank_analysis_backend
         type: string
+
       image-tag:
-        description: 'Docker image tag (e.g., main, v1.0.0)'
+        description: Docker image tag
         required: true
         type: string
+
       registry:
-        description: 'Docker registry username (Docker Hub)'
+        description: Docker registry username
         required: false
-        default: 'icseig'
+        default: icseig
         type: string
+
       push:
-        description: 'Push image to registry'
+        description: Push image to registry
         required: false
         default: false
         type: boolean
+
       dockerfile-path:
-        description: 'Path to Dockerfile'
+        description: Path to Dockerfile
         required: false
-        default: 'docker/Dockerfile'
+        default: docker/Dockerfile
         type: string
+
       context:
-        description: 'Build context directory'
+        description: Docker build context
         required: false
-        default: '.'
+        default: .
         type: string
+
     outputs:
       image-uri:
-        description: 'Full image reference (registry/image:tag)'
+        description: Full image URI
         value: ${{ jobs.build.outputs.image-uri }}
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     outputs:
       image-uri: ${{ steps.image-uri.outputs.uri }}
+
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v6.0.2
 
       - name: Set up Docker Buildx
@@ -56,7 +64,7 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Extract metadata
+      - name: Extract Docker metadata
         id: meta
         uses: docker/metadata-action@v6
         with:
@@ -66,16 +74,23 @@ jobs:
             type=semver,pattern={{version}},value=${{ inputs.image-tag }}
             type=raw,value=${{ inputs.image-tag }}
 
-      - name: Build and push
+      - name: Build and push Docker image
         uses: docker/build-push-action@v7.1.0
         with:
           context: ${{ inputs.context }}
           file: ${{ inputs.dockerfile-path }}
+
           push: ${{ inputs.push }}
+
+          pull: true
+
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+          provenance: false
 
       - name: Set image URI output
         id: image-uri

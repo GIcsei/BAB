@@ -2,8 +2,13 @@ name: Docker Build and Scan
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+
   workflow_dispatch:
+
+  schedule:
+    - cron: "0 3 * * *"
 
 permissions:
   contents: read
@@ -11,11 +16,12 @@ permissions:
 jobs:
   build-scan:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v6.0.2
 
-      - name: Set up Buildx
+      - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
       - name: Build Docker image
@@ -23,21 +29,35 @@ jobs:
         with:
           context: .
           file: docker/Dockerfile
+
           tags: bab:main
+
           load: true
+
+          pull: true
+
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Trivy scan
+          provenance: false
+
+      - name: Run Trivy vulnerability scan
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: bab:main
+
           format: json
           output: /tmp/trivy-results.json
+
           exit-code: 1
+
           ignore-unfixed: true
+
           vuln-type: os,library
+
           severity: HIGH,CRITICAL
+
+          timeout: 10m
 
       - name: Upload Trivy scan results
         if: always()
@@ -46,3 +66,4 @@ jobs:
           name: security-scan-docker
           path: /tmp/trivy-results.json
           if-no-files-found: ignore
+          retention-days: 14
