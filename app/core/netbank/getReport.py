@@ -112,16 +112,13 @@ class ErsteNetBroker:
             raise ValueError("Element name must not be empty")
         delay = 20
         try:
-            logger.debug(
-                "Waiting for presence of element by %s with name '%s'", by, name
-            )
             my_elem = WebDriverWait(driver, delay).until(
                 EC.presence_of_element_located((by, name))
             )
         except TimeoutException:
             logger.error("Timeout waiting for element by %s with name '%s'", by, name)
             raise AttributeError(f"Element not found: {name}")
-        logger.debug("Element found: %s", my_elem)
+        logger.debug("Element found: %s", name)
         if to_click:
             logger.debug(
                 "Waiting for element to be clickable by %s with name '%s'", by, name
@@ -133,7 +130,7 @@ class ErsteNetBroker:
                 EC.element_to_be_clickable((by, name))
             )
             my_elem.click()
-        logger.debug("Element actions performed: %s", my_elem)
+        logger.debug("Element actions performed: %s", name)
         return my_elem
 
     def __wait_for_page(self, timeout: int = 20) -> bool:
