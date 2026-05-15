@@ -417,14 +417,14 @@ class ErsteNetBroker:
             except HTTPError as e:
                 logger.debug("HTTP error while querying for OTP code: %s", e)
                 if (
-                    e.request
-                    and e.request.text
-                    and "UNAUTHENTICATED" in e.request.text.lower()
+                    e.response is not None
+                    and e.response.text
+                    and "UNAUTHENTICATED" in e.response.text.lower()
                 ):
                     logger.warning(
                         "Permission denied when querying for OTP code; trying to refresh token"
                     )
-                    token = fb.refresh_token(token)
+                    token = fb.refresh_token(token["userId"])
             except Exception:
                 logger.debug("No OTP message yet or query failed; will retry")
             time.sleep(1.0)
