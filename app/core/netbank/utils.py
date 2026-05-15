@@ -74,7 +74,12 @@ class reportFormatter:
     )
     TIME_STAMP = date.today()
 
-    def __init__(self, fileName: Optional[str] = None, fileLoc: Optional[str] = None):
+    def __init__(
+        self,
+        fileName: Optional[str] = None,
+        fileLoc: Optional[str] = None,
+        update_timestamp: bool = True,
+    ) -> None:
         if fileLoc is not None:
             if not str(fileLoc).strip():
                 raise ValueError("fileLoc must be a non-empty path when provided")
@@ -83,6 +88,7 @@ class reportFormatter:
             raise ValueError("fileLoc is required when no default report folder is set")
         if fileName is not None:
             self.fileName = fileName
+        if update_timestamp:
             self._update_timestamp_from_filename()
         self.data: pd.DataFrame = self._load()
         self._format()
