@@ -16,6 +16,7 @@ from app.core.netbank.utils import (
     is_today_in,
     reportFormatter,
 )
+from requests.exceptions import HTTPError
 from selenium import webdriver
 from selenium.common.exceptions import TimeoutException, WebDriverException
 from selenium.webdriver import ActionChains
@@ -112,16 +113,13 @@ class ErsteNetBroker:
             raise ValueError("Element name must not be empty")
         delay = 20
         try:
-            logger.debug(
-                "Waiting for presence of element by %s with name '%s'", by, name
-            )
             my_elem = WebDriverWait(driver, delay).until(
                 EC.presence_of_element_located((by, name))
             )
         except TimeoutException:
             logger.error("Timeout waiting for element by %s with name '%s'", by, name)
             raise AttributeError(f"Element not found: {name}")
-        logger.debug("Element found: %s", my_elem)
+        logger.debug("Element found: %s", name)
         if to_click:
             logger.debug(
                 "Waiting for element to be clickable by %s with name '%s'", by, name
@@ -133,7 +131,7 @@ class ErsteNetBroker:
                 EC.element_to_be_clickable((by, name))
             )
             my_elem.click()
-        logger.debug("Element actions performed: %s", my_elem)
+        logger.debug("Element actions performed: %s", name)
         return my_elem
 
     def __wait_for_page(self, timeout: int = 20) -> bool:
@@ -416,6 +414,17 @@ class ErsteNetBroker:
                             logger.debug("Failed to delete OTP document %s", doc.name)
                         logger.info("OTP code found for user %s", token.get("userId"))
                         return str(code_value) if code_value is not None else None
+            except HTTPError as e:
+                logger.debug("HTTP error while querying for OTP code: %s", e)
+                if (
+                    e.response is not None
+                    and e.response.text
+                    and "UNAUTHENTICATED" in e.response.text.lower()
+                ):
+                    logger.warning(
+                        "Permission denied when querying for OTP code; trying to refresh token"
+                    )
+                    token = fb.refresh_token(token["userId"])
             except Exception:
                 logger.debug("No OTP message yet or query failed; will retry")
             time.sleep(1.0)

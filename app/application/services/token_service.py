@@ -162,12 +162,7 @@ class TokenService:
     def _is_token_expired(cls, token_data: Optional[Dict[str, Any]]) -> bool:
         expiry_epoch = cls._extract_expiry_epoch(token_data)
         if expiry_epoch is None:
-            if token_data and (
-                token_data.get("expiresIn") is not None
-                or token_data.get("expires_in") is not None
-            ):
-                return True
-            return False
+            return True  # Consider token expired if we can't determine expiry
         return int(time.time()) >= (expiry_epoch - _TOKEN_EXPIRY_SKEW_SECONDS)
 
     def _normalize_token(
@@ -207,28 +202,27 @@ class TokenService:
         self._token_file = token_json
         token = None
         existing = self.load_login_token()
-        if existing:
-            try:
-                refresh_token = existing.get("refreshToken")
-                if isinstance(refresh_token, str) and refresh_token:
-                    refreshed = auth_client.refresh(refresh_token)
-                    token = self._normalize_token(refreshed, existing)
-                    if not token.get("idToken"):
-                        logger.warning(
-                            "Refreshed login token missing idToken; falling back to stored token"
-                        )
-                        token = existing
-                else:
+        if not existing:
+            return auth_client, None
+        try:
+            refresh_token = existing.get("refreshToken")
+            if isinstance(refresh_token, str) and refresh_token:
+                refreshed = auth_client.refresh(refresh_token)
+                token = self._normalize_token(refreshed, existing)
+                if not token.get("idToken"):
+                    logger.warning(
+                        "Refreshed login token missing idToken; falling back to stored token"
+                    )
                     token = existing
-                    if self._is_token_expired(existing):
-                        logger.warning(
-                            "Stored login token appears expired and has no usable refreshToken"
-                        )
-            except Exception:
-                logger.exception(
-                    "Failed to refresh token from file; using stored token"
-                )
+            else:
                 token = existing
+                if self._is_token_expired(existing):
+                    logger.warning(
+                        "Stored login token appears expired and has no usable refreshToken"
+                    )
+        except Exception:
+            logger.exception("Failed to refresh token from file; using stored token")
+            token = existing
         return auth_client, token
 
     def save_login_token(self, token_data: Dict[str, Any]) -> None:

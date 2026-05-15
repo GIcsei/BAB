@@ -265,7 +265,9 @@ async def error_handling_middleware(
 
 @app.get("/")
 async def root() -> Dict[str, str]:
-    logger.debug("Root endpoint invoked")
+    logger.debug(
+        "Root endpoint invoked"
+    )  # Further todo: Introduce redirect to frontend or API docs if desired
     return {"message": "Bank Analysis Backend"}
 
 
@@ -306,6 +308,8 @@ async def health_check() -> JSONResponse:
 app.include_router(login.router)
 app.include_router(netbank_credentials.router)
 app.include_router(data_plot.router)
+# Additional routers can be included here as needed
+# TODO: Consider adding an admin router for internal endpoints like metrics, health details, etc.
 
 
 @app.get("/admin/cleanup-metrics")
