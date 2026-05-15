@@ -16,6 +16,7 @@ from app.core.netbank.utils import (
     is_today_in,
     reportFormatter,
 )
+from requests.exceptions import HTTPError
 from selenium import webdriver
 from selenium.common.exceptions import TimeoutException, WebDriverException
 from selenium.webdriver import ActionChains
@@ -413,6 +414,17 @@ class ErsteNetBroker:
                             logger.debug("Failed to delete OTP document %s", doc.name)
                         logger.info("OTP code found for user %s", token.get("userId"))
                         return str(code_value) if code_value is not None else None
+            except HTTPError as e:
+                logger.debug("HTTP error while querying for OTP code: %s", e)
+                if (
+                    e.request
+                    and e.request.text
+                    and "UNAUTHENTICATED" in e.request.text.lower()
+                ):
+                    logger.warning(
+                        "Permission denied when querying for OTP code; trying to refresh token"
+                    )
+                    token = fb.refresh_token(token)
             except Exception:
                 logger.debug("No OTP message yet or query failed; will retry")
             time.sleep(1.0)
