@@ -5,7 +5,7 @@ description = "Creates backend to run on TrueNAS to collect data user level with
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "cryptography>=46.0.7",
+    "cryptography>=48.0.1",
     "fastapi[standard]>=0.115.12",
     "fastapi-cli[standard]>=0.0.7",
     "firestore>=0.0.8",
