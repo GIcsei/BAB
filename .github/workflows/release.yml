@@ -142,7 +142,7 @@ jobs:
           cache-from: type=gha
 
       - name: Trivy image scan
-        uses: aquasecurity/trivy-action@v0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: bab:release-scan
           format: json
