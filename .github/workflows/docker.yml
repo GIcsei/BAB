@@ -19,13 +19,13 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@latest
+        uses: actions/checkout@v6.0.2
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@latest
+        uses: docker/setup-buildx-action@v4
 
       - name: Build Docker image
-        uses: docker/build-push-action@latest
+        uses: docker/build-push-action@v7.1.0
         with:
           context: .
           file: docker/Dockerfile
@@ -42,7 +42,7 @@ jobs:
           provenance: false
 
       - name: Run Trivy vulnerability scan
-        uses: aquasecurity/trivy-action@latest
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: bab:main
 
@@ -61,7 +61,7 @@ jobs:
 
       - name: Upload Trivy scan results
         if: always()
-        uses: actions/upload-artifact@latest
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: security-scan-docker
           path: /tmp/trivy-results.json

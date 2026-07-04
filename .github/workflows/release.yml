@@ -17,15 +17,15 @@ jobs:
         python-version: ["3.12"]
     steps:
       - name: Checkout
-        uses: actions/checkout@latest
+        uses: actions/checkout@v6.0.2
 
       - name: Set up Python
-        uses: actions/setup-python@latest
+        uses: actions/setup-python@v6.2.0
         with:
           python-version: ${{ matrix.python-version }}
 
       - name: Cache uv
-        uses: actions/cache@latest
+        uses: actions/cache@v5.0.5
         with:
           path: ~/.cache/uv
           key: ${{ runner.os }}-uv-${{ hashFiles('uv.lock') }}
@@ -67,7 +67,7 @@ jobs:
           uv run bandit -r app -ll --format json --output reports/bandit-release.json
 
       - name: Upload bandit report
-        uses: actions/upload-artifact@latest
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: security-scan-validate
           path: reports/bandit-release.json
@@ -86,7 +86,7 @@ jobs:
             --self-contained-html
 
       - name: Upload coverage report
-        uses: actions/upload-artifact@latest
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: coverage-report
           path: |
@@ -94,13 +94,13 @@ jobs:
             htmlcov/
 
       - name: Upload test report
-        uses: actions/upload-artifact@latest
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: test-report
           path: reports/
 
       - name: Upload documentation
-        uses: actions/upload-artifact@latest
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: documentation
           path: docs/
@@ -110,17 +110,17 @@ jobs:
     needs: [validate]
     steps:
       - name: Checkout
-        uses: actions/checkout@latest
+        uses: actions/checkout@v6.0.2
 
       - name: Log in to Docker Hub
-        uses: docker/login-action@latest
+        uses: docker/login-action@v4.1.0
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Extract Docker metadata
         id: meta
-        uses: docker/metadata-action@latest
+        uses: docker/metadata-action@v6
         with:
           images: icseig/bank_analysis_backend
           tags: |
@@ -130,10 +130,10 @@ jobs:
             type=raw,value=latest
 
       - name: Set up Buildx
-        uses: docker/setup-buildx-action@latest
+        uses: docker/setup-buildx-action@v4
 
       - name: Build Docker image for Trivy scan
-        uses: docker/build-push-action@latest
+        uses: docker/build-push-action@v7.1.0
         with:
           context: .
           file: docker/Dockerfile
@@ -142,7 +142,7 @@ jobs:
           cache-from: type=gha
 
       - name: Trivy image scan
-        uses: aquasecurity/trivy-action@latest
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: bab:release-scan
           format: json
@@ -154,14 +154,14 @@ jobs:
 
       - name: Upload Trivy scan report
         if: always()
-        uses: actions/upload-artifact@latest
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: security-scan-release
           path: /tmp/trivy-release.json
           if-no-files-found: ignore
 
       - name: Build and push Docker image
-        uses: docker/build-push-action@latest
+        uses: docker/build-push-action@v7.1.0
         with:
           context: .
           file: docker/Dockerfile
@@ -176,14 +176,14 @@ jobs:
     needs: [validate, docker]
     steps:
       - name: Checkout
-        uses: actions/checkout@latest
+        uses: actions/checkout@v6.0.2
 
       - name: Download artifacts
-        uses: actions/download-artifact@latest
+        uses: actions/download-artifact@v8.0.1
         with:
           path: release-artifacts
 
       - name: Create GitHub release
-        uses: softprops/action-gh-release@latest
+        uses: softprops/action-gh-release@v3
         with:
           generate_release_notes: true
