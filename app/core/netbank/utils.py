@@ -239,11 +239,11 @@ class reportFormatter:
         try:
             df.drop(df.tail(1).index, inplace=True)
         except Exception:
-            logger.debug("Failed to drop tail row - possibly empty dataframe")
+            logger.warning("Failed to drop tail row - possibly empty dataframe")
         try:
             df.drop(df.head(6).index, inplace=True)
         except Exception:
-            logger.debug("Failed to drop head rows - possibly smaller dataframe")
+            logger.warning("Failed to drop head rows - possibly smaller dataframe")
         df.dropna(axis=1, how="all", inplace=True)
         if df.shape[1] > 0:
             df.dropna(subset=[df.columns[0]], inplace=True)
@@ -251,7 +251,7 @@ class reportFormatter:
             df.dropna(subset=df.columns[1:], inplace=True)
 
     def search_for_currency(self, data: Optional[pd.DataFrame] = None) -> None:
-        currency_values = {"HUF", "USD", "EUR"}
+        currency_values = {"HUF", "USD", "EUR", "GBP"}
         df = self.data if data is None else data
         try:
             cols_to_drop = [
@@ -262,9 +262,15 @@ class reportFormatter:
         except Exception:
             cols_to_drop = []
         if len(cols_to_drop) == 0:
+            logger.debug("No currency columns found in data")
             return
         try:
             df["NewCurrency"] = df[cols_to_drop[0]]
             df.drop(columns=cols_to_drop, inplace=True)
+            logger.debug(
+                "Extracted currency column '%s' and dropped %d columns",
+                cols_to_drop[0],
+                len(cols_to_drop),
+            )
         except Exception:
             logger.exception("Failed while extracting currency columns")
