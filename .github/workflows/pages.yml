@@ -21,10 +21,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v6.0.2
+        uses: actions/checkout@latest
 
       - name: Download security artifacts from release job
-        uses: actions/download-artifact@v8.0.1
+        uses: actions/download-artifact@latest
         with:
           path: artifacts/
         continue-on-error: true  # Don't fail if no artifacts on main branch
@@ -39,10 +39,10 @@ jobs:
     needs: [download-artifacts]
     steps:
       - name: Checkout
-        uses: actions/checkout@v6.0.2
+        uses: actions/checkout@latest
 
       - name: Set up Python
-        uses: actions/setup-python@v6.2.0
+        uses: actions/setup-python@latest
         with:
           python-version: "3.12"
 
@@ -51,7 +51,7 @@ jobs:
           pip install mkdocs-material jinja2
 
       - name: Download artifacts
-        uses: actions/download-artifact@v8.0.1
+        uses: actions/download-artifact@latest
         with:
           path: security-artifacts/
         continue-on-error: true
@@ -92,7 +92,7 @@ jobs:
           find site -type f | head -30
 
       - name: Upload pages artifact
-        uses: actions/upload-pages-artifact@v5
+        uses: actions/upload-pages-artifact@latest
         with:
           path: site/
 
@@ -105,4 +105,4 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v5
+        uses: actions/deploy-pages@latest

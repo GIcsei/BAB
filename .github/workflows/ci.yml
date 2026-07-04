@@ -85,15 +85,15 @@ jobs:
         python-version: ["3.12"]
     steps:
       - name: Checkout
-        uses: actions/checkout@v6.0.2
+        uses: actions/checkout@latest
 
       - name: Set up Python
-        uses: actions/setup-python@v6.2.0
+        uses: actions/setup-python@latest
         with:
           python-version: ${{ matrix.python-version }}
 
       - name: Cache uv
-        uses: actions/cache@v5.0.5
+        uses: actions/cache@latest
         with:
           path: ~/.cache/uv
           key: ${{ runner.os }}-uv-${{ hashFiles('uv.lock') }}
@@ -130,7 +130,7 @@ jobs:
 
       - name: Upload security scan reports
         if: always()
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@latest
         with:
           name: security-scan-ci
           path: artifacts/security/
@@ -138,7 +138,7 @@ jobs:
 
       - name: Upload reports
         if: always()
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@latest
         with:
           name: test-reports
           path: |
@@ -147,7 +147,7 @@ jobs:
             htmlcov/
 
       - name: Upload documentation
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@latest
         with:
           name: documentation
           path: docs/
@@ -160,15 +160,15 @@ jobs:
         python-version: ["3.12"]
     steps:
       - name: Checkout
-        uses: actions/checkout@v6.0.2
+        uses: actions/checkout@latest
 
       - name: Set up Python
-        uses: actions/setup-python@v6.2.0
+        uses: actions/setup-python@latest
         with:
           python-version: ${{ matrix.python-version }}
 
       - name: Cache uv
-        uses: actions/cache@v5.0.5
+        uses: actions/cache@latest
         with:
           path: ~/.cache/uv
           key: ${{ runner.os }}-uv-${{ hashFiles('uv.lock') }}
@@ -193,7 +193,7 @@ jobs:
 
       - name: Upload Bandit report
         if: always()
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@latest
         with:
           name: bandit-report
           path: bandit-report.json
@@ -204,13 +204,13 @@ jobs:
     needs: [lint, typecheck, test, security]
     steps:
       - name: Checkout
-        uses: actions/checkout@v6.0.2
+        uses: actions/checkout@latest
 
       - name: Set up Buildx
-        uses: docker/setup-buildx-action@v4
+        uses: docker/setup-buildx-action@latest
 
       - name: Build Docker image
-        uses: docker/build-push-action@v7.1.0
+        uses: docker/build-push-action@latest
         with:
           context: .
           file: docker/Dockerfile
@@ -227,7 +227,7 @@ jobs:
       pull-requests: write
     steps:
       - name: Comment on PR about failure
-        uses: actions/github-script@v7
+        uses: actions/github-script@latest
         with:
           script: |
             const runUrl = `https://github.com/${context.repo.owner}` +
